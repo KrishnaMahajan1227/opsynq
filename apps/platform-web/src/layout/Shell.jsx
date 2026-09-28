@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState}from'react';
-import{Bell,Check,ChevronDown,ChevronRight,Command,LogOut,Menu,PanelLeftClose,PanelLeftOpen,Search,X}from'lucide-react';
+import{ArrowLeft,Bell,Check,ChevronDown,ChevronRight,Command,LogOut,Menu,PanelLeftClose,PanelLeftOpen,Search,X}from'lucide-react';
 import {Brand} from '../components/common';
 import {api} from '../core/api';
 import {flattenModulesForUser,moduleForPage,groupsForUser} from './moduleRegistry';
@@ -57,6 +57,7 @@ export function Shell({user,page,setPage,logout,companyMode=false,companyId=null
  const[openGroups,setOpenGroups]=useState(()=>{try{return {...initialGroups(),...(JSON.parse(localStorage.getItem(storageKey(companyMode)))||{})}}catch{return initialGroups()}});
  const current=moduleForPage(page,companyMode);
  const navActivePage=companyMode&&['contracts','work-orders','work-packages'].includes(page)?'programs':companyMode&&supplyHidden.includes(page)?'supply-chain':page;
+ const contextBack=companyMode&&supplyHidden.includes(page)?{label:'Supply Chain Control',target:'supply-chain'}:companyMode&&['contracts','work-orders','work-packages'].includes(page)?{label:'Delivery Portfolio',target:'programs'}:null;
  const trailKey=`opsynq.nav.trail.${companyMode?'company':'platform'}.${companyId||'global'}`;
  useEffect(()=>{let existing=[];try{existing=JSON.parse(sessionStorage.getItem(trailKey)||'[]')}catch{}const next=[...existing.filter(id=>id!==page),page].slice(-4);setNavTrail(next);try{sessionStorage.setItem(trailKey,JSON.stringify(next))}catch{}},[page,trailKey]);
  useEffect(()=>{if(current){const activeGroup=['contracts','work-orders','work-packages'].includes(page)?'delivery':supplyHidden.includes(page)?'supply-chain':current.groupId;setOpenGroups(Object.fromEntries(groups.map(g=>[g.id,g.id===activeGroup])))}else if(modules.length&&page!==modules[0].id)setPage(modules[0].id)},[page,companyMode,user]);
@@ -80,7 +81,10 @@ export function Shell({user,page,setPage,logout,companyMode=false,companyId=null
   </aside>
   <main className="workspace">
    <div className="workspace-tools"><button className="mobile-nav-trigger" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={18}/><span>Menu</span></button><span className={`api-state api-${apiState}`} title="Backend readiness"><i></i>{apiState==='ready'?'System ready':apiState==='checking'?'Checking system…':apiState==='offline'?'API offline':'System attention'}</span><GlobalSearch companyId={companyId} onNavigate={go} allowedPages={searchAllowedPages}/>{companyMode&&companyId&&<NotificationBell companyId={companyId} onNavigate={go}/>}<button className="module-switch" onClick={()=>setPalette(true)}><Menu size={16}/> All modules</button></div>
-   {companyMode&&navTrail.length>0&&<div className="workspace-breadcrumbs" aria-label="Navigation context"><span>Workspace</span>{(supplyHidden.includes(page)?['supply-chain',page]:navTrail).map((id,i)=>{const m=moduleForPage(id,companyMode);if(!m)return null;return <React.Fragment key={`${id}-${i}`}><ChevronRight size={12}/><button className={id===page?'active':''} onClick={()=>id!==page&&go(id)}>{m.label}</button></React.Fragment>})}</div>}
+   {companyMode&&<div className="workspace-contextbar">
+    {contextBack&&<button className="context-back" onClick={()=>go(contextBack.target)}><ArrowLeft size={14}/><span>Back to {contextBack.label}</span></button>}
+    {navTrail.length>0&&<div className="workspace-breadcrumbs" aria-label="Navigation context"><span>Workspace</span>{(supplyHidden.includes(page)?['supply-chain',page]:navTrail).map((id,i)=>{const m=moduleForPage(id,companyMode);if(!m)return null;return <React.Fragment key={`${id}-${i}`}><ChevronRight size={12}/><button className={id===page?'active':''} onClick={()=>id!==page&&go(id)}>{m.label}</button></React.Fragment>})}</div>}
+   </div>}
    {permissionNotice&&<div className="permission-toast">{permissionNotice}</div>}
    {children}
   </main>

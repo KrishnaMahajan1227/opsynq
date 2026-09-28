@@ -2,9 +2,20 @@ import React from 'react';
 import{Activity,ArrowLeft,ArrowRight,ArrowRightLeft,BarChart3,Bell,Boxes,Building2,Camera,CheckCircle2,CircleAlert,ClipboardCheck,FileSpreadsheet,FileText,History,Layers3,LockKeyhole,LogOut,MapPin,Menu,Navigation,PackageCheck,PackageOpen,PackagePlus,Plus,ScanLine,Search,ShieldCheck,ShoppingCart,SlidersHorizontal,Truck,UploadCloud,UserPlus,UsersRound,Warehouse,X,XCircle}from'lucide-react';
 export const Status=({value})=><span className={`status status-${String(value||'').toLowerCase()}`}>{String(value||'Unknown').replaceAll('_',' ')}</span>;
 export function Brand(){return <div className="brand"><span className="mark">O</span><div><b>Opsynq</b><small>GLOBAL OPERATIONS PLATFORM</small></div></div>}
-// Screen titles/descriptive banners are intentionally suppressed in the app workspace.
-// Actions remain available in a compact toolbar so users retain fast access without repeated headings.
-export const PageHeader=({actions})=>actions?<div className="screen-actionbar">{actions}</div>:null;
+export const PageHeader=({eyebrow='',title='',text='',actions=null,back=null})=>{
+ const hasCopy=Boolean(eyebrow||title||text);
+ if(!hasCopy&&actions)return <div className="screen-actionbar">{actions}</div>;
+ if(!hasCopy&&!actions)return null;
+ return <header className="screen-header">
+  <div className="screen-header__copy">
+   {back&&<button type="button" className="screen-back" onClick={back.onClick}><ArrowLeft size={15}/><span>{back.label||'Back'}</span></button>}
+   {eyebrow&&<span className="screen-eyebrow">{eyebrow}</span>}
+   {title&&<h1>{title}</h1>}
+   {text&&<p>{text}</p>}
+  </div>
+  {actions&&<div className="screen-header__actions">{actions}</div>}
+ </header>;
+};
 export function Modal({title,close,children,size='md'}){return <div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&close()} role="presentation"><div className={`modal modal-${size}`} role="dialog" aria-modal="true" aria-label={title}><div className="modal-head"><div><h2>{title}</h2></div><button type="button" className="icon-btn" onClick={close} aria-label="Close"><X/></button></div><div className="modal-body-scroll">{children}</div></div></div>}
 export function FilterDrawer({open,title='Filters',subtitle='Refine the records shown in this workspace.',close,children,onReset}){if(!open)return null;return <><button className="filter-drawer-backdrop" aria-label="Close filters" onClick={close}/><aside className="filter-drawer" role="dialog" aria-modal="true" aria-label={title}><div className="filter-drawer__header"><div><SlidersHorizontal size={17}/><span><b>{title}</b><small>{subtitle}</small></span></div><button className="icon-btn" onClick={close} aria-label="Close filters"><X size={18}/></button></div><div className="filter-drawer__body">{children}</div><div className="filter-drawer__footer">{onReset&&<button className="btn secondary" onClick={onReset}>Reset</button>}<button className="btn primary" onClick={close}>View results</button></div></aside></>}
 export function FilterButton({onClick,count=0,label='Filters'}){return <button type="button" className="btn secondary filter-button" onClick={onClick}><SlidersHorizontal size={16}/><span>{label}</span>{count>0&&<em>{count}</em>}</button>}

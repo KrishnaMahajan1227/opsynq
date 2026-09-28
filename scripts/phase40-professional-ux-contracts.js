@@ -1,0 +1,17 @@
+const fs=require('fs');
+const assert=require('assert');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const has=(p,s,label)=>{assert(read(p).includes(s),`${label} missing in ${p}`);console.log(`✓ ${label}`)};
+has('apps/platform-web/src/components/common.jsx','screen-header','compact professional page header');
+has('apps/platform-web/src/layout/Shell.jsx','context-back','contextual back navigation');
+has('apps/platform-web/src/layout/Shell.jsx','Back to {contextBack.label}','back destination label');
+has('apps/platform-web/src/layout/moduleRegistry.jsx',"label:'Program Delivery'",'professional delivery navigation label');
+has('apps/platform-web/src/layout/moduleRegistry.jsx',"label:'Supply Operations'",'professional supply navigation label');
+has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','supply-flow','supply operating flow');
+has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','Open the stage you need','progressive supply disclosure');
+has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','Needs attention','focused exception queue');
+has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','Recent dispatch activity','bounded recent activity');
+has('apps/platform-web/src/styles/index.css','Phase 40 — professional information hierarchy','phase 40 professional styles');
+console.log('✓ Phase 40 professional information hierarchy contracts passed');

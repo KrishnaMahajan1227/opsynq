@@ -69,14 +69,14 @@ export const companyGroups=[
     item('action-center','Action Center',CircleAlert,'priority action pending critical attention inbox'),
     item('company-overview','Dashboard',Activity,'dashboard command overview health attention')
   ]},
-  {id:'delivery',label:'Delivery',icon:BriefcaseBusiness,items:[
+  {id:'delivery',label:'Program Delivery',icon:BriefcaseBusiness,items:[
     item('programs','Delivery Portfolio',Layers3,'program contract loa work order work package delivery hierarchy scheme project','operations.write'),
     item('agencies','Agencies',UsersRound,'agency implementation partner','operations.write'),
     item('beneficiary-records','Beneficiary Records',UsersRound,'farmer beneficiary records details photos status'),
     item('geo-operations','Geo Operations',MapPin,'map geography sites survey installation complaint location geotag'),
     item('beneficiary-imports','Beneficiary Imports',UploadCloud,'farmer beneficiary excel bulk import','operations.write')
   ]},
-  {id:'supply-chain',label:'Supply Chain',icon:Truck,items:[
+  {id:'supply-chain',label:'Supply Operations',icon:Truck,items:[
     item('supply-chain','Supply Chain Control',Truck,'procurement inventory warehouse dispatch shipment driver vehicle agency technician material custody control tower')
   ]},
 
@@ -115,7 +115,7 @@ const hiddenDeliveryModules=[
   item('contracts','Contracts / LOA',ClipboardCheck,'contract loa tender award','operations.write'),
   item('work-orders','Work Orders',Building2,'work order execution','operations.write'),
   item('work-packages','Work Packages',PackageCheck,'allocation agency package','operations.write')
-].map(x=>({...x,groupId:'delivery',groupLabel:'Delivery'}));
+].map(x=>({...x,groupId:'delivery',groupLabel:'Program Delivery'}));
 const hiddenSupplyModules=[
   item('inventory-overview','Supply Chain Overview',Boxes,'inventory dashboard stock'),
   item('item-master','Item Master',PackagePlus,'sku product material master','inventory.write'),
@@ -130,7 +130,7 @@ const hiddenSupplyModules=[
   item('material-issues','Technician Material Custody',PackageOpen,'technician issue custody material','logistics.write'),
   item('agency-stock','Agency Material Accountability',Truck,'agency dispatched received damaged missing stock custody'),
   item('pdi','PDI & Asset Inspection',ClipboardCheck,'pre dispatch inspection pdi serial quality supplier brand','pdi.write')
-].map(x=>({...x,groupId:'supply-chain',groupLabel:'Supply Chain'}));
+].map(x=>({...x,groupId:'supply-chain',groupLabel:'Supply Operations'}));
 const hiddenCompanyModules=[...hiddenDeliveryModules,...hiddenSupplyModules];
 
 export const flattenModules=(companyMode=false)=>(companyMode?companyGroups:platformGroups).flatMap(g=>g.items.map(x=>({...x,groupId:g.id,groupLabel:g.label})));
