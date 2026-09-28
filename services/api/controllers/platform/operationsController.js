@@ -20,6 +20,8 @@ const platformAudit=require('../../utils/platformAudit');
 const companyIdFor=(req)=> req.platformUser.role==='platform_superadmin' ? (req.params.companyId||req.query.companyId||req.body.companyId) : String(req.tenant.companyId||'');
 const ensureCompany=async(req,res)=>{ const companyId=companyIdFor(req); if(!companyId){res.status(400).json({message:'Company context is required.'});return null;} const c=await Organization.findOne({_id:companyId,type:'COMPANY',status:{$ne:'ARCHIVED'}}); if(!c){res.status(404).json({message:'Company not found.'});return null;} return c; };
 const text=(v)=>String(v??'').trim();
+const validId=v=>mongoose.isValidObjectId(v);
+const safeRegex=v=>new RegExp(String(v||'').slice(0,100).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');
 
 exports.dashboard=async(req,res)=>{
  const company=await ensureCompany(req,res); if(!company)return;
@@ -44,14 +46,55 @@ exports.dashboard=async(req,res)=>{
 const parseSiteLocation=(value)=>{const parts=String(value||'').split(',').map(x=>Number(String(x).trim()));return parts.length>=2&&Number.isFinite(parts[0])&&Number.isFinite(parts[1])?{latitude:parts[0],longitude:parts[1]}:null};
 exports.geoOverview=async(req,res)=>{
  const c=await ensureCompany(req,res);if(!c)return;
- const ctxFilter={companyId:c._id};if(req.query.agencyId&&mongoose.isValidObjectId(req.query.agencyId))ctxFilter.agencyId=req.query.agencyId;
- const contexts=await BeneficiaryContext.find(ctxFilter).populate('farmerId').populate('agencyId','name code').populate('workPackageId','code name status geography').populate('programId','name code').lean();
+ const ctxFilter={companyId:c._id};
+ for(const [key,value] of [['programId',req.query.programId],['workOrderId',req.query.workOrderId],['workPackageId',req.query.workPackageId],['agencyId',req.query.agencyId]])if(value&&validId(value))ctxFilter[key]=value;
+ if(req.query.contractId&&validId(req.query.contractId)){const ids=(await WorkOrder.find({companyId:c._id,contractId:req.query.contractId}).select('_id').lean()).map(x=>x._id);if(ctxFilter.workOrderId&&!ids.some(id=>String(id)===String(ctxFilter.workOrderId)))return res.json({pins:[],total:0,statuses:[],districts:[]});if(!ctxFilter.workOrderId)ctxFilter.workOrderId={$in:ids};}
+ if(req.query.state){const pf={companyId:c._id,'geography.state':text(req.query.state)};if(ctxFilter.programId)pf.programId=ctxFilter.programId;if(ctxFilter.agencyId)pf.agencyId=ctxFilter.agencyId;const ids=(await WorkPackage.find(pf).select('_id').lean()).map(x=>x._id);if(ctxFilter.workPackageId&&!ids.some(id=>String(id)===String(ctxFilter.workPackageId)))return res.json({pins:[],total:0,statuses:[],districts:[]});if(!ctxFilter.workPackageId)ctxFilter.workPackageId={$in:ids};}
+ const contexts=await BeneficiaryContext.find(ctxFilter).select('farmerId agencyId workPackageId programId workOrderId').populate('farmerId').populate('agencyId','name code').populate('workPackageId','code name status geography').populate('programId','name code scheme financialYear').populate('workOrderId','number title contractId').lean();
  const farmerIds=contexts.map(x=>x.farmerId?._id||x.farmerId).filter(Boolean);
- const evidence=farmerIds.length?await EvidenceSubmission.find({companyId:c._id,farmerId:{$in:farmerIds},'captureGeo.latitude':{$exists:true},'captureGeo.longitude':{$exists:true}}).sort({updatedAt:-1}).lean():[];
+ const evidence=farmerIds.length?await EvidenceSubmission.find({companyId:c._id,farmerId:{$in:farmerIds},'captureGeo.latitude':{$exists:true},'captureGeo.longitude':{$exists:true}}).select('farmerId captureGeo updatedAt').sort({updatedAt:-1}).lean():[];
  const geoByFarmer=new Map();for(const e of evidence){const k=String(e.farmerId);if(!geoByFarmer.has(k))geoByFarmer.set(k,e.captureGeo)}
- const pins=[];for(const ctx of contexts){const f=ctx.farmerId;if(!f)continue;if(req.query.status&&f.applicationStatus!==req.query.status)continue;if(req.query.district&&f.district!==req.query.district)continue;if(req.query.survey&&f.inspectionStatus!==req.query.survey)continue;const id=String(f._id);const geo=geoByFarmer.get(id)||parseSiteLocation(f.siteLocation);if(!geo)continue;pins.push({farmerId:id,beneficiaryId:f.beneficiaryId,name:f.beneficiaryName,mobile:f.mobile,status:f.applicationStatus||'Pending',surveyStatus:f.inspectionStatus||'Pending',district:f.district||'',taluka:f.taluka||'',village:f.village||'',latitude:Number(geo.latitude),longitude:Number(geo.longitude),accuracy:Number(geo.accuracy||0),capturedAt:geo.capturedAt||null,geoSource:geoByFarmer.has(id)?'Evidence':'Site record',agency:ctx.agencyId?{id:ctx.agencyId._id,name:ctx.agencyId.name,code:ctx.agencyId.code}:null,program:ctx.programId?{id:ctx.programId._id,name:ctx.programId.name,code:ctx.programId.code}:null,workPackage:ctx.workPackageId?{id:ctx.workPackageId._id,code:ctx.workPackageId.code,name:ctx.workPackageId.name,status:ctx.workPackageId.status}:null});}
- const statusCounts={};const districtCounts={};for(const p of pins){statusCounts[p.status]=(statusCounts[p.status]||0)+1;districtCounts[p.district]=(districtCounts[p.district]||0)+1;}
+ const pins=[];for(const ctx of contexts){const f=ctx.farmerId;if(!f)continue;if(req.query.status&&f.applicationStatus!==req.query.status)continue;if(req.query.district&&f.district!==req.query.district)continue;if(req.query.taluka&&f.taluka!==req.query.taluka)continue;if(req.query.village&&f.village!==req.query.village)continue;if(req.query.survey&&f.inspectionStatus!==req.query.survey)continue;if(req.query.scheme&&f.scheme!==req.query.scheme)continue;const id=String(f._id);const geo=geoByFarmer.get(id)||parseSiteLocation(f.siteLocation);if(!geo)continue;pins.push({farmerId:id,beneficiaryId:f.beneficiaryId,name:f.beneficiaryName,mobile:f.mobile,status:f.applicationStatus||'Pending',surveyStatus:f.inspectionStatus||'Pending',district:f.district||'',taluka:f.taluka||'',village:f.village||'',scheme:f.scheme||'',latitude:Number(geo.latitude),longitude:Number(geo.longitude),accuracy:Number(geo.accuracy||0),capturedAt:geo.capturedAt||null,geoSource:geoByFarmer.has(id)?'Evidence':'Site record',agency:ctx.agencyId?{id:ctx.agencyId._id,name:ctx.agencyId.name,code:ctx.agencyId.code}:null,program:ctx.programId?{id:ctx.programId._id,name:ctx.programId.name,code:ctx.programId.code}:null,workOrder:ctx.workOrderId?{id:ctx.workOrderId._id,number:ctx.workOrderId.number,title:ctx.workOrderId.title,contractId:ctx.workOrderId.contractId}:null,workPackage:ctx.workPackageId?{id:ctx.workPackageId._id,code:ctx.workPackageId.code,name:ctx.workPackageId.name,status:ctx.workPackageId.status,geography:ctx.workPackageId.geography}:null});}
+ const statusCounts={},districtCounts={};for(const p of pins){statusCounts[p.status]=(statusCounts[p.status]||0)+1;districtCounts[p.district]=(districtCounts[p.district]||0)+1;}
  res.json({pins,total:pins.length,statuses:Object.entries(statusCounts).map(([status,count])=>({status,count})),districts:Object.entries(districtCounts).map(([district,count])=>({district,count})).sort((a,b)=>b.count-a.count)});
+};
+
+exports.portfolioOverview=async(req,res)=>{
+ const c=await ensureCompany(req,res);if(!c)return;
+ const base={companyId:c._id};
+ const [programs,contracts,workOrders,packages,agencies,beneficiaryGroups]=await Promise.all([
+  Program.find(base).sort({createdAt:-1}).lean(),
+  Contract.find(base).populate('programId','name code scheme financialYear').sort({createdAt:-1}).lean(),
+  WorkOrder.find(base).populate('programId','name code scheme financialYear').populate('contractId','number title type').sort({createdAt:-1}).lean(),
+  WorkPackage.find(base).populate('programId','name code scheme financialYear').populate('workOrderId','number title contractId').populate('agencyId','name code state contact').sort({createdAt:-1}).lean(),
+  Organization.find({type:'AGENCY',parentOrganization:c._id,status:{$ne:'ARCHIVED'}}).select('name code state status contact').sort({name:1}).lean(),
+  BeneficiaryContext.aggregate([{$match:base},{$group:{_id:{programId:'$programId',workOrderId:'$workOrderId',workPackageId:'$workPackageId',agencyId:'$agencyId'},count:{$sum:1}}}])
+ ]);
+ const byProgram=new Map(),byWorkOrder=new Map(),byPackage=new Map(),byAgency=new Map();
+ for(const g of beneficiaryGroups){const n=Number(g.count||0),id=g._id||{};for(const [map,key] of [[byProgram,id.programId],[byWorkOrder,id.workOrderId],[byPackage,id.workPackageId],[byAgency,id.agencyId]])if(key)map.set(String(key),(map.get(String(key))||0)+n)}
+ const woCountByContract=new Map(),pkgCountByWo=new Map(),pkgCountByProgram=new Map(),pkgCountByAgency=new Map();
+ for(const w of workOrders){if(w.contractId?._id){const k=String(w.contractId._id);woCountByContract.set(k,(woCountByContract.get(k)||0)+1)}}
+ for(const k of packages){const wo=String(k.workOrderId?._id||k.workOrderId||''),pr=String(k.programId?._id||k.programId||''),ag=String(k.agencyId?._id||k.agencyId||'');if(wo)pkgCountByWo.set(wo,(pkgCountByWo.get(wo)||0)+1);if(pr)pkgCountByProgram.set(pr,(pkgCountByProgram.get(pr)||0)+1);if(ag)pkgCountByAgency.set(ag,(pkgCountByAgency.get(ag)||0)+1)}
+ const contractBeneficiaries=new Map();for(const w of workOrders){const cid=String(w.contractId?._id||w.contractId||'');if(cid)contractBeneficiaries.set(cid,(contractBeneficiaries.get(cid)||0)+(byWorkOrder.get(String(w._id))||0))}
+ res.json({
+  programs:programs.map(x=>({...x,metrics:{contracts:contracts.filter(cn=>String(cn.programId?._id||cn.programId)===String(x._id)).length,workOrders:workOrders.filter(w=>String(w.programId?._id||w.programId)===String(x._id)).length,workPackages:pkgCountByProgram.get(String(x._id))||0,beneficiaries:byProgram.get(String(x._id))||0}})),
+  contracts:contracts.map(x=>({...x,metrics:{workOrders:woCountByContract.get(String(x._id))||0,beneficiaries:contractBeneficiaries.get(String(x._id))||0}})),
+  workOrders:workOrders.map(x=>({...x,metrics:{workPackages:pkgCountByWo.get(String(x._id))||0,beneficiaries:byWorkOrder.get(String(x._id))||0}})),
+  workPackages:packages.map(x=>({...x,metrics:{beneficiaries:byPackage.get(String(x._id))||0}})),
+  agencies:agencies.map(x=>({...x,metrics:{workPackages:pkgCountByAgency.get(String(x._id))||0,beneficiaries:byAgency.get(String(x._id))||0}}))
+ });
+};
+
+exports.beneficiaryFilterOptions=async(req,res)=>{
+ const c=await ensureCompany(req,res);if(!c)return;
+ const contexts=await BeneficiaryContext.find({companyId:c._id}).select('farmerId').lean();
+ const ids=contexts.map(x=>x.farmerId).filter(Boolean);
+ const match=ids.length?{_id:{$in:ids}}:{_id:null};
+ const [districts,talukas,villages,schemes,statuses,surveys]=await Promise.all([
+  Farmer.distinct('district',match),Farmer.distinct('taluka',match),Farmer.distinct('village',match),Farmer.distinct('scheme',match),Farmer.distinct('applicationStatus',match),Farmer.distinct('inspectionStatus',match)
+ ]);
+ const clean=a=>a.filter(Boolean).sort((a,b)=>String(a).localeCompare(String(b)));
+ res.json({districts:clean(districts),talukas:clean(talukas),villages:clean(villages),schemes:clean(schemes),statuses:clean(statuses),surveys:clean(surveys)});
 };
 
 exports.listPrograms=async(req,res)=>{const c=await ensureCompany(req,res);if(!c)return;res.json({items:await Program.find({companyId:c._id}).sort({createdAt:-1}).lean()});};
@@ -102,20 +145,30 @@ exports.listImports=async(req,res)=>{const c=await ensureCompany(req,res);if(!c)
 
 exports.listBeneficiaries=async(req,res)=>{
  const c=await ensureCompany(req,res);if(!c)return;
- const page=Math.max(1,Number(req.query.page||1)),pageSize=Math.min(100,Math.max(10,Number(req.query.pageSize||50))),q=text(req.query.q),status=text(req.query.status),agencyId=text(req.query.agencyId),district=text(req.query.district),survey=text(req.query.survey);
- const ctxFilter={companyId:c._id};if(agencyId)ctxFilter.agencyId=agencyId;
- if(q||status||district||survey){
-  const farmerFilter={};
-  if(status)farmerFilter.applicationStatus=status;
-  if(district)farmerFilter.district=district;
-  if(survey)farmerFilter.inspectionStatus=survey;
-  if(q)farmerFilter.$or=[{beneficiaryId:{$regex:q,$options:'i'}},{beneficiaryName:{$regex:q,$options:'i'}},{mobile:{$regex:q,$options:'i'}},{village:{$regex:q,$options:'i'}},{district:{$regex:q,$options:'i'}}];
-  const farmers=await Farmer.find(farmerFilter).select('_id').limit(5000).lean();
-  ctxFilter.farmerId={$in:farmers.map(x=>x._id)};
+ const page=Math.max(1,Number(req.query.page||1)),pageSize=Math.min(100,Math.max(10,Number(req.query.pageSize||50)));
+ const q=text(req.query.q),status=text(req.query.status),survey=text(req.query.survey),district=text(req.query.district),taluka=text(req.query.taluka),village=text(req.query.village),scheme=text(req.query.scheme),state=text(req.query.state);
+ const ctxFilter={companyId:c._id};
+ for(const [key,value] of [['programId',req.query.programId],['workOrderId',req.query.workOrderId],['workPackageId',req.query.workPackageId],['agencyId',req.query.agencyId]])if(value&&validId(value))ctxFilter[key]=value;
+ if(req.query.contractId&&validId(req.query.contractId)){
+  const ids=(await WorkOrder.find({companyId:c._id,contractId:req.query.contractId}).select('_id').lean()).map(x=>x._id);
+  if(ctxFilter.workOrderId&&!ids.some(id=>String(id)===String(ctxFilter.workOrderId)))return res.json({items:[],total:0,page,pageSize,pages:1});
+  if(!ctxFilter.workOrderId)ctxFilter.workOrderId={$in:ids};
+ }
+ if(state){
+  const pkgFilter={companyId:c._id,'geography.state':state};
+  if(ctxFilter.programId)pkgFilter.programId=ctxFilter.programId;if(ctxFilter.agencyId)pkgFilter.agencyId=ctxFilter.agencyId;
+  const packageIds=(await WorkPackage.find(pkgFilter).select('_id').lean()).map(x=>x._id);
+  if(ctxFilter.workPackageId&&!packageIds.some(id=>String(id)===String(ctxFilter.workPackageId)))return res.json({items:[],total:0,page,pageSize,pages:1});
+  if(!ctxFilter.workPackageId)ctxFilter.workPackageId={$in:packageIds};
+ }
+ if(q||status||district||taluka||village||survey||scheme){
+  const farmerFilter={};if(status)farmerFilter.applicationStatus=status;if(district)farmerFilter.district=district;if(taluka)farmerFilter.taluka=taluka;if(village)farmerFilter.village=village;if(survey)farmerFilter.inspectionStatus=survey;if(scheme)farmerFilter.scheme=scheme;
+  if(q){const rx=safeRegex(q);farmerFilter.$or=[{beneficiaryId:rx},{beneficiaryName:rx},{mobile:rx},{alternateMobileNumber:rx},{village:rx},{taluka:rx},{district:rx},{divisionName:rx},{circleName:rx},{zoneName:rx},{scheme:rx},{assignedVendorCompanyName:rx},{installedByTechnicianName:rx}];}
+  const farmers=await Farmer.find(farmerFilter).select('_id').limit(10000).lean();ctxFilter.farmerId={$in:farmers.map(x=>x._id)};
  }
  const [total,items]=await Promise.all([
   BeneficiaryContext.countDocuments(ctxFilter),
-  BeneficiaryContext.find(ctxFilter).populate('farmerId').populate('agencyId','name code').populate('programId','name code').populate('workPackageId','code name status').sort({updatedAt:-1}).skip((page-1)*pageSize).limit(pageSize).lean()
+  BeneficiaryContext.find(ctxFilter).select('farmerId companyId programId workOrderId workPackageId agencyId assignedAt validationStatus').populate('farmerId').populate('agencyId','name code state contact').populate('programId','name code scheme financialYear').populate('workOrderId','number title status contractId').populate('workPackageId','code name status geography').sort({updatedAt:-1}).skip((page-1)*pageSize).limit(pageSize).lean()
  ]);
  res.json({items,total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
 };
@@ -123,7 +176,7 @@ exports.listBeneficiaries=async(req,res)=>{
 exports.getBeneficiaryDetail=async(req,res)=>{
  const c=await ensureCompany(req,res);if(!c)return;
  if(!mongoose.isValidObjectId(req.params.farmerId)) return res.status(400).json({message:'Invalid beneficiary/farmer id.'});
- const ctx=await BeneficiaryContext.findOne({companyId:c._id,farmerId:req.params.farmerId}).populate('farmerId').populate('companyId','name code').populate('agencyId','name code contact address').populate('programId','name code authority scheme component').populate('workOrderId','number title status dueDate').populate('workPackageId','code name status dueDate geography').lean();
+ const ctx=await BeneficiaryContext.findOne({companyId:c._id,farmerId:req.params.farmerId}).populate('farmerId').populate('companyId','name code').populate('agencyId','name code contact address').populate('programId','name code authority scheme component financialYear').populate({path:'workOrderId',select:'number title status dueDate contractId',populate:{path:'contractId',select:'number title type'}}).populate('workPackageId','code name status dueDate geography').lean();
  if(!ctx)return res.status(404).json({message:'Beneficiary not found in this company.'});
  const farmerId=ctx.farmerId?._id||ctx.farmerId;
  const [assets,materialIssues,serviceCases,compliance,evidenceRequirements,evidenceSubmissions]=await Promise.all([

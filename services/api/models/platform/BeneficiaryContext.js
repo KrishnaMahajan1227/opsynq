@@ -11,4 +11,6 @@ const schema=new mongoose.Schema({
  assignedAt:Date,assignmentHistory:{type:[mongoose.Schema.Types.Mixed],default:[]}
 },{timestamps:true});
 schema.index({companyId:1,programId:1,workPackageId:1,agencyId:1});
+schema.index({companyId:1,workOrderId:1,workPackageId:1});
+schema.index({companyId:1,agencyId:1,updatedAt:-1});
 module.exports=mongoose.model('BeneficiaryContext',schema);

@@ -12,6 +12,8 @@ const canRead=requirePlatformRoles(...readRoles),canOperationsRead=requirePlatfo
 router.use(protectPlatform,requireCompanyScope);
 router.get('/dashboard',canRead,c.dashboard);
 router.get('/geo-overview',canBeneficiaryRead,c.geoOverview);
+router.get('/portfolio',canOperationsRead,c.portfolioOverview);
+router.get('/beneficiary-filter-options',canBeneficiaryRead,c.beneficiaryFilterOptions);
 router.get('/programs',canOperationsRead,c.listPrograms);router.post('/programs',canWrite,c.createProgram);router.patch('/programs/:id',canWrite,c.updateProgram);router.delete('/programs/:id',canWrite,c.closeProgram);
 router.get('/contracts',canOperationsRead,c.listContracts);router.post('/contracts',canWrite,c.createContract);router.patch('/contracts/:id',canWrite,c.updateContract);router.delete('/contracts/:id',canWrite,c.closeContract);
 router.get('/work-orders',canOperationsRead,c.listWorkOrders);router.post('/work-orders',canWrite,c.createWorkOrder);router.patch('/work-orders/:id',canWrite,c.updateWorkOrder);router.delete('/work-orders/:id',canWrite,c.closeWorkOrder);

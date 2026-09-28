@@ -5,4 +5,6 @@ const schema=new mongoose.Schema({
  assignedQuantity:{type:Number,default:0}, assignedAt:Date,dueDate:Date,status:{type:String,enum:['DRAFT','READY','ASSIGNED','IN_PROGRESS','BLOCKED','COMPLETED','CLOSED'],default:'DRAFT'}, commercialTerms:{type:mongoose.Schema.Types.Mixed,default:{}}
 },{timestamps:true});
 schema.index({companyId:1,code:1},{unique:true});
+schema.index({companyId:1,programId:1,workOrderId:1,status:1});
+schema.index({companyId:1,agencyId:1,'geography.state':1,'geography.district':1});
 module.exports=mongoose.model('WorkPackage',schema);

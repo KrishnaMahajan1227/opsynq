@@ -344,3 +344,6 @@ npm run qa:routes
 ```
 
 See `docs/SECURITY_EMAIL_RECOVERY_2026-09-27.md` and `docs/LOCAL_ENV_MIGRATION.md`.
+
+## Phase 35
+Delivery hierarchy and cross-module filters are documented in `docs/PHASE_35_DELIVERY_HIERARCHY_AND_FILTERS.md`.

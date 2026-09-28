@@ -113,11 +113,12 @@ const fs = require('fs');
 const platformDist = path.resolve(__dirname, '../../apps/platform-web/dist');
 const agencyDist = path.resolve(__dirname, '../../apps/agency-web/dist');
 
+const staticOptions={index:false,maxAge:process.env.NODE_ENV==='production'?'1h':0,setHeaders:(res,filePath)=>{if(process.env.NODE_ENV==='production'&&/[\\/]assets[\\/].+\.[a-z0-9]+$/i.test(filePath))res.setHeader('Cache-Control','public, max-age=31536000, immutable')}};
 if (fs.existsSync(agencyDist)) {
-  app.use('/agency', express.static(agencyDist, { index: false, maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0 }));
+  app.use('/agency', express.static(agencyDist, staticOptions));
 }
 if (fs.existsSync(platformDist)) {
-  app.use(express.static(platformDist, { index: false, maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0 }));
+  app.use(express.static(platformDist, staticOptions));
 }
 
 // SPA fallbacks. Unknown API/socket/upload routes must remain API 404s instead

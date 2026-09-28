@@ -215,5 +215,9 @@ farmerSchema.index({ complaintNumber: 1 });
 farmerSchema.index({ complaintRaisedDate: 1 });
 farmerSchema.index({ applicationStatus: 1 });
 farmerSchema.index({ surveyorMobile: 1 });
+farmerSchema.index({ district: 1, taluka: 1, village: 1 });
+farmerSchema.index({ scheme: 1, applicationStatus: 1, inspectionStatus: 1 });
+farmerSchema.index({ beneficiaryId: 1 });
+farmerSchema.index({ mobile: 1 });
 
 module.exports = mongoose.model('Farmer', farmerSchema);
