@@ -1,0 +1,12 @@
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const root=path.resolve(__dirname,'..');const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const ai=read('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx');
+const reg=read('apps/platform-web/src/layout/moduleRegistry.jsx');
+const css=read('apps/platform-web/src/styles/index.css');
+const advisor=read('services/api/utils/aiAdvisor.js');
+assert(reg.includes("id:'intelligence'")&&reg.includes("label:'AI Operations'"),'AI must have a dedicated navigation group');
+assert(ai.includes('DetailDrawer')&&ai.includes('Open source record'),'proposal detail/source navigation missing');
+assert(ai.includes("decide(x,'APPROVED')")&&ai.includes("decide(x,'REJECTED')"),'manual confirm/reject missing');
+assert(css.includes('.ai-scope-grid')&&css.includes('.ai-question textarea'),'AI workspace styling missing');
+assert(advisor.includes('process.env.AI_PROVIDER_API_KEY||process.env.GEMINI_API_KEY'),'legacy/current key compatibility missing');
+console.log('✓ Phase 45 AI workspace contracts passed');

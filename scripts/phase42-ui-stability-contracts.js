@@ -1,12 +1,13 @@
 const fs=require('fs');
 const assert=(cond,msg)=>{if(!cond){console.error('FAIL:',msg);process.exit(1)}console.log('PASS:',msg)};
 const shell=fs.readFileSync('apps/platform-web/src/layout/Shell.jsx','utf8');
+const registry=fs.readFileSync('apps/platform-web/src/layout/moduleRegistry.jsx','utf8');
 const resilience=fs.readFileSync('apps/platform-web/src/core/resilience.jsx','utf8');
 const offline=fs.readFileSync('apps/platform-web/src/core/offlineStore.js','utf8');
 const ops=fs.readFileSync('apps/platform-web/src/features/company/operations/OperationsPages.jsx','utf8');
 const css=fs.readFileSync('apps/platform-web/src/styles/index.css','utf8');
 assert(!shell.includes('All modules</button>'),'redundant All modules toolbar action removed');
-assert(shell.includes('nav-ai-shortcut')&&shell.includes("go('ai-operations')"),'AI Operations is permanently discoverable in sidebar');
+assert(registry.includes("id:'intelligence'")&&registry.includes("'ai-operations'"),'AI Operations is permanently discoverable in dedicated sidebar group');
 assert(shell.indexOf('workspace-contextbar')<shell.indexOf('workspace-tools'),'breadcrumbs render before workspace tools');
 assert(shell.includes('PanelLeftClose size={18}')&&!shell.includes('aria-label="Close navigation" onClick={()=>setMobileOpen(false)}><X'),'sidebar uses collapse affordance instead of desktop X close');
 assert(resilience.includes('if(online&&!syncing)return null'),'online idle sync banner is suppressed');

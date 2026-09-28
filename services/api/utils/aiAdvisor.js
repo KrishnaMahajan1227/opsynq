@@ -1,4 +1,4 @@
-const API_KEY=()=>String(process.env.AI_PROVIDER_API_KEY||'').trim();
+const API_KEY=()=>String(process.env.AI_PROVIDER_API_KEY||process.env.GEMINI_API_KEY||'').trim();
 const DEFAULT_MODEL=['ge','mini-3.8-flash'].join('');
 const FALLBACK_MODEL=['ge','mini-3.7-flash'].join('');
 const MODEL=()=>String(process.env.AI_MODEL||DEFAULT_MODEL).trim();
