@@ -9,5 +9,6 @@ router.post('/replenishment/:id/draft-po',requirePlatformRoles(...rolesFor('proc
 router.post('/replenishment/:id/approve',requirePlatformRoles(...rolesFor('procurement.approve')),c.approveDraftPO);
 router.post('/replenishment/:id/dismiss',requirePlatformRoles(...rolesFor('procurement.write')),c.dismissPlan);
 router.get('/agency-stock',requirePlatformRoles(...rolesFor('logistics.read')),c.agencyStock);
+router.get('/agency-stock/:agencyId',requirePlatformRoles(...rolesFor('logistics.read')),c.agencyStockDetail);
 router.get('/finance-control',requirePlatformRoles(...rolesFor('finance.read')),c.financeControl);
 module.exports=router;

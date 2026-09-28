@@ -14,4 +14,7 @@ const schema=new mongoose.Schema({
  notes:String
 },{timestamps:true});
 schema.index({companyId:1,issueNo:1},{unique:true});
+
+schema.index({companyId:1,agencyId:1,issuedAt:-1});
+schema.index({companyId:1,farmerId:1,issuedAt:-1});
 module.exports=mongoose.model('MaterialIssue',schema);

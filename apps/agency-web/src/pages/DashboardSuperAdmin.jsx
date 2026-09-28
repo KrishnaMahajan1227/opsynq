@@ -58,6 +58,7 @@ import './AdminEnterprise.css';
 import { API_URL } from '../config';
 import AgencySidebar from '../components/AgencySidebar';
 import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
+import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
 
 // Register ChartJS components
 ChartJS.register(ArcElement, ChartTooltip, Legend);
@@ -2010,6 +2011,8 @@ export default function DashboardSuperAdmin() {
           )}
 
           {/* ─── TECHNICIAN SUMMARY TAB ─────────────────────────────────────── */}
+          {activeTab === 'material-receipts' && !isLoading && (<MaterialReceiptsPanel />)}
+
           {activeTab === 'technician-summary' && !isLoading && (
             <Card className="mb-4">
               <Card.Header className="d-flex justify-content-between align-items-center">

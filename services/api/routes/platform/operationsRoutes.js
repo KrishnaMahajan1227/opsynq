@@ -20,6 +20,7 @@ router.get('/work-orders',canOperationsRead,c.listWorkOrders);router.post('/work
 router.get('/agencies',canOperationsRead,c.listAgencies);router.post('/agencies',canWrite,c.createAgency);router.patch('/agencies/:id',canWrite,c.updateAgency);router.delete('/agencies/:id',canWrite,c.archiveAgency);
 router.get('/work-packages',canOperationsRead,c.listWorkPackages);router.post('/work-packages',canWrite,c.createWorkPackage);router.patch('/work-packages/:id',canWrite,c.updateWorkPackage);router.patch('/work-packages/:id/assign',canWrite,c.assignPackage);router.delete('/work-packages/:id',canWrite,c.closeWorkPackage);
 router.get('/beneficiaries',canBeneficiaryRead,c.listBeneficiaries);
+router.patch('/beneficiaries/bulk',canWrite,c.bulkUpdateBeneficiaries);
 // IMPORTANT: fixed/static beneficiary routes must be declared before /:farmerId.
 router.get('/beneficiaries/template',canOperationsRead,c.downloadBeneficiaryTemplate);
 router.post('/beneficiaries/import',canWrite,upload.single('file'),c.importBeneficiaries);

@@ -13,7 +13,7 @@ router.get('/refs',requirePlatformRoles(...read),c.refs);
 router.get('/drivers',requirePlatformRoles(...read),c.listDrivers);router.post('/drivers',requirePlatformRoles(...manage),c.createDriver);
 router.get('/vehicles',requirePlatformRoles(...read),c.listVehicles);router.post('/vehicles',requirePlatformRoles(...manage),c.createVehicle);
 router.get('/shipments',requirePlatformRoles(...read),c.listShipments);router.post('/shipments',requirePlatformRoles(...manage),c.createShipment);
-router.post('/shipments/:id/dispatch',requirePlatformRoles(...manage),c.dispatchShipment);
+router.post('/shipments/:id/dispatch',requirePlatformRoles(...manage),c.dispatchShipment);router.post('/shipments/:id/cancel',requirePlatformRoles(...manage),c.cancelShipment);
 router.post('/shipments/:id/receive',requirePlatformRoles(...manage),c.podUpload,c.receiveShipment);
 router.get('/shipments/:id/tracking',requirePlatformRoles(...read),c.shipmentTracking);
 router.get('/technician-links',requirePlatformRoles(...read),c.listTechnicianLinks);router.post('/technician-links',requirePlatformRoles(...manage),c.linkTechnician);

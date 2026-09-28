@@ -50,6 +50,7 @@ import './AdminEnterprise.css';
 import { API_URL } from '../config.js';
 import AgencySidebar from '../components/AgencySidebar';
 import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
+import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
 
 // Constants for dropdowns
 const APPLICATION_STATUSES = [
@@ -1916,6 +1917,8 @@ export default function DashboardAdmin() {
               </Card.Body>
             </Card>
           )}
+
+          {activeTab === 'material-receipts' && !isLoading && (<MaterialReceiptsPanel />)}
 
           {activeTab === 'technician-summary' && !isLoading && (
             <Card className="mb-4">

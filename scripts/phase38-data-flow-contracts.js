@@ -1,0 +1,23 @@
+const fs=require('fs');
+const assert=require('assert');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const has=(p,s,label)=>{assert(read(p).includes(s),`${label} missing in ${p}`);console.log(`✓ ${label}`)};
+
+has('services/api/controllers/fieldVerificationController.js','AGENCY_FIELD_SURVEY','agency survey evidence provenance');
+has('services/api/controllers/fieldVerificationController.js','agency-site-survey-photos','agency survey photos mirrored to evidence ledger');
+has('services/api/controllers/platform/operationsController.js','evidenceSubmissions,shipments','beneficiary detail returns evidence and dispatch lineage');
+has('services/api/controllers/platform/operationsController.js','bulkUpdateBeneficiaries','role-scoped beneficiary bulk update');
+has('apps/platform-web/src/components/common.jsx','opsynq:open-beneficiary','global beneficiary navigation event');
+has('apps/platform-web/src/features/company/operations/OperationsPages.jsx','BeneficiaryLink farmerId={f._id}','work-package beneficiaries open master record');
+has('services/api/controllers/platform/inventoryController.js','cancelPurchaseOrder','non-destructive purchase-order cancellation');
+has('services/api/controllers/platform/inventoryController.js','pageSize=Math.min(100','server-side inventory/procurement pagination');
+has('services/api/controllers/platform/logisticsController.js','cancelShipment','non-destructive draft shipment cancellation');
+has('services/api/controllers/platform/logisticsController.js','workPackageId','shipment to work-package traceability');
+has('services/api/controllers/agencyInventoryController.js','pageSize=Math.min(100','agency inbound receipt pagination');
+has('apps/agency-web/src/components/AgencySidebar.jsx','Inbound Material','agency receipt workspace exposed');
+has('apps/platform-web/src/layout/moduleRegistry.jsx','Agency Material Accountability','agency material accountability workspace');
+has('services/api/controllers/platform/intelligenceController.js','Shipment.aggregate','agency accountability uses database aggregation');
+has('apps/platform-web/src/layout/moduleRegistry.jsx','Purchase Orders & GRN','professional procurement naming');
+console.log('✓ Phase 38 beneficiary evidence + supply-chain custody contracts passed');

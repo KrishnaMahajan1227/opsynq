@@ -15,6 +15,7 @@ const ServiceCase=require('../../models/platform/ServiceCase');
 const ComplianceRecord=require('../../models/platform/ComplianceRecord');
 const EvidenceRequirement=require('../../models/platform/EvidenceRequirement');
 const EvidenceSubmission=require('../../models/platform/EvidenceSubmission');
+const Shipment=require('../../models/platform/Shipment');
 const platformAudit=require('../../utils/platformAudit');
 
 const companyIdFor=(req)=> req.platformUser.role==='platform_superadmin' ? (req.params.companyId||req.query.companyId||req.body.companyId) : String(req.tenant.companyId||'');
@@ -186,10 +187,25 @@ exports.listBeneficiaries=async(req,res)=>{
  res.json({items,total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
 };
 
+exports.bulkUpdateBeneficiaries=async(req,res)=>{
+ const c=await ensureCompany(req,res);if(!c)return;
+ const ids=Array.isArray(req.body.ids)?[...new Set(req.body.ids.filter(validId).map(String))].slice(0,500):[];
+ if(!ids.length)return res.status(400).json({message:'Select at least one beneficiary.'});
+ const patch={};
+ if(req.body.applicationStatus!==undefined)patch.applicationStatus=text(req.body.applicationStatus);
+ if(req.body.inspectionStatus!==undefined)patch.inspectionStatus=text(req.body.inspectionStatus);
+ if(req.body.remarks!==undefined)patch.remarks=text(req.body.remarks);
+ if(!Object.keys(patch).length)return res.status(400).json({message:'No supported update fields were supplied.'});
+ const allowedFarmerIds=(await BeneficiaryContext.find({companyId:c._id,farmerId:{$in:ids}}).select('farmerId').lean()).map(x=>x.farmerId);
+ const result=await Farmer.updateMany({_id:{$in:allowedFarmerIds}},{$set:patch},{runValidators:true});
+ await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'BENEFICIARY_BULK_UPDATED',entityType:'Farmer',after:{ids:allowedFarmerIds.map(String),patch,count:result.modifiedCount},bulkOperationId:crypto.randomUUID()});
+ res.json({matched:result.matchedCount,modified:result.modifiedCount});
+};
+
 exports.getBeneficiaryDetail=async(req,res)=>{
  const c=await ensureCompany(req,res);if(!c)return;
  if(!mongoose.isValidObjectId(req.params.farmerId)) return res.status(400).json({message:'Invalid beneficiary/farmer id.'});
- const ctx=await BeneficiaryContext.findOne({companyId:c._id,farmerId:req.params.farmerId}).populate('farmerId').populate('companyId','name code').populate('agencyId','name code contact address').populate('programId','name code authority scheme component financialYear').populate({path:'workOrderId',select:'number title status dueDate contractId',populate:{path:'contractId',select:'number title type'}}).populate('workPackageId','code name status dueDate geography').lean();
+ const ctx=await BeneficiaryContext.findOne({companyId:c._id,farmerId:req.params.farmerId}).populate('farmerId').populate('companyId','name code').populate('agencyId','name code contact address').populate('programId','name code authority scheme component financialYear').populate({path:'workOrderId',select:'number title status dueDate contractId',populate:{path:'contractId',select:'number title type'}}).populate('workPackageId','code name status dueDate geography').populate('sourceImportBatchId','sourceFileName status totalRows successRows failedRows createdAt').lean();
  if(!ctx)return res.status(404).json({message:'Beneficiary not found in this company.'});
  const farmerId=ctx.farmerId?._id||ctx.farmerId;
  const [assets,materialIssues,serviceCases,compliance,evidenceRequirements,evidenceSubmissions]=await Promise.all([
@@ -198,9 +214,18 @@ exports.getBeneficiaryDetail=async(req,res)=>{
   ServiceCase.find({companyId:c._id,farmerId}).sort({openedAt:-1}).lean(),
   ComplianceRecord.find({companyId:c._id,farmerId}).sort({createdAt:-1}).lean(),
   EvidenceRequirement.find({companyId:c._id,isActive:true,$or:[{programId:null},{programId:ctx.programId?._id||ctx.programId}]}).sort({stage:1,sortOrder:1}).lean(),
-  EvidenceSubmission.find({companyId:c._id,farmerId}).lean()
+  EvidenceSubmission.find({companyId:c._id,farmerId}).populate('requirementId','key label stage evidenceType').populate('agencyId','name code').populate('submittedByLegacyUser','username mobile role').populate('submittedByPlatformUser','name email role').sort({updatedAt:-1}).lean()
  ]);
- const submissionByRequirement=new Map(evidenceSubmissions.map(x=>[String(x.requirementId),x]));
+ const submissionByRequirement=new Map(evidenceSubmissions.map(x=>[String(x.requirementId?._id||x.requirementId),x]));
  const evidenceChecklist=evidenceRequirements.map(r=>({requirement:r,submission:submissionByRequirement.get(String(r._id))||null}));
- res.json({context:ctx,farmer:ctx.farmerId,assets,materialIssues,serviceCases,compliance,evidenceChecklist});
+ const shipments=ctx.workPackageId?await Shipment.find({companyId:c._id,workPackageId:ctx.workPackageId._id||ctx.workPackageId}).populate('agencyId','name code').populate('fromWarehouseId','name code').populate('toWarehouseId','name code').populate('items.itemId','sku name').sort({createdAt:-1}).lean():[];
+ res.json({
+  context:ctx,farmer:ctx.farmerId,assets,materialIssues,serviceCases,compliance,evidenceChecklist,evidenceSubmissions,shipments,
+  lineage:{
+   source:{type:ctx.sourceImportBatchId?'IMPORT':'MANUAL',batch:ctx.sourceImportBatchId||null,row:ctx.sourceRowNumber||null,authority:ctx.sourceAuthority||null},
+   assignment:{assignedAt:ctx.assignedAt||ctx.createdAt,history:ctx.assignmentHistory||[],agency:ctx.agencyId||null},
+   delivery:{program:ctx.programId||null,contract:ctx.workOrderId?.contractId||null,workOrder:ctx.workOrderId||null,workPackage:ctx.workPackageId||null},
+   survey:{surveyorName:ctx.farmerId?.surveyorName||null,surveyorMobile:ctx.farmerId?.surveyorMobile||null,surveyDate:ctx.farmerId?.surveyDate||null,status:ctx.farmerId?.inspectionStatus||null}
+  }
+ });
 };

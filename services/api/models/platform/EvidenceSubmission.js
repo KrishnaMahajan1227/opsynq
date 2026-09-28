@@ -12,4 +12,6 @@ const schema=new mongoose.Schema({
 },{timestamps:true});
 schema.index({companyId:1,farmerId:1,requirementId:1},{unique:true});
 schema.index({companyId:1,'captureGeo.latitude':1,'captureGeo.longitude':1});
+
+schema.index({companyId:1,farmerId:1,stage:1,updatedAt:-1});
 module.exports=mongoose.model('EvidenceSubmission',schema);

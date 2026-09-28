@@ -77,18 +77,18 @@ export const companyGroups=[
     item('beneficiary-imports','Beneficiary Imports',UploadCloud,'farmer beneficiary excel bulk import','operations.write')
   ]},
   {id:'supply-chain',label:'Supply Chain',icon:Truck,items:[
-    item('inventory-overview','Inventory Overview',Boxes,'inventory dashboard stock'),
+    item('inventory-overview','Supply Chain Overview',Boxes,'inventory dashboard stock'),
     item('item-master','Item Master',PackagePlus,'sku product material master','inventory.write'),
     item('warehouses','Warehouses',Warehouse,'warehouse location stock','inventory.write'),
-    item('procurement','Procurement',ShoppingCart,'purchase order po grn goods receipt','procurement.write'),
+    item('procurement','Purchase Orders & GRN',ShoppingCart,'purchase order po grn goods receipt','procurement.write'),
     item('procurement-intelligence','Procurement Intelligence',ShoppingCart,'ai reorder replenishment low stock forecast draft po'),
-    item('stock','Stock & Transfers',ArrowRightLeft,'inventory balance movement transfer','inventory.write'),
+    item('stock','Warehouse Stock & Transfers',ArrowRightLeft,'inventory balance movement transfer','inventory.write'),
     item('scanner','Barcode / Serial Scan',ScanLine,'barcode qr serial scanner'),
-    item('logistics-overview','Logistics Overview',Truck,'logistics transport dashboard'),
-    item('shipments','Shipments & Tracking',Navigation,'dispatch shipment tracking driver','logistics.write'),
+    item('logistics-overview','Dispatch Overview',Truck,'logistics transport dashboard'),
+    item('shipments','Dispatch & Shipment Tracking',Navigation,'dispatch shipment tracking driver','logistics.write'),
     item('fleet','Drivers & Vehicles',UsersRound,'driver vehicle fleet','logistics.write'),
-    item('material-issues','Technician Material',PackageOpen,'technician issue custody material','logistics.write'),
-    item('agency-stock','Agency Stock Accountability',Truck,'agency dispatched received damaged missing stock custody'),
+    item('material-issues','Technician Material Custody',PackageOpen,'technician issue custody material','logistics.write'),
+    item('agency-stock','Agency Material Accountability',Truck,'agency dispatched received damaged missing stock custody'),
     item('pdi','PDI & Asset Inspection',ClipboardCheck,'pre dispatch inspection pdi serial quality supplier brand','pdi.write')
   ]},
   {id:'asset-care',label:'Asset Care',icon:Wrench,items:[

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FaChartPie, FaDatabase, FaTools, FaCheckCircle, FaExclamationTriangle,
   FaUsers, FaUserCog, FaFileAlt, FaUpload, FaSignOutAlt, FaChevronDown,
-  FaChevronRight, FaBars, FaTimes, FaLayerGroup
+  FaChevronRight, FaBars, FaTimes, FaLayerGroup, FaTruckLoading
 } from 'react-icons/fa';
 
 const operationalSections = [
@@ -19,6 +19,10 @@ const operationalSections = [
       { key: 'completed', label: 'Completed Installs', icon: <FaCheckCircle /> },
       { key: 'complaints', label: 'Complaints & Rework', icon: <FaExclamationTriangle /> },
     ],
+  },
+  {
+    id: 'materials', label: 'Materials',
+    items: [{ key: 'material-receipts', label: 'Inbound Material', icon: <FaTruckLoading /> }],
   },
   {
     id: 'team', label: 'Team',
