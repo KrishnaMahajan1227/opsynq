@@ -2,8 +2,8 @@ const fs=require('fs'),path=require('path');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const checks=[
  ['ReplenishmentPlan model present',()=>read('services/api/models/platform/ReplenishmentPlan.js').includes("suggestedQty")&&read('services/api/models/platform/ReplenishmentPlan.js').includes("draftPurchaseOrderId")],
- ['Gemini advisor is backend-only',()=>read('services/api/utils/geminiProcurementAdvisor.js').includes('process.env.GEMINI_API_KEY')&&!read('apps/platform-web/src/core/api.js').includes('GEMINI_API_KEY')],
- ['Gemini REST uses server API-key header',()=>read('services/api/utils/geminiProcurementAdvisor.js').includes("'x-goog-api-key':key")],
+ ['AI provider advisor is backend-only',()=>read('services/api/utils/procurementAdvisor.js').includes('process.env.AI_PROVIDER_API_KEY')&&!read('apps/platform-web/src/core/api.js').includes('AI_PROVIDER_API_KEY')],
+ ['AI provider REST uses server API-key header',()=>read('services/api/utils/procurementAdvisor.js').includes("'x-goog-api-key':key")],
  ['replenishment route mounted',()=>read('services/api/server.js').includes("/api/platform/intelligence")&&read('services/api/routes/platform/intelligenceRoutes.js').includes("/replenishment")],
  ['manual procurement approval capability',()=>read('services/api/security/platformCapabilities.js').includes("'procurement.approve':withSuper(['company_owner','company_admin'])")],
  ['draft PO remains manual before issue',()=>read('services/api/controllers/platform/intelligenceController.js').includes("status:'DRAFT'")&&read('services/api/controllers/platform/intelligenceController.js').includes("status='ISSUED'")],

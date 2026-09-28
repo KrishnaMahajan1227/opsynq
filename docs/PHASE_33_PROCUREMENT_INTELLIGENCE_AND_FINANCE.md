@@ -27,9 +27,9 @@ Opsynq may automatically prepare a **Draft Purchase Order** for a replenishment 
 
 Only then can the user explicitly issue the PO. This prevents AI/rules from committing company funds without human approval.
 
-## Optional Gemini assistance
+## Optional decision service assistance
 
-If a supported Gemini/Google AI API key already exists in the backend environment, Opsynq can generate concise procurement and finance briefs. The API key is never sent to the frontend. Deterministic stock calculations remain the source of truth; Gemini only explains/prioritizes supplied facts. If Gemini is unavailable, Opsynq returns a rules-based brief.
+If a supported decision service/external decision service API key already exists in the backend environment, Opsynq can generate concise procurement and finance briefs. The API key is never sent to the frontend. Deterministic stock calculations remain the source of truth; decision service only explains/prioritizes supplied facts. If decision service is unavailable, Opsynq returns a rules-based brief.
 
 ## Agency Material Control
 

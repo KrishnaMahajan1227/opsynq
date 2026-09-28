@@ -7,6 +7,7 @@ const { authorizeRoles } = require('../middleware/roleMiddleware');
 
 // File Upload Routes
 router.post('/upload', protect, uploadController.uploadFiles);
+router.get('/template/:type', protect, authorizeRoles('admin', 'superadmin'), farmerController.downloadExcelTemplate);
 router.post('/uploadExcel', protect, authorizeRoles('admin', 'superadmin'), farmerController.uploadExcel);
 router.post('/uploadJsrExcel', protect, authorizeRoles('admin', 'superadmin'), farmerController.uploadJsrExcel);
 

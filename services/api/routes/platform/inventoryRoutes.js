@@ -10,6 +10,7 @@ const inventoryRoles=rolesFor('inventory.write');
 const procurementRoles=rolesFor('procurement.write');
 router.use(protectPlatform,requireCompanyScope);
 router.get('/dashboard',requirePlatformRoles(...inventoryRead),c.dashboard);
+router.get('/items/template',requirePlatformRoles(...inventoryRead),c.downloadItemTemplate);
 router.get('/items',requirePlatformRoles(...inventoryRead),c.listItems);router.post('/items',requirePlatformRoles(...inventoryRoles),c.createItem);router.patch('/items/:id',requirePlatformRoles(...inventoryRoles),c.updateItem);router.post('/items/import',requirePlatformRoles(...inventoryRoles),upload.single('file'),c.importItems);
 router.get('/warehouses',requirePlatformRoles(...inventoryRead),c.listWarehouses);router.post('/warehouses',requirePlatformRoles(...inventoryRoles),c.createWarehouse);router.patch('/warehouses/:id',requirePlatformRoles(...inventoryRoles),c.updateWarehouse);router.delete('/warehouses/:id',requirePlatformRoles(...inventoryRoles),c.archiveWarehouse);
 router.get('/purchase-orders',requirePlatformRoles(...procurementRead),c.listPurchaseOrders);router.post('/purchase-orders',requirePlatformRoles(...procurementRoles),c.createPurchaseOrder);router.post('/purchase-orders/bulk',requirePlatformRoles(...procurementRoles),c.bulkPurchaseOrders);router.patch('/purchase-orders/:id',requirePlatformRoles(...procurementRoles),c.updatePurchaseOrder);router.post('/purchase-orders/:id/cancel',requirePlatformRoles(...procurementRoles),c.cancelPurchaseOrder);

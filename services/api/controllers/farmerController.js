@@ -555,6 +555,15 @@ exports.deleteFarmer = async (req, res) => {
   }
 };
 
+exports.downloadExcelTemplate=async(req,res)=>{
+  const type=String(req.params.type||'beneficiary').toLowerCase();
+  const columns=type==='jsr'?['Beneficiary ID','Beneficiary Name','Mobile','Aadhar No','JSR Status']:Object.keys(mapping);
+  const sample=Object.fromEntries(columns.map(k=>[k,k==='Beneficiary ID'?'APP-0001':k==='Beneficiary Name'?'Sample Beneficiary':k==='Mobile'?'9876543210':k==='JSR Status'?'JSR SUBMITTED':'']));
+  const ws=xlsx.utils.json_to_sheet([sample],{header:columns});const wb=xlsx.utils.book_new();xlsx.utils.book_append_sheet(wb,ws,type==='jsr'?'JSR Update':'Beneficiaries');
+  const help=xlsx.utils.aoa_to_sheet([['Instructions'],['Do not rename required standard headers. Extra columns are allowed on the beneficiary template and are preserved as Custom Fields.'],[type==='jsr'?'Required: Beneficiary ID, Beneficiary Name, Mobile, Aadhar No, JSR Status':'Required: Beneficiary ID. Use the template headers to avoid mapping errors.']]);xlsx.utils.book_append_sheet(wb,help,'Instructions');
+  const buf=xlsx.write(wb,{type:'buffer',bookType:'xlsx'});res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition',`attachment; filename="opsynq-agency-${type}-template.xlsx"`);res.send(buf);
+};
+
 /* POST /uploadExcel */
 exports.uploadExcel = [
   upload.single('excel'),
@@ -618,6 +627,8 @@ exports.uploadExcel = [
           }
         }
 
+        const knownHeaders=new Set([...Object.keys(mapping),...Array.from({length:20},(_,i)=>`Panel${i+1}`)]);
+        obj.customFields=Object.fromEntries(Object.entries(r).filter(([k,v])=>!knownHeaders.has(k)&&v!==undefined&&v!==null&&String(v).trim()!=='').map(([k,v])=>[k,v]));
         obj.excelFileName = req.file.originalname;
         obj.excelUploadDate = new Date();
 

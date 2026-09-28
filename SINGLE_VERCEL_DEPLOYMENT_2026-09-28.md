@@ -23,7 +23,7 @@ before its API 404 middleware.
 
 ## Environment
 Use `VERCEL_ENV_IMPORT.env` in Vercel Environment Variables. Do not commit real
-`.env` files. Blank provider values (Resend/Gemini etc.) remain optional until
+`.env` files. Blank provider values (Resend/decision service etc.) remain optional until
 those integrations are enabled.
 
 ## Important Vercel limitation

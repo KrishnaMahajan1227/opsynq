@@ -6,4 +6,5 @@ const {aiRateLimit}=require('../../middleware/security');
 router.use(protectPlatform,requireCompanyScope);
 router.get('/status',requirePlatformRoles(...rolesFor('ai.read')),c.status);
 router.post('/brief',aiRateLimit,requirePlatformRoles(...rolesFor('ai.run')),c.brief);
+router.post('/scan',aiRateLimit,requirePlatformRoles(...rolesFor('ai.run')),c.scan);
 module.exports=router;

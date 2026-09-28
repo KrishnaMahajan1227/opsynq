@@ -14,8 +14,8 @@
 - AI Operations frontend route and navigation are wired.
 - `/api/platform/ai/status` and `/api/platform/ai/brief` are mounted.
 - Finance AI advice route is mounted.
-- The Gemini key remains backend-only and must be configured in Vercel as `GEMINI_API_KEY`.
-- `gemini-3.8-flash` remains the default configured model with `gemini-2.5-flash` fallback.
+- The decision service key remains backend-only and must be configured in Vercel as `AI_PROVIDER_API_KEY`.
+- The provider-specific model identifier stays internal to the backend adapter and is not surfaced in the product UI.
 
 ## CRUD principle
 Company operational CRUD remains capability/role based. Master/configuration data can use create/edit/archive/delete where safe. Evidence, survey, dispatch, receipt, installation, financial and audit-linked records use governed cancellation/archive/reconciliation instead of destructive hard-delete so chain-of-custody and compliance history are not lost.

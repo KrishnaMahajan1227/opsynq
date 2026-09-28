@@ -30,15 +30,15 @@ The replenishment engine calculates, by item and warehouse:
 - Estimated replenishment value
 - Suggested supplier from current/open PO history
 
-The deterministic calculation remains authoritative. Gemini adds explanatory advisory text only.
+The deterministic calculation remains authoritative. decision service adds explanatory advisory text only.
 
 ### AI policy
 
-Gemini runs server-side only using `GEMINI_API_KEY`.
+decision service runs server-side only using `AI_PROVIDER_API_KEY`.
 
-The browser never receives the Gemini API key.
+The browser never receives the decision service API key.
 
-Scheduled automation refreshes the deterministic plan every 15 minutes. When a Gemini key is configured, AI advisory text is refreshed when stale rather than on every scheduler cycle.
+Scheduled automation refreshes the deterministic plan every 15 minutes. When a decision service key is configured, AI advisory text is refreshed when stale rather than on every scheduler cycle.
 
 ### Manual procurement control
 
@@ -113,7 +113,7 @@ It creates/refreshes replenishment plans and sends role-targeted stock-risk noti
 
 ## Security
 
-- Gemini key is backend-only.
+- decision service key is backend-only.
 - Procurement users can prepare DRAFT POs.
 - Only Company Owner/Admin can approve/issue replenishment POs.
 - Approval Center enforces the same Owner/Admin restriction.

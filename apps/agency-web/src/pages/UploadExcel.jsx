@@ -110,6 +110,14 @@ const UploadExcel = () => {
     });
   }, []);
 
+  const downloadTemplate = async (type) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/farmers/template/${type === 'jsr' ? 'jsr' : 'beneficiary'}`, { responseType: 'blob', headers: { Authorization: `Bearer ${token}` } });
+      const url = URL.createObjectURL(response.data); const a = document.createElement('a'); a.href = url; a.download = `opsynq-agency-${type === 'jsr' ? 'jsr' : 'beneficiary'}-template.xlsx`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    } catch (err) { toast.error(err.response?.data?.message || 'Template download failed.'); }
+  };
+
   const onRegularDrop = useCallback((acceptedFiles) => {
     const f = acceptedFiles[0];
     if (f && validateFile(f, 'regular')) setFile(f);
@@ -270,6 +278,8 @@ const UploadExcel = () => {
             <span><FaInfoCircle /> Review feedback after processing</span>
           </div>
 
+          <div className="upload-template-line"><div><strong>Use the approved template</strong><span>Extra beneficiary columns are preserved as Custom Fields.</span></div><Button type="button" className="upload-secondary-btn" onClick={() => downloadTemplate(type)} disabled={loading}>Download template</Button></div>
+
           <div className="upload-actions">
             <Button type="submit" className="upload-primary-btn" disabled={loading || !fileValue}>
               {isCurrentLoading ? <><Spinner animation="border" size="sm" /> Processing…</> : <>{buttonLabel}<FaArrowRight /></>}
@@ -298,7 +308,7 @@ const UploadExcel = () => {
             <div>
               <div className="upload-page-kicker">DATA OPERATIONS</div>
               <h1>Excel Import Center</h1>
-              <p>Import farmer records or apply JSR updates with controlled validation and clear processing feedback.</p>
+              <p>Import beneficiary records or apply JSR updates with downloadable templates, controlled validation and clear row-level feedback.</p>
             </div>
             <button className="upload-back-btn" onClick={() => navigate(`${dashboardPath}?tab=records`)}>
               <FaDatabase /> Farmer records
@@ -338,7 +348,7 @@ const UploadExcel = () => {
 
           <section className="upload-notes-card">
             <div><FaInfoCircle /></div>
-            <div><strong>Before you upload</strong><p>Keep the source workbook structure consistent with your current operational template. Import validation, duplicate review, matching logic and backend endpoints remain unchanged.</p></div>
+            <div><strong>Before you upload</strong><p>Download the relevant template before preparing a workbook. Standard headers map automatically; extra beneficiary columns are retained as Custom Fields, while required fields continue to be validated.</p></div>
           </section>
         </div>
       </main>

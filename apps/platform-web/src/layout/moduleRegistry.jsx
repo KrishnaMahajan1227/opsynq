@@ -68,7 +68,7 @@ export const companyGroups=[
     item('my-workspace','My Workspace',Home,'home favorites pinned recent modules shortcuts'),
     item('action-center','Action Center',CircleAlert,'priority action pending critical attention inbox'),
     item('company-overview','Dashboard',Activity,'dashboard command overview health attention'),
-    item('ai-operations','AI Operations',BrainCircuit,'gemini ai assistant intelligence operations brief risk analysis')
+    item('ai-operations','Operations Intelligence',BrainCircuit,'assistant intelligence operations brief risk analysis automation recommendations')
   ]},
   {id:'delivery',label:'Program Delivery',icon:BriefcaseBusiness,items:[
     item('programs','Delivery Portfolio',Layers3,'program contract loa work order work package delivery hierarchy scheme project','operations.write'),

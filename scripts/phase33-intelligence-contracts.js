@@ -5,7 +5,7 @@ const must=(cond,msg)=>{if(cond)console.log(`✓ ${msg}`);else{failed=true;conso
 const server=read('services/api/server.js');
 const model=read('services/api/models/platform/ReplenishmentRecommendation.js');
 const engine=read('services/api/utils/procurementIntelligence.js');
-const gemini=read('services/api/utils/geminiAdvisor.js');
+const ai=read('services/api/utils/aiAdvisor.js');
 const intelRoutes=read('services/api/routes/platform/intelligenceRoutes.js');
 const intelController=read('services/api/controllers/platform/intelligenceController.js');
 const inventory=read('services/api/controllers/platform/inventoryController.js');
@@ -26,8 +26,8 @@ must(server.includes("/api/platform/intelligence")&&server.includes("/api/agency
 must(intelRoutes.includes("/replenishment")&&intelRoutes.includes("/agency-material")&&intelRoutes.includes("/finance-control"),'procurement, Agency accountability and finance endpoints are exposed');
 must(engine.includes("avgDailyConsumption")&&engine.includes("openPoQty")&&engine.includes("createDraftPo")&&engine.includes("DRAFT"),'replenishment engine uses consumption/inbound/open PO and only auto-prepares Draft POs');
 must(engine.includes("inventory_manager")&&engine.includes("procurement_manager")&&engine.includes("company_owner")&&engine.includes("company_admin"),'stock-risk notifications target responsible roles');
-must(gemini.includes('GEMINI_API_KEY')&&gemini.includes('gemini-2.5-flash')&&gemini.includes('fetch('),'Gemini advisor is backend-only and environment configured');
-must(!front.includes('GEMINI_API_KEY')&&!front.includes('GOOGLE_GEMINI_API_KEY'),'AI API keys are not referenced by Platform frontend');
+must(ai.includes('AI_PROVIDER_API_KEY')&&ai.includes('fetch('),'Decision service adapter is backend-only and environment configured');
+must(!front.includes('AI_PROVIDER_API_KEY')&&!front.includes('GOOGLE_AI_PROVIDER_API_KEY'),'AI API keys are not referenced by Platform frontend');
 must(automation.includes('procurement_replenishment')&&automationController.includes('replenishmentCritical'),'scheduled replenishment scan and critical signal are wired');
 must(inventoryRoutes.includes("purchase-orders/:id/issue")&&inventory.includes("status:'DRAFT'")&&inventory.includes('Only Draft purchase orders can be issued')&&inventory.includes('Confirm the supplier before issuing')&&inventory.includes('positive quantity and unit price'),'purchase orders require explicit human issue with supplier and priced lines');
 must(inventory.includes('destination warehouse')&&inventory.includes('exceeds the remaining purchase-order quantity')&&inventory.includes('Validate the entire receipt before mutating'),'GRN validates PO warehouse/item/remaining quantity before inventory mutation');

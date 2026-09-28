@@ -318,7 +318,7 @@ See `docs/PHASE_32_FUNCTIONAL_CLOSURE.md` and `docs/FINAL_GAP_REGISTER.md`.
 
 ## Current baseline — Phase 33
 
-Phase 33 adds AI-assisted procurement intelligence, deterministic replenishment planning, low-stock notifications, Agency stock accountability and Company/Agency financial control. Gemini is advisory only; purchase orders remain under manual Owner/Admin approval.
+Phase 33 adds AI-assisted procurement intelligence, deterministic replenishment planning, low-stock notifications, Agency stock accountability and Company/Agency financial control. decision service is advisory only; purchase orders remain under manual Owner/Admin approval.
 
 ```bash
 npm run qa:release

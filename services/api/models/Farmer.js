@@ -200,6 +200,7 @@ const farmerSchema = new mongoose.Schema({
   confirmedBy: { type: String, default: '' },            // Added for technician username
   confirmationDate: { type: Date, default: null },       // Added for confirmation timestamp
   lrPhotoUrls: [{ type: String, default: '' }],          // Added for LR photos
+  customFields: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { timestamps: true });
 
 // Simplified pre('save') hook to avoid interference

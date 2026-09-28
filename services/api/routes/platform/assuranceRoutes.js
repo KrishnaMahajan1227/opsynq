@@ -17,6 +17,7 @@ router.get('/action-center',requirePlatformRoles(...assuranceRead),c.actionCente
 router.get('/approvals',requirePlatformRoles(...approvalRead),c.listApprovals);
 router.post('/approvals',requirePlatformRoles(...write),c.createApproval);
 router.patch('/approvals/:id/decision',requirePlatformRoles(...decide),c.decideApproval);
+router.get('/bulk-masters/template/:type',requirePlatformRoles(...approvalRead),c.masterTemplate);
 router.post('/bulk-masters',requirePlatformRoles(...decide),c.uploadMiddleware,c.bulkMasters);
 router.get('/export',requirePlatformRoles(...assuranceRead),c.exportData);
 module.exports=router;

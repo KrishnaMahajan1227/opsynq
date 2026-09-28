@@ -69,7 +69,7 @@ The view is operational management finance, not a statutory general ledger.
 
 ## 8. AI brief
 
-If a supported Gemini/Google AI key already exists in your backend environment, use **AI brief** on Procurement Intelligence or Financial Control. If no supported key is configured or the provider is unavailable, Opsynq returns a deterministic rules-based brief instead. AI never issues a purchase order.
+If a supported decision service/external decision service key already exists in your backend environment, use **AI brief** on Procurement Intelligence or Financial Control. If no supported key is configured or the provider is unavailable, Opsynq returns a deterministic rules-based brief instead. AI never issues a purchase order.
 
 ## 9. Release checks
 

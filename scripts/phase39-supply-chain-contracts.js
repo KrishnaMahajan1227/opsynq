@@ -10,7 +10,7 @@ has('apps/platform-web/src/layout/moduleRegistry.jsx','hiddenSupplyModules','int
 has('apps/platform-web/src/layout/Shell.jsx',"supplyHidden.includes(page)?'supply-chain':page",'hidden supply modules keep control nav active');
 has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','Procurement & Receiving','procurement folder workspace');
 has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','Dispatch & Delivery','dispatch folder workspace');
-has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','Agency material footprint','agency custody overview');
+has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','Agency & Field Custody','agency custody overview');
 has('apps/platform-web/src/features/company/logistics/LogisticsPages.jsx','availability', 'fleet availability UI');
 has('apps/platform-web/src/features/company/logistics/LogisticsPages.jsx','BulkShipmentModal','bulk shipment operations');
 has('apps/platform-web/src/features/company/logistics/LogisticsPages.jsx','FleetHistory','driver/vehicle delivery history');

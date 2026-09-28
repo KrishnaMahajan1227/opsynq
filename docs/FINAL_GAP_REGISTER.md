@@ -16,7 +16,7 @@ Phase 33 adds operational finance control: procurement commitments, received pro
 2. **Managed backup/restore policy** — database snapshot/export support exists; automated cloud backup schedules and restore drills must be configured in the production infrastructure account.
 3. **Observability provider** — health/readiness endpoints and application logs exist; external APM/log aggregation/alerting provider configuration is deployment-specific.
 4. **Offline synchronization conflict policy** — queued writes replay automatically. Complex two-user concurrent-edit conflict resolution remains a future collaboration enhancement.
-5. **AI provider production controls** — Gemini integration is server-side and fails safely to deterministic replenishment. Production should set budget/quota monitoring and rotate API keys through a secret manager.
+5. **decision service production controls** — decision service integration is server-side and fails safely to deterministic replenishment. Production should set budget/quota monitoring and rotate API keys through a secret manager.
 
 ## Product hardening still recommended
 
@@ -28,4 +28,4 @@ Phase 33 adds operational finance control: procurement commitments, received pro
 
 ## Validation limits of a source release
 
-Source contracts validate syntax, routes, role policies and critical wiring. Complete production certification still requires the target environment's MongoDB, Cloudinary, Gemini API, browser/device geolocation, network conditions and installed npm dependencies. Use `verify:demo`, `uat:local`, and `build:all` after deployment.
+Source contracts validate syntax, routes, role policies and critical wiring. Complete production certification still requires the target environment's MongoDB, Cloudinary, decision service API, browser/device geolocation, network conditions and installed npm dependencies. Use `verify:demo`, `uat:local`, and `build:all` after deployment.
