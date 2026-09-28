@@ -1,24 +1,33 @@
 # OPSYNQ — One Git Repository / One Vercel Project
 
-This release is configured for Vercel Services:
+This release uses a **single standard Express/Node deployment**. It intentionally does not use Vercel Services.
 
-- `/` -> Platform/Company frontend (`apps/platform-web`)
-- `/agency/*` -> Agency Operations frontend (`apps/agency-web`)
-- `/api/*` -> Express API (`services/api`)
-- `/socket.io/*` -> API service for Socket.IO/WebSocket traffic
+## Runtime map
+- `/` and Platform SPA routes → Platform frontend
+- `/agency` and `/agency/*` → Agency Operations frontend
+- `/api/*` → existing Express API
+- `/socket.io/*` → existing Socket.IO server
 
-The frontend automatically uses same-origin API/Socket URLs in production, so generated Vercel deployment domains do not need to be known before the first deploy. Vercel-provided deployment URLs are also included in the API CORS allowlist automatically.
+## Vercel settings
+- Project Name: `opsynq`
+- Framework Preset: **Express**
+- Root Directory: **`./` (repository root)**
+- Build Command: leave default
+- Install Command: leave default
+- Output Directory: leave default
+
+The root `package.json` defines `build` and `start`. The build creates both Vite `dist` folders; root `server.js` starts the existing API server, which serves both frontends before the API 404 middleware.
 
 ## Environment
+Import `VERCEL_ENV_IMPORT.env` in Vercel Environment Variables. Keep it out of Git; `.gitignore` already excludes it.
 
-Import `VERCEL_ENV_IMPORT.env` in the Vercel project. It intentionally leaves email-provider values blank if they were not present in the supplied environment files. Configure Resend later to activate production Forgot Password email delivery.
+Frontend API/socket URLs can stay blank in production because the apps use same-origin URLs. The Vercel hostname is included in the backend CORS allowlist automatically.
 
-Never commit `VERCEL_ENV_IMPORT.env` to Git. It is excluded by `.gitignore` in this release.
-
-## Hobby automation
-
-The local API retains its 15-minute in-process automation scheduler. On Vercel it is disabled because compute can scale to zero. A once-daily Hobby-compatible Vercel Cron calls `/api/cron/automation`; `CRON_SECRET` must be configured. On a paid plan, the schedule can be increased.
+## Password recovery email
+The app can deploy while `EMAIL_PROVIDER`, `EMAIL_FROM`, and `RESEND_API_KEY` are blank. Recovery email delivery activates after Resend is configured.
 
 ## Persistent files
+Vercel compute is stateless. Runtime-generated local files are not durable. Production media should use Cloudinary/external storage.
 
-Vercel compute is stateless. Runtime-generated local files must not be treated as durable storage. Existing Cloudinary-backed media remains the production-safe path for persistent uploads.
+## Automation
+The API retains its protected `/api/cron/automation` endpoint and local scheduler behavior. No Vercel cron is declared in this release; first deployment is intentionally kept minimal. A Vercel Cron can be added after the base deployment is healthy.

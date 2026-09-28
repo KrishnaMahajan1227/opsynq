@@ -51,7 +51,10 @@
     "qa:phase31-hotfix": "node scripts/phase31-hotfix-contracts.js",
     "qa:phase32": "node scripts/phase32-functional-contracts.js",
     "qa:phase33": "node scripts/phase33-contracts.js",
-    "qa:phase34": "node scripts/phase34-security-contracts.js"
+    "qa:phase34": "node scripts/phase34-security-contracts.js",
+    "build": "npm run build:all",
+    "start": "node server.js",
+    "vercel-build": "npm run build"
   },
   "devDependencies": {
     "vite": "6.4.3",
@@ -60,6 +63,6 @@
     "yaml": "2.8.1"
   },
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   }
 }

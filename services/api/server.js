@@ -106,6 +106,33 @@ app.get('/api/cron/automation', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// Serve both production frontends from this single Node service.
+// Build outputs are created by the root `npm run build` command. Agency is
+// mounted first so its /agency assets and SPA never fall through to Platform.
+const fs = require('fs');
+const platformDist = path.resolve(__dirname, '../../apps/platform-web/dist');
+const agencyDist = path.resolve(__dirname, '../../apps/agency-web/dist');
+
+if (fs.existsSync(agencyDist)) {
+  app.use('/agency', express.static(agencyDist, { index: false, maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0 }));
+}
+if (fs.existsSync(platformDist)) {
+  app.use(express.static(platformDist, { index: false, maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0 }));
+}
+
+// SPA fallbacks. Unknown API/socket/upload routes must remain API 404s instead
+// of accidentally returning index.html.
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+  if (/^\/(api|socket\.io|uploads|demo-media)(?:\/|$)/.test(req.path)) return next();
+
+  const isAgency = req.path === '/agency' || req.path.startsWith('/agency/');
+  const indexFile = path.join(isAgency ? agencyDist : platformDist, 'index.html');
+  if (!fs.existsSync(indexFile)) return next();
+  res.set('Cache-Control', 'no-cache');
+  return res.sendFile(indexFile);
+});
+
 // Handle 404 for undefined routes
 app.use((req, res) => {
   console.warn(`404: Route not found for ${req.method} ${req.url}`);
