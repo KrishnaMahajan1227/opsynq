@@ -91,3 +91,11 @@ setInterval(() => {
     if (now - bucket.start > 2 * 60 * 60 * 1000) buckets.delete(key);
   }
 }, 30 * 60 * 1000).unref();
+
+exports.aiRateLimit = rateLimiter({
+  namespace: 'ai',
+  windowMs: 60 * 1000,
+  max: 12,
+  includeIdentifier: false,
+  message: 'AI request limit reached. Please wait a minute and try again.',
+});

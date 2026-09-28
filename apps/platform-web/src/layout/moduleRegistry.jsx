@@ -1,7 +1,7 @@
 import {
   Activity,ArrowRightLeft,BarChart3,Bell,Boxes,Building2,CheckCircle2,CircleAlert,ClipboardCheck,
   FileText,History,Home,Layers3,Navigation,PackageCheck,PackageOpen,PackagePlus,ScanLine,ShieldCheck,
-  ShoppingCart,Truck,UploadCloud,UsersRound,Warehouse,UserCog,Wrench,WalletCards,BriefcaseBusiness,MapPin
+  ShoppingCart,Truck,UploadCloud,UsersRound,Warehouse,UserCog,Wrench,WalletCards,BriefcaseBusiness,MapPin,BrainCircuit
 } from 'lucide-react';
 
 export const platformGroups=[
@@ -18,7 +18,7 @@ const ROLE_MODULES={
   company_owner:'*',
   company_admin:'*',
   operations_manager:[
-    'my-workspace','action-center','company-overview','supply-chain',
+    'my-workspace','ai-operations','action-center','company-overview','supply-chain',
     'programs','work-orders','work-packages','agencies','beneficiary-records','beneficiary-imports','geo-operations',
     'logistics-overview','shipments','material-issues','agency-stock',
     'installed-assets','service-cases','service-plans',
@@ -26,32 +26,32 @@ const ROLE_MODULES={
     'analytics','notifications','documents','automation','readiness','evidence-control','regulatory-reports'
   ],
   program_manager:[
-    'my-workspace','company-overview',
+    'my-workspace','ai-operations','company-overview',
     'programs','contracts','work-orders','work-packages','agencies','beneficiary-records','beneficiary-imports','geo-operations',
     'financial-control','claims','sla','agency-performance','compliance',
     'analytics','notifications','documents','audit','readiness','evidence-control','regulatory-reports'
   ],
   inventory_manager:[
-    'my-workspace','company-overview','supply-chain',
+    'my-workspace','ai-operations','company-overview','supply-chain',
     'inventory-overview','item-master','warehouses','stock','scanner','procurement-intelligence','logistics-overview','shipments','material-issues','agency-stock',
     'reconciliation','pdi','analytics','notifications','documents','readiness'
   ],
   procurement_manager:[
-    'my-workspace','company-overview','supply-chain',
+    'my-workspace','ai-operations','company-overview','supply-chain',
     'item-master','warehouses','procurement','procurement-intelligence','stock','pdi',
     'analytics','notifications','documents'
   ],
   finance_user:[
-    'my-workspace','company-overview','financial-control','claims','insurance','regulatory-reports','analytics','notifications','documents','audit'
+    'my-workspace','ai-operations','company-overview','financial-control','claims','insurance','regulatory-reports','analytics','notifications','documents','audit'
   ],
   quality_user:[
-    'my-workspace','company-overview','action-center','beneficiary-records','geo-operations',
+    'my-workspace','ai-operations','company-overview','action-center','beneficiary-records','geo-operations',
     'installed-assets','asset-lifecycle','service-cases','service-plans','reconciliation',
     'sla','agency-performance','compliance','insurance','pdi','regulatory-reports',
     'analytics','notifications','documents','audit','readiness','evidence-control'
   ],
   logistics_manager:[
-    'my-workspace','company-overview','supply-chain',
+    'my-workspace','ai-operations','company-overview','supply-chain',
     'warehouses','stock','scanner','logistics-overview','shipments','fleet','material-issues','agency-stock',
     'reconciliation','analytics','notifications','documents','readiness'
   ],
@@ -67,7 +67,8 @@ export const companyGroups=[
   {id:'workspace',label:'Workspace',icon:Home,items:[
     item('my-workspace','My Workspace',Home,'home favorites pinned recent modules shortcuts'),
     item('action-center','Action Center',CircleAlert,'priority action pending critical attention inbox'),
-    item('company-overview','Dashboard',Activity,'dashboard command overview health attention')
+    item('company-overview','Dashboard',Activity,'dashboard command overview health attention'),
+    item('ai-operations','AI Operations',BrainCircuit,'gemini ai assistant intelligence operations brief risk analysis')
   ]},
   {id:'delivery',label:'Program Delivery',icon:BriefcaseBusiness,items:[
     item('programs','Delivery Portfolio',Layers3,'program contract loa work order work package delivery hierarchy scheme project','operations.write'),
@@ -77,7 +78,11 @@ export const companyGroups=[
     item('beneficiary-imports','Beneficiary Imports',UploadCloud,'farmer beneficiary excel bulk import','operations.write')
   ]},
   {id:'supply-chain',label:'Supply Operations',icon:Truck,items:[
-    item('supply-chain','Supply Chain Control',Truck,'procurement inventory warehouse dispatch shipment driver vehicle agency technician material custody control tower')
+    item('supply-chain','Supply Chain Control',Truck,'procurement inventory warehouse dispatch shipment driver vehicle agency technician material custody control tower'),
+    item('procurement','Procurement & GRN',ShoppingCart,'purchase order supplier goods receipt procurement','procurement.write'),
+    item('stock','Warehouse Stock',ArrowRightLeft,'inventory stock balance warehouse transfer','inventory.write'),
+    item('shipments','Dispatch Tracking',Navigation,'dispatch shipment delivery tracking agency','logistics.write'),
+    item('fleet','Fleet & Capacity',UsersRound,'driver vehicle availability workload fleet','logistics.write')
   ]},
 
   {id:'asset-care',label:'Asset Care',icon:Wrench,items:[

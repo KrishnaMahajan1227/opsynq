@@ -33,3 +33,5 @@ export const teamPath=(companyId,path='')=>scoped('/api/platform/team',companyId
 export const regulatoryPath=(companyId,path='')=>scoped('/api/platform/regulatory',companyId,path);
 
 export const intelligencePath=(companyId,path='')=>scoped('/api/platform/intelligence',companyId,path);
+
+export const aiPath=(companyId,path='')=>scoped('/api/platform/ai',companyId,path);

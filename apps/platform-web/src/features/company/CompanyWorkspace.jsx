@@ -16,11 +16,12 @@ import {TeamAccessPage} from './system/TeamAccessPage';
 import {ReadinessPage} from './system/ReadinessPage';
 import {MasterDataPage,EvidenceControlPage} from './configuration/ConfigurationCenter.jsx';
 import {GeoOperationsPage} from './geo/GeoOperationsPage';
+import {AIOperationsPage} from './intelligence/AIOperationsPage.jsx';
 import {PermissionProvider} from '../../core/accessControl.jsx';
 import {defaultCompanyPageForRole,flattenModulesForUser,roleModuleIds} from '../../layout/moduleRegistry';
 
 const pageComponents={
- 'my-workspace':MyWorkspacePage,'company-overview':CompanyDashboard,'work-packages':WorkPackages,'beneficiary-records':BeneficiaryRecords,'beneficiary-imports':BeneficiaryImports,
+ 'my-workspace':MyWorkspacePage,'company-overview':CompanyDashboard,'ai-operations':AIOperationsPage,'work-packages':WorkPackages,'beneficiary-records':BeneficiaryRecords,'beneficiary-imports':BeneficiaryImports,
  'supply-chain':SupplyChainWorkspace,'inventory-overview':InventoryOverview,'item-master':ItemMasterPage,'warehouses':WarehousesPage,'procurement':ProcurementPage,'procurement-intelligence':ProcurementIntelligencePage,'agency-stock':AgencyStockAccountabilityPage,'financial-control':FinancialControlPage,'stock':StockPage,'scanner':ScannerPage,
  'logistics-overview':LogisticsOverview,'shipments':ShipmentsPage,'fleet':FleetPage,'material-issues':MaterialIssuesPage,'installed-assets':InstalledAssetsPage,'asset-lifecycle':AssetLifecyclePage,'reconciliation':ReconciliationPage,
  'service-cases':ServiceCasesPage,'service-plans':ServicePlansPage,'sla':SlaPage,'claims':ClaimsPage,'insurance':InsurancePage,'pdi':PDIPage,'regulatory-reports':RegulatoryReportsPage,

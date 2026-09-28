@@ -11,4 +11,5 @@ router.post('/replenishment/:id/dismiss',requirePlatformRoles(...rolesFor('procu
 router.get('/agency-stock',requirePlatformRoles(...rolesFor('logistics.read')),c.agencyStock);
 router.get('/agency-stock/:agencyId',requirePlatformRoles(...rolesFor('logistics.read')),c.agencyStockDetail);
 router.get('/finance-control',requirePlatformRoles(...rolesFor('finance.read')),c.financeControl);
+router.post('/finance-control/advice',requirePlatformRoles(...rolesFor('finance.read')),c.financeAdvice);
 module.exports=router;

@@ -1,0 +1,15 @@
+const fs=require('fs');
+const assert=(c,m)=>{if(!c){console.error('FAIL:',m);process.exitCode=1}else console.log('PASS:',m)};
+const ops=fs.readFileSync('apps/platform-web/src/features/company/operations/OperationsPages.jsx','utf8');
+const agency=ops.slice(ops.indexOf('function AgencyDirectory'),ops.indexOf('export function ResourcePage'));
+assert(!agency.includes('selectedIds'),'AgencyDirectory does not reference beneficiary bulk selectedIds state');
+assert(fs.existsSync('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx'),'AI Operations page exists');
+const reg=fs.readFileSync('apps/platform-web/src/layout/moduleRegistry.jsx','utf8');
+for(const x of ['ai-operations','Supply Chain Control','Procurement & GRN','Warehouse Stock','Dispatch Tracking','Fleet & Capacity'])assert(reg.includes(x),`Navigation exposes ${x}`);
+const routes=fs.readFileSync('services/api/routes/platform/aiRoutes.js','utf8');
+assert(routes.includes("'/status'")&&routes.includes("'/brief'"),'AI status and brief routes are registered');
+const srv=fs.readFileSync('services/api/server.js','utf8');
+assert(srv.includes("/api/platform/ai"),'AI router mounted on API');
+const intel=fs.readFileSync('services/api/routes/platform/intelligenceRoutes.js','utf8');
+assert(intel.includes("finance-control/advice"),'Financial Control AI advice route is registered');
+if(!process.exitCode)console.log('Phase 41 AI/Agency contracts passed.');
