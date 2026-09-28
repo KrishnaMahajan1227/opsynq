@@ -19,7 +19,7 @@ const ROLE_MODULES={
   company_admin:'*',
   operations_manager:[
     'my-workspace','action-center','company-overview',
-    'work-orders','work-packages','agencies','beneficiary-records','beneficiary-imports','geo-operations',
+    'programs','work-orders','work-packages','agencies','beneficiary-records','beneficiary-imports','geo-operations',
     'logistics-overview','shipments','material-issues','agency-stock',
     'installed-assets','service-cases','service-plans',
     'sla','agency-performance','compliance','approval-center',
@@ -70,10 +70,7 @@ export const companyGroups=[
     item('company-overview','Dashboard',Activity,'dashboard command overview health attention')
   ]},
   {id:'delivery',label:'Delivery',icon:BriefcaseBusiness,items:[
-    item('programs','Programs',Layers3,'scheme project program','operations.write'),
-    item('contracts','Contracts / LOA',ClipboardCheck,'contract loa tender award','operations.write'),
-    item('work-orders','Work Orders',Building2,'work order execution','operations.write'),
-    item('work-packages','Work Packages',PackageCheck,'allocation agency package','operations.write'),
+    item('programs','Delivery Portfolio',Layers3,'program contract loa work order work package delivery hierarchy scheme project','operations.write'),
     item('agencies','Agencies',UsersRound,'agency implementation partner','operations.write'),
     item('beneficiary-records','Beneficiary Records',UsersRound,'farmer beneficiary records details photos status'),
     item('geo-operations','Geo Operations',MapPin,'map geography sites survey installation complaint location geotag'),
@@ -125,8 +122,14 @@ export const companyGroups=[
   ]}
 ];
 
+const hiddenCompanyModules=[
+  item('contracts','Contracts / LOA',ClipboardCheck,'contract loa tender award','operations.write'),
+  item('work-orders','Work Orders',Building2,'work order execution','operations.write'),
+  item('work-packages','Work Packages',PackageCheck,'allocation agency package','operations.write')
+].map(x=>({...x,groupId:'delivery',groupLabel:'Delivery'}));
+
 export const flattenModules=(companyMode=false)=>(companyMode?companyGroups:platformGroups).flatMap(g=>g.items.map(x=>({...x,groupId:g.id,groupLabel:g.label})));
-export const moduleForPage=(page,companyMode=false)=>flattenModules(companyMode).find(m=>m.id===page);
+export const moduleForPage=(page,companyMode=false)=>(companyMode?[...flattenModules(true),...hiddenCompanyModules]:flattenModules(false)).find(m=>m.id===page);
 export const moduleVisibleToUser=(module,user,companyMode=false)=>{
   if(!module)return false;
   if(!companyMode||user?.role==='platform_superadmin')return true;
@@ -137,7 +140,7 @@ export const groupsForUser=(user,companyMode=false)=>(companyMode?companyGroups:
   items:group.items.filter(x=>moduleVisibleToUser(x,user,companyMode))
 })).filter(group=>group.items.length);
 export const flattenModulesForUser=(user,companyMode=false)=>groupsForUser(user,companyMode).flatMap(g=>g.items.map(x=>({...x,groupId:g.id,groupLabel:g.label})));
-export const roleModuleIds=role=>ROLE_MODULES[role]==='*'?flattenModules(true).map(m=>m.id):[...(ROLE_MODULES[role]||[])];
+export const roleModuleIds=role=>ROLE_MODULES[role]==='*'?[...flattenModules(true),...hiddenCompanyModules].map(m=>m.id):[...(ROLE_MODULES[role]||[])];
 export const defaultCompanyPageForRole=role=>({
   company_owner:'company-overview',
   company_admin:'company-overview',

@@ -18,7 +18,7 @@ const checks=[
  ['geo hierarchy filters',geo.includes('Geo & delivery filters')&&geo.includes('workPackageId')&&geo.includes('agencyId')],
  ['portfolio API mounted',routes.includes("router.get('/portfolio'")],
  ['filter options API mounted',routes.includes("router.get('/beneficiary-filter-options'")],
- ['portfolio aggregation controller',controller.includes('exports.portfolioOverview')&&controller.includes('beneficiaryGroups')],
+ ['portfolio aggregation controller',controller.includes('exports.portfolioOverview')&&(controller.includes('beneficiaryGroups')||controller.includes('beneficiaryRollup'))],
  ['beneficiary cross filters backend',controller.includes('req.query.contractId')&&controller.includes('req.query.state')&&controller.includes('req.query.scheme')],
  ['beneficiary context indexes',context.includes('workOrderId:1,workPackageId:1')],
  ['farmer geography indexes',farmer.includes('district: 1, taluka: 1, village: 1')]

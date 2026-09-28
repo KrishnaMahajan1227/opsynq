@@ -62,33 +62,39 @@ exports.geoOverview=async(req,res)=>{
 exports.portfolioOverview=async(req,res)=>{
  const c=await ensureCompany(req,res);if(!c)return;
  const base={companyId:c._id};
- const [programs,contracts,workOrders,packages,agencies,beneficiaryGroups,agencyContexts]=await Promise.all([
-  Program.find(base).sort({createdAt:-1}).lean(),
-  Contract.find(base).populate('programId','name code scheme financialYear').sort({createdAt:-1}).lean(),
-  WorkOrder.find(base).populate('programId','name code scheme financialYear').populate('contractId','number title type').sort({createdAt:-1}).lean(),
-  WorkPackage.find(base).populate('programId','name code scheme financialYear').populate('workOrderId','number title contractId').populate('agencyId','name code state contact').sort({createdAt:-1}).lean(),
+ const [programs,contracts,workOrders,packages,agencies,beneficiaryRollup]=await Promise.all([
+  Program.find(base).select('name code authority scheme component financialYear sanctionedQuantity contractValue status createdAt updatedAt').sort({createdAt:-1}).lean(),
+  Contract.find(base).select('programId type number title authority sanctionedQuantity contractValue status createdAt updatedAt').populate('programId','name code scheme financialYear').sort({createdAt:-1}).lean(),
+  WorkOrder.find(base).select('programId contractId number title sanctionedQuantity contractValue status createdAt updatedAt').populate('programId','name code scheme financialYear').populate('contractId','number title type').sort({createdAt:-1}).lean(),
+  WorkPackage.find(base).select('programId workOrderId agencyId code name geography dueDate status assignedQuantity assignedAt createdAt updatedAt').populate('programId','name code scheme financialYear').populate('workOrderId','number title contractId').populate('agencyId','name code state contact').sort({createdAt:-1}).lean(),
   Organization.find({type:'AGENCY',parentOrganization:c._id,status:{$ne:'ARCHIVED'}}).select('name code state status contact createdAt updatedAt').sort({name:1}).lean(),
-  BeneficiaryContext.aggregate([{$match:base},{$group:{_id:{programId:'$programId',workOrderId:'$workOrderId',workPackageId:'$workPackageId',agencyId:'$agencyId'},count:{$sum:1}}}]),
-  BeneficiaryContext.find(base).select('farmerId agencyId workPackageId assignedAt').lean()
+  BeneficiaryContext.aggregate([
+   {$match:base},
+   {$facet:{
+    hierarchy:[{$group:{_id:{programId:'$programId',workOrderId:'$workOrderId',workPackageId:'$workPackageId',agencyId:'$agencyId'},count:{$sum:1}}}],
+    agency:[
+     {$lookup:{from:Farmer.collection.name,localField:'farmerId',foreignField:'_id',as:'farmer'}},
+     {$unwind:{path:'$farmer',preserveNullAndEmptyArrays:true}},
+     {$group:{_id:'$agencyId',beneficiaries:{$sum:1},completed:{$sum:{$cond:[{$in:['$farmer.applicationStatus',['Installation Completed','Closed']]},1,0]}},pendingSurvey:{$sum:{$cond:[{$or:[{$eq:[{$ifNull:['$farmer.inspectionStatus','']},'']},{$not:[{$in:['$farmer.inspectionStatus',['Completed','Approved']]}]}]},1,0]}},issues:{$sum:{$cond:[{$or:[{$eq:['$farmer.applicationStatus','Complaint Raised']},{$and:[{$ne:[{$ifNull:['$farmer.complaintStatus','']},'']},{$not:[{$in:['$farmer.complaintStatus',['Resolved','Closed']]}]}]}]},1,0]}},districts:{$addToSet:'$farmer.district'},lastActivity:{$max:{$ifNull:['$farmer.updatedAt','$assignedAt']}}}}
+    ]
+   }}]
+  )
  ]);
+ const hierarchyGroups=beneficiaryRollup?.[0]?.hierarchy||[],agencyGroups=beneficiaryRollup?.[0]?.agency||[];
  const byProgram=new Map(),byWorkOrder=new Map(),byPackage=new Map(),byAgency=new Map();
- for(const g of beneficiaryGroups){const n=Number(g.count||0),id=g._id||{};for(const [map,key] of [[byProgram,id.programId],[byWorkOrder,id.workOrderId],[byPackage,id.workPackageId],[byAgency,id.agencyId]])if(key)map.set(String(key),(map.get(String(key))||0)+n)}
- const woCountByContract=new Map(),pkgCountByWo=new Map(),pkgCountByProgram=new Map(),pkgCountByAgency=new Map();
- for(const w of workOrders){if(w.contractId?._id){const k=String(w.contractId._id);woCountByContract.set(k,(woCountByContract.get(k)||0)+1)}}
+ for(const g of hierarchyGroups){const n=Number(g.count||0),id=g._id||{};for(const [map,key] of [[byProgram,id.programId],[byWorkOrder,id.workOrderId],[byPackage,id.workPackageId],[byAgency,id.agencyId]])if(key)map.set(String(key),(map.get(String(key))||0)+n)}
+ const contractsByProgram=new Map(),woByProgram=new Map(),woCountByContract=new Map(),pkgCountByWo=new Map(),pkgCountByProgram=new Map(),pkgCountByAgency=new Map(),contractBeneficiaries=new Map();
+ for(const cn of contracts){const pid=String(cn.programId?._id||cn.programId||'');if(pid)contractsByProgram.set(pid,(contractsByProgram.get(pid)||0)+1)}
+ for(const w of workOrders){const pid=String(w.programId?._id||w.programId||''),cid=String(w.contractId?._id||w.contractId||'');if(pid)woByProgram.set(pid,(woByProgram.get(pid)||0)+1);if(cid){woCountByContract.set(cid,(woCountByContract.get(cid)||0)+1);contractBeneficiaries.set(cid,(contractBeneficiaries.get(cid)||0)+(byWorkOrder.get(String(w._id))||0))}}
  for(const k of packages){const wo=String(k.workOrderId?._id||k.workOrderId||''),pr=String(k.programId?._id||k.programId||''),ag=String(k.agencyId?._id||k.agencyId||'');if(wo)pkgCountByWo.set(wo,(pkgCountByWo.get(wo)||0)+1);if(pr)pkgCountByProgram.set(pr,(pkgCountByProgram.get(pr)||0)+1);if(ag)pkgCountByAgency.set(ag,(pkgCountByAgency.get(ag)||0)+1)}
- const contractBeneficiaries=new Map();for(const w of workOrders){const cid=String(w.contractId?._id||w.contractId||'');if(cid)contractBeneficiaries.set(cid,(contractBeneficiaries.get(cid)||0)+(byWorkOrder.get(String(w._id))||0))}
- const farmerIds=[...new Set(agencyContexts.map(x=>String(x.farmerId||'')).filter(Boolean))];
- const agencyFarmers=farmerIds.length?await Farmer.find({_id:{$in:farmerIds}}).select('applicationStatus inspectionStatus complaintStatus district taluka village installationCompletionDate updatedAt').lean():[];
- const farmerById=new Map(agencyFarmers.map(x=>[String(x._id),x])),agencyPerformance=new Map();
- const completedStates=new Set(['Installation Completed','Closed']);
- for(const ctx of agencyContexts){const agencyId=String(ctx.agencyId||'');if(!agencyId)continue;const f=farmerById.get(String(ctx.farmerId||''));let m=agencyPerformance.get(agencyId);if(!m){m={beneficiaries:0,completed:0,inProgress:0,pendingSurvey:0,issues:0,districts:new Set(),lastActivity:null};agencyPerformance.set(agencyId,m)}m.beneficiaries++;if(f){if(completedStates.has(f.applicationStatus))m.completed++;else m.inProgress++;if(!f.inspectionStatus||!['Completed','Approved'].includes(f.inspectionStatus))m.pendingSurvey++;if(f.applicationStatus==='Complaint Raised'||(f.complaintStatus&&f.complaintStatus!=='Resolved'&&f.complaintStatus!=='Closed'))m.issues++;if(f.district)m.districts.add(f.district);const activity=f.updatedAt||ctx.assignedAt;if(activity&&(!m.lastActivity||new Date(activity)>new Date(m.lastActivity)))m.lastActivity=activity}}
+ const agencyPerformance=new Map(agencyGroups.filter(x=>x._id).map(x=>[String(x._id),{beneficiaries:Number(x.beneficiaries||0),completed:Number(x.completed||0),inProgress:Math.max(0,Number(x.beneficiaries||0)-Number(x.completed||0)),pendingSurvey:Number(x.pendingSurvey||0),issues:Number(x.issues||0),districts:(x.districts||[]).filter(Boolean).length,lastActivity:x.lastActivity||null}]));
  const packageStatusByAgency=new Map();for(const pkg of packages){const aid=String(pkg.agencyId?._id||pkg.agencyId||'');if(!aid)continue;let m=packageStatusByAgency.get(aid);if(!m){m={active:0,completed:0,blocked:0};packageStatusByAgency.set(aid,m)}if(['COMPLETED','CLOSED'].includes(pkg.status))m.completed++;else m.active++;if(pkg.status==='BLOCKED')m.blocked++;}
  res.json({
-  programs:programs.map(x=>({...x,metrics:{contracts:contracts.filter(cn=>String(cn.programId?._id||cn.programId)===String(x._id)).length,workOrders:workOrders.filter(w=>String(w.programId?._id||w.programId)===String(x._id)).length,workPackages:pkgCountByProgram.get(String(x._id))||0,beneficiaries:byProgram.get(String(x._id))||0}})),
+  programs:programs.map(x=>({...x,metrics:{contracts:contractsByProgram.get(String(x._id))||0,workOrders:woByProgram.get(String(x._id))||0,workPackages:pkgCountByProgram.get(String(x._id))||0,beneficiaries:byProgram.get(String(x._id))||0}})),
   contracts:contracts.map(x=>({...x,metrics:{workOrders:woCountByContract.get(String(x._id))||0,beneficiaries:contractBeneficiaries.get(String(x._id))||0}})),
   workOrders:workOrders.map(x=>({...x,metrics:{workPackages:pkgCountByWo.get(String(x._id))||0,beneficiaries:byWorkOrder.get(String(x._id))||0}})),
   workPackages:packages.map(x=>({...x,metrics:{beneficiaries:byPackage.get(String(x._id))||0}})),
-  agencies:agencies.map(x=>{const perf=agencyPerformance.get(String(x._id))||{beneficiaries:0,completed:0,inProgress:0,pendingSurvey:0,issues:0,districts:new Set(),lastActivity:null},pkg=packageStatusByAgency.get(String(x._id))||{active:0,completed:0,blocked:0};const total=Number(perf.beneficiaries||0);return {...x,metrics:{workPackages:pkgCountByAgency.get(String(x._id))||0,beneficiaries:byAgency.get(String(x._id))||0,completed:perf.completed,inProgress:perf.inProgress,pendingSurvey:perf.pendingSurvey,issues:perf.issues,districts:perf.districts.size,completionPercent:total?Math.round(perf.completed/total*100):0,activePackages:pkg.active,completedPackages:pkg.completed,blockedPackages:pkg.blocked,lastActivity:perf.lastActivity}}})
+  agencies:agencies.map(x=>{const perf=agencyPerformance.get(String(x._id))||{beneficiaries:0,completed:0,inProgress:0,pendingSurvey:0,issues:0,districts:0,lastActivity:null},pkg=packageStatusByAgency.get(String(x._id))||{active:0,completed:0,blocked:0};const total=Number(perf.beneficiaries||0);return {...x,metrics:{workPackages:pkgCountByAgency.get(String(x._id))||0,beneficiaries:byAgency.get(String(x._id))||0,completed:perf.completed,inProgress:perf.inProgress,pendingSurvey:perf.pendingSurvey,issues:perf.issues,districts:perf.districts,completionPercent:total?Math.round(perf.completed/total*100):0,activePackages:pkg.active,completedPackages:pkg.completed,blockedPackages:pkg.blocked,lastActivity:perf.lastActivity}}})
  });
 };
 
