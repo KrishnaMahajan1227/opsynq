@@ -1,0 +1,54 @@
+{
+  "services": {
+    "platform_web": {
+      "root": "apps/platform-web/",
+      "framework": "vite"
+    },
+    "agency_web": {
+      "root": "apps/agency-web/",
+      "framework": "vite"
+    },
+    "api": {
+      "root": "services/api/",
+      "framework": "express"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/socket.io/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/agency",
+      "destination": {
+        "service": "agency_web"
+      }
+    },
+    {
+      "source": "/agency/(.*)",
+      "destination": {
+        "service": "agency_web"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "platform_web"
+      }
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/automation",
+      "schedule": "15 2 * * *"
+    }
+  ]
+}

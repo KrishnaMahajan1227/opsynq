@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import NavbarComponent from './components/Navbar';
 import UnifiedLoginRedirect from './components/UnifiedLoginRedirect';
 import AuthHandoff from './components/AuthHandoff';
@@ -18,6 +18,8 @@ const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   return token ? <><UserLocationTracker />{children}</> : <Navigate to="/" />;
 };
+
+const Router = import.meta.env.PROD ? HashRouter : BrowserRouter;
 
 const App = () => {
   return (

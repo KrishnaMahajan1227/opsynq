@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+const SOCKET_SERVER_URL = String(import.meta.env.VITE_SOCKET_SERVER_URL||'').replace(/\/$/,'')||(String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')||(import.meta.env.PROD?'':'http://localhost:3000'));
 
 const roleLabel = (role) => role === 'field_technician' ? 'Technician' : role === 'superadmin' ? 'Superadmin' : role === 'admin' ? 'Admin' : 'User';
 const timeAgo = (value) => {

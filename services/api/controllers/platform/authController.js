@@ -34,9 +34,9 @@ exports.login = async (req, res) => {
     const agencyUser = await LegacyUser.findOne({ mobile: String(identifier).trim() }).select('_id role isActive').lean();
     if (agencyUser) {
       return res.status(409).json({
-        message: 'This is an Agency Operations account. Sign in from the Agency Operations app on port 5174.',
+        message: 'This is an Agency Operations account. Use the unified Opsynq sign-in.',
         code: 'AGENCY_ACCOUNT',
-        agencyAppUrl: 'http://localhost:5174',
+        agencyAppUrl: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/agency/` : 'http://localhost:5174',
       });
     }
     return res.status(401).json({ message: 'Invalid credentials.' });

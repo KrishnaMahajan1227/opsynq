@@ -11,3 +11,6 @@ services/api/uploads/*
 
 # Runtime operational snapshots
 services/api/backups/*.json
+
+# Local deployment secret bundle (never commit)
+VERCEL_ENV_IMPORT.env

@@ -313,7 +313,7 @@ export default function DashboardSuperAdmin() {
         message: `Failed to fetch requests: ${error.response?.data?.message || error.message}`,
       });
       if (error.message.includes('Authentication token')) {
-        window.location.href = '/login';
+        window.location.href = import.meta.env.PROD ? '/?login=1' : '/';
       }
     } finally {
       setIsLoading(false);
@@ -1078,7 +1078,7 @@ export default function DashboardSuperAdmin() {
 
   const handleLogout = () => {
     localStorage.clear();
-    const platformBase=import.meta.env.VITE_PLATFORM_APP_URL||`${window.location.protocol}//${window.location.hostname||'localhost'}:5173`; window.location.assign(`${platformBase}/?login=1`);
+    const platformBase=import.meta.env.VITE_PLATFORM_APP_URL||(import.meta.env.PROD?window.location.origin:`${window.location.protocol}//${window.location.hostname||'localhost'}:5173`); window.location.assign(`${platformBase}/?login=1`);
   };
 
   const openFarmerDetail = (farmer, event) => {

@@ -8,6 +8,7 @@ const farmerRoutes = require('./routes/farmerRoutes');
 const fieldVerificationRoutes = require('./routes/fieldVerificationRoutes');
 const installationRoutes = require('./routes/installationRoutes');
 const technicianChangeRoutes = require('./routes/technicianChangeRoutes');
+const agencyInventoryRoutes = require('./routes/agencyInventoryRoutes');
 const platformAuthRoutes = require('./routes/platform/authRoutes');
 const platformCompanyRoutes = require('./routes/platform/companyRoutes');
 const platformOperationsRoutes = require('./routes/platform/operationsRoutes');
@@ -37,9 +38,14 @@ if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
 app.use(requestContext);
 app.use((req,res,next)=>{const started=Date.now();const end=res.end;res.end=function(...args){if(!res.headersSent)res.setHeader('X-Response-Time',`${Date.now()-started}ms`);return end.apply(this,args)};next();});
 
-// Enable CORS
-const allowedOrigins = String(process.env.CLIENT_ORIGIN || 'http://localhost:5173,http://localhost:5174').split(',').map(v => v.trim()).filter(Boolean);
-app.use(cors({ origin: (origin, cb) => (!origin || allowedOrigins.includes(origin) ? cb(null, true) : cb(new Error('Origin not allowed by CORS'))), credentials: true }));
+// Enable CORS. Vercel deployment URLs are included automatically, so preview and
+// production deployments work without hardcoding a generated *.vercel.app host.
+const configuredOrigins = String(process.env.CLIENT_ORIGIN || 'http://localhost:5173,http://localhost:5174').split(',').map(v => v.trim()).filter(Boolean);
+const vercelOrigins = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL]
+  .filter(Boolean).map(v => `https://${String(v).replace(/^https?:\/\//,'').replace(/\/$/,'')}`);
+const allowedOrigins = [...new Set([...configuredOrigins, ...vercelOrigins])];
+const isAllowedOrigin = (origin) => !origin || allowedOrigins.includes(origin);
+app.use(cors({ origin: (origin, cb) => (isAllowedOrigin(origin) ? cb(null, true) : cb(new Error('Origin not allowed by CORS'))), credentials: true }));
 
 // Parse JSON and URL-encoded bodies
 app.use(express.json({ limit: '2mb' }));
@@ -65,6 +71,7 @@ app.use('/api/farmers', farmerRoutes); // Includes /api/farmers/upload
 app.use('/api/field-verification', fieldVerificationRoutes);
 app.use('/api/installation', installationRoutes);
 app.use('/api/technician-changes', technicianChangeRoutes);
+app.use('/api/agency-inventory', agencyInventoryRoutes);
 app.use('/api/platform/auth', authRateLimit, platformAuthRoutes);
 app.use('/api/platform/companies', platformCompanyRoutes);
 app.use('/api/platform/operations', platformOperationsRoutes);
@@ -89,6 +96,16 @@ app.get('/api/health/ready',(req,res)=>{const ready=mongoose.connection.readySta
 app.get('/api/health/version',(req,res)=>res.json({service:'opsynq-api',version:pkg.version||'1.0.0'}));
 const {getRevision}=require('./utils/runtimeRevision');
 app.get('/api/runtime/revision',(req,res)=>res.set('Cache-Control','no-store').json({revision:getRevision(),version:pkg.version||'1.0.0',releaseId:process.env.RELEASE_ID||process.env.COMMIT_SHA||null}));
+// Vercel Hobby cron: once daily. Pro deployments can increase frequency later.
+app.get('/api/cron/automation', async (req, res, next) => {
+  try {
+    const secret = String(process.env.CRON_SECRET || '');
+    if (!secret || req.get('authorization') !== `Bearer ${secret}`) return res.status(401).json({ message: 'Unauthorized' });
+    const results = await require('./utils/automationEngine').runCycle('VERCEL_CRON');
+    res.json({ ok: true, runs: results.length, completedAt: new Date().toISOString() });
+  } catch (error) { next(error); }
+});
+
 // Handle 404 for undefined routes
 app.use((req, res) => {
   console.warn(`404: Route not found for ${req.method} ${req.url}`);
@@ -107,7 +124,7 @@ app.use((err, req, res, next) => {
 
 const server = http.createServer(app);
 const { Server } = require('socket.io');
-const io = new Server(server, { cors: { origin: allowedOrigins, credentials: true } });
+const io = new Server(server, { cors: { origin: (origin, cb) => (isAllowedOrigin(origin) ? cb(null, true) : cb(new Error('Origin not allowed by CORS'))), credentials: true } });
 
 // ✅ ADD THIS LINE to import User model (adjust path if needed)
 const User = require('./models/User');
@@ -187,18 +204,22 @@ io.on('connection', (socket) => {
 });
 
 
-// Connect to MongoDB and start server
+// Connect to MongoDB and start the Node HTTP server. Vercel's current Node runtime
+// supports standard Node servers (including Socket.IO/WebSockets), so this same
+// entrypoint is used locally and on Vercel. The in-process 15-minute scheduler is
+// disabled on Vercel because instances can scale to zero; a daily Hobby-compatible
+// cron route below triggers the automation cycle instead.
 const PORT = process.env.PORT || 3000;
 connectDB()
   .then(() => {
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      require('./utils/automationEngine').startScheduler();
+      if (!process.env.VERCEL) require('./utils/automationEngine').startScheduler();
     });
   })
   .catch((err) => {
     console.error('Failed to connect to MongoDB:', err);
-    process.exit(1);
+    if (!process.env.VERCEL) process.exit(1);
   });
 
 let shuttingDown=false;
@@ -207,11 +228,13 @@ async function gracefulShutdown(signal){
   console.log(`${signal} received. Closing Opsynq API gracefully...`);
   server.close(async()=>{
     try{await mongoose.connection.close(false);}catch(e){console.error('MongoDB close error:',e.message)}
-    process.exit(0);
+    if (!process.env.VERCEL) process.exit(0);
   });
-  setTimeout(()=>process.exit(1),10000).unref();
+  if (!process.env.VERCEL) setTimeout(()=>process.exit(1),10000).unref();
 }
 process.on('SIGTERM',()=>gracefulShutdown('SIGTERM'));
 process.on('SIGINT',()=>gracefulShutdown('SIGINT'));
 process.on('unhandledRejection',err=>console.error('Unhandled rejection:',err));
-process.on('uncaughtException',err=>{console.error('Uncaught exception:',err);gracefulShutdown('UNCAUGHT_EXCEPTION')});
+process.on('uncaughtException',err=>{console.error('Uncaught exception:',err);if (!process.env.VERCEL) gracefulShutdown('UNCAUGHT_EXCEPTION')});
+
+module.exports = server;

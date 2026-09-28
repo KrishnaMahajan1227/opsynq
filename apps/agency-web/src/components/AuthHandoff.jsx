@@ -37,7 +37,7 @@ export default function AuthHandoff() {
 
   if (error) {
     const configured = import.meta.env.VITE_PLATFORM_APP_URL;
-    const platformBase = configured || `${window.location.protocol}//${window.location.hostname || 'localhost'}:5173`;
+    const platformBase = configured || (import.meta.env.PROD?window.location.origin:`${window.location.protocol}//${window.location.hostname || 'localhost'}:5173`);
     return <div className="agency-auth-transition is-error"><strong>Sign-in session expired</strong><span>{error}</span><button onClick={() => window.location.replace(`${platformBase}/?login=1`)}>Return to secure sign-in</button></div>;
   }
   return <div className="agency-auth-transition"><div className="agency-auth-spinner"/><strong>Opening Agency Operations…</strong><span>Verifying your secure workspace session.</span></div>;

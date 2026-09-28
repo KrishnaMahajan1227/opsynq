@@ -25,7 +25,7 @@ const NavbarComponent = () => {
 
   const handleLogout = () => {
     localStorage.clear();
-    const platformBase=import.meta.env.VITE_PLATFORM_APP_URL||`${window.location.protocol}//${window.location.hostname||'localhost'}:5173`; window.location.assign(`${platformBase}/?login=1`);
+    const platformBase=import.meta.env.VITE_PLATFORM_APP_URL||(import.meta.env.PROD?window.location.origin:`${window.location.protocol}//${window.location.hostname||'localhost'}:5173`); window.location.assign(`${platformBase}/?login=1`);
   };
 
   // Purely presentational helpers (no change to app logic/behavior)

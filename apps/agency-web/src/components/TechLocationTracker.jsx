@@ -3,7 +3,7 @@ import { Alert, Spinner } from "react-bootstrap";
 import io from "socket.io-client";
 
 const SOCKET_SERVER_URL =
-  import.meta.env.VITE_SOCKET_SERVER_URL || (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+  String(import.meta.env.VITE_SOCKET_SERVER_URL||'').replace(/\/$/,'')||(String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')||(import.meta.env.PROD?'':'http://localhost:3000'));
 
 // How accurate (in meters) we require before sending to server
 const ACCURACY_THRESHOLD = 50;

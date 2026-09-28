@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+const SOCKET_SERVER_URL = String(import.meta.env.VITE_SOCKET_SERVER_URL||'').replace(/\/$/,'')||(String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')||(import.meta.env.PROD?'':'http://localhost:3000'));
 const ACCURACY_THRESHOLD = 120;
 const MIN_EMIT_INTERVAL = 30000;
 

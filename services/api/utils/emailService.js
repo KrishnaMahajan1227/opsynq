@@ -4,6 +4,8 @@ const clean = (v) => String(v || '').trim();
 
 function publicBaseUrl() {
   if (clean(process.env.PUBLIC_APP_URL)) return clean(process.env.PUBLIC_APP_URL).replace(/\/$/, '');
+  const vercelHost = clean(process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL);
+  if (vercelHost) return `https://${vercelHost.replace(/^https?:\/\//,'').replace(/\/$/,'')}`;
   const firstOrigin = clean(process.env.CLIENT_ORIGIN).split(',').map((x) => x.trim()).find(Boolean);
   return (firstOrigin || 'http://localhost:5173').replace(/\/$/, '');
 }

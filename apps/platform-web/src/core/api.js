@@ -1,5 +1,5 @@
 import {cacheResponse,getCachedResponse,queueWrite} from './offlineStore';
-export const API=import.meta.env.VITE_API_URL||'http://localhost:3000';
+export const API=String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')||(import.meta.env.PROD?'':'http://localhost:3000');
 export const tokenKey='opsynq_platform_token';
 export const api=async(path,options={})=>{
  const token=localStorage.getItem(tokenKey),method=String(options.method||'GET').toUpperCase(),isForm=options.body instanceof FormData,controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000),cacheKey=`${method}:${path}`;

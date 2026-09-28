@@ -6,7 +6,7 @@ import axios from 'axios';
 import { API_URL } from '../config';
 
 const defaultCenter = [19.7515, 75.7139];
-const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+const SOCKET_SERVER_URL = String(import.meta.env.VITE_SOCKET_SERVER_URL||'').replace(/\/$/,'')||(String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')||(import.meta.env.PROD?'':'http://localhost:3000'));
 
 const isValidCoordinate = (lat, lng) => {
   const latitude = Number(lat);

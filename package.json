@@ -57,7 +57,9 @@
     "vite": "6.4.3",
     "@vitejs/plugin-react": "4.7.0",
     "rollup": "4.50.1",
-    "@rollup/rollup-win32-x64-msvc": "4.50.1",
     "yaml": "2.8.1"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

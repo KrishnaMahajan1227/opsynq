@@ -49,7 +49,7 @@ function GlobalSearch({companyId,onNavigate,allowedPages=null}){
 export function Shell({user,page,setPage,logout,companyMode=false,companyId=null,children}){
  const[apiState,setApiState]=useState('checking'),[permissionNotice,setPermissionNotice]=useState('');
  useEffect(()=>{const forbidden=e=>{setPermissionNotice(e.detail?.message||'You do not have permission for this action.');const id=setTimeout(()=>setPermissionNotice(''),4200);return()=>clearTimeout(id)};window.addEventListener('opsynq:forbidden',forbidden);return()=>window.removeEventListener('opsynq:forbidden',forbidden)},[]);
- useEffect(()=>{let live=true;const check=()=>fetch(`${(import.meta.env.VITE_API_URL||'http://localhost:3000')}/api/health/ready`).then(r=>{if(live)setApiState(r.ok?'ready':'attention')}).catch(()=>{if(live)setApiState('offline')});check();const id=setInterval(check,30000);return()=>{live=false;clearInterval(id)}},[]);
+ useEffect(()=>{let live=true;const check=()=>fetch(`${(String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')||(import.meta.env.PROD?'':'http://localhost:3000'))}/api/health/ready`).then(r=>{if(live)setApiState(r.ok?'ready':'attention')}).catch(()=>{if(live)setApiState('offline')});check();const id=setInterval(check,30000);return()=>{live=false;clearInterval(id)}},[]);
  const groups=useMemo(()=>groupsForUser(user,companyMode),[user,companyMode]),modules=useMemo(()=>flattenModulesForUser(user,companyMode),[user,companyMode]);
  const[compact,setCompact]=useState(()=>localStorage.getItem(compactKey)==='1'),[navQuery,setNavQuery]=useState(''),[palette,setPalette]=useState(false),[mobileOpen,setMobileOpen]=useState(false);
  const initialGroups=()=>Object.fromEntries(groups.map((g,i)=>[g.id,i===0]));
