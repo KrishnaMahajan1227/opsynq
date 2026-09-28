@@ -44,11 +44,5 @@
         "service": "platform_web"
       }
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/automation",
-      "schedule": "15 2 * * *"
-    }
   ]
 }
