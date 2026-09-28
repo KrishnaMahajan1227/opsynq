@@ -19,16 +19,21 @@ export async function queueWrite(entry){await tx(QUEUE,'readwrite',s=>s.add({...
 export async function queuedCount(){try{return await tx(QUEUE,'readonly',s=>s.count())||0}catch{return 0}}
 async function allQueued(){try{return await tx(QUEUE,'readonly',s=>s.getAll())||[]}catch{return []}}
 async function removeQueued(id){try{await tx(QUEUE,'readwrite',s=>s.delete(id))}catch{}}
+async function updateQueued(item,patch){try{await tx(QUEUE,'readwrite',s=>s.put({...item,...patch}))}catch{}}
 export async function flushQueuedWrites({apiBase,token}){
- if(!navigator.onLine)return {synced:0,pending:await queuedCount()};
- let synced=0;for(const item of await allQueued()){
+ if(!navigator.onLine)return {synced:0,pending:await queuedCount(),failed:0};
+ let synced=0,failed=0;for(const item of await allQueued()){
   try{
    const body=restoreBody(item.body),isForm=body instanceof FormData;
    const res=await fetch(`${apiBase}${item.path}`,{method:item.method,body,headers:{...(isForm?{}:{'Content-Type':'application/json'}),...(token?{Authorization:`Bearer ${token}`}:{}) ,...(item.headers||{})}});
    if(res.status===401||res.status===403)break;
-   if(!res.ok)continue;
-   await removeQueued(item.id);synced++;
-  }catch{break}
+   if(res.ok){await removeQueued(item.id);synced++;continue}
+   const permanent=res.status>=400&&res.status<500&&![408,409,425,429].includes(res.status);
+   if(permanent){await removeQueued(item.id);failed++;continue}
+   const attempts=Number(item.attempts||0)+1;
+   await updateQueued(item,{attempts,lastAttemptAt:Date.now(),lastStatus:res.status});
+   if(attempts>=8){await removeQueued(item.id);failed++}
+  }catch{const attempts=Number(item.attempts||0)+1;await updateQueued(item,{attempts,lastAttemptAt:Date.now()});break}
  }
- const pending=await queuedCount();window.dispatchEvent(new CustomEvent('opsynq:sync-state',{detail:{synced,pending}}));return {synced,pending};
+ const pending=await queuedCount();window.dispatchEvent(new CustomEvent('opsynq:sync-state',{detail:{synced,pending,failed}}));return {synced,pending,failed};
 }
