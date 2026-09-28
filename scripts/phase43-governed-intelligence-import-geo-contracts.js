@@ -6,11 +6,11 @@ const no=(p,s,label)=>{assert(!read(p).toLowerCase().includes(s.toLowerCase()),`
 has('apps/platform-web/src/layout/Shell.jsx',"supplyVisible=['supply-chain','procurement','stock','shipments','fleet']",'daily supply modules retain own nav state');
 has('apps/platform-web/src/layout/Shell.jsx','supplyHidden.includes(page)?\'supply-chain\':page','specialized supply tools retain parent nav state');
 has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','More tools','progressive supply tool disclosure');
-has('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx','Pending automated proposals','governed proposal queue');
-has('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx','Human confirmation remains mandatory','human confirmation UX');
+has('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx','Automation activity','governed proposal queue');
+has('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx','Manual confirmation remains mandatory','human confirmation UX');
 has('services/api/utils/automationEngine.js','ensureSystemProposal','automatic operational proposal generator');
 has('services/api/routes/platform/aiRoutes.js',"'/scan'",'on-demand operational monitoring route');
-has('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx','Run monitoring now','on-demand monitoring control');
+has('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx','Run checks now','on-demand monitoring control');
 has('services/api/utils/automationEngine.js','SERVICE_PRIORITY_ESCALATION','service escalation proposal');
 has('services/api/utils/automationEngine.js','CLAIM_FOLLOWUP','claim follow-up proposal');
 has('services/api/controllers/platform/assuranceController.js',"item.requestOrigin==='SYSTEM'",'system proposal execution gate');

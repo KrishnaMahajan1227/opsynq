@@ -1,0 +1,20 @@
+const fs=require('fs');
+const path=require('path');
+const root=path.join(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const shell=read('apps/platform-web/src/layout/Shell.jsx');
+const registry=read('apps/platform-web/src/layout/moduleRegistry.jsx');
+const ai=read('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx');
+const supply=read('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx');
+const assurance=read('services/api/controllers/platform/assuranceController.js');
+const automation=read('services/api/utils/automationEngine.js');
+const must=(ok,msg)=>{if(!ok)throw new Error(msg)};
+must(registry.includes("'AI Operations'"),'AI Operations must be a visible company module');
+must(shell.includes('workspace-ai-button')&&shell.includes("go('ai-operations')"),'Global AI Operations shortcut missing');
+must(ai.includes('Automation activity')&&ai.includes('Decision history')&&ai.includes('Needs confirmation'),'AI activity/history UI missing');
+must(ai.includes("window.confirm('Confirm this system-prepared action?"),'Explicit manual confirmation gate missing');
+must(supply.includes('supply-overview-card')&&supply.includes('Review AI actions'),'Supply control tower redesign/context AI action missing');
+must(automation.includes('ensureSystemProposal'),'System proposals must use approval records');
+must(assurance.includes("status:'PENDING'")&&assurance.includes('PURCHASE_ORDER_APPROVAL'),'Controlled proposals must require pending approval decision');
+for(const file of ['apps/platform-web/src/features/company/inventory/InventoryPages.jsx','apps/platform-web/src/features/company/logistics/LogisticsPages.jsx','apps/platform-web/src/features/company/service/ServicePages.jsx']){const src=read(file);must(src.includes("ai-operations"),`${file} missing contextual AI Operations action`)}
+console.log('phase44 AI visibility / supply UX contracts passed');
