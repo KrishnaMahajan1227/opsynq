@@ -1,0 +1,17 @@
+const fs=require('fs');
+const assert=(ok,msg)=>{if(!ok){console.error('FAIL:',msg);process.exitCode=1}else console.log('PASS:',msg)};
+const assurance=fs.readFileSync('apps/platform-web/src/features/company/assurance/AssurancePages.jsx','utf8');
+const finance=fs.readFileSync('apps/platform-web/src/features/company/inventory/IntelligencePages.jsx','utf8');
+const service=fs.readFileSync('apps/platform-web/src/features/company/service/ServicePages.jsx','utf8');
+const ac=fs.readFileSync('services/api/controllers/platform/assuranceController.js','utf8');
+const ic=fs.readFileSync('services/api/controllers/platform/intelligenceController.js','utf8');
+const sc=fs.readFileSync('services/api/controllers/platform/serviceController.js','utf8');
+assert(assurance.includes('agency-performance-summary')&&assurance.includes('Material accountability')&&assurance.includes('serviceBreached'),'Agency performance exposes operational scorecard and drill-downs');
+assert(assurance.includes('Installation completion')&&assurance.includes('Operational attention')&&assurance.includes('All states'),'Agency performance provides role-relevant filters');
+assert(ac.includes('BeneficiaryContext.aggregate')&&ac.includes('WorkPackage.aggregate')&&ac.includes('Shipment.aggregate'),'Agency performance uses grouped backend calculations');
+assert(finance.includes('procurementReceiptPct')&&finance.includes('claimRealizationPct')&&finance.includes('pricingCoveragePct'),'Financial Control shows explicit calculation integrity ratios');
+assert(finance.includes("onNavigate?.('procurement')")&&finance.includes("onNavigate?.('stock')")&&finance.includes("onNavigate?.('claims')")&&finance.includes("onNavigate?.('agency-performance')"),'Financial Control KPIs drill into source modules');
+assert(ic.includes('wpAgencyById')&&ic.includes("wpAgencyById.get(String(cl.workPackageId||''))"),'Agency claim exposure follows Claim -> Work Package -> Agency lineage');
+assert(sc.includes('if(req.query.agencyId)q.agencyId=req.query.agencyId')&&sc.includes("q.workPackageId={$in:ids}"),'Service and claim endpoints accept Agency drill filters');
+assert(service.includes('dashboardFilter(\'claims\')')&&service.includes('dashboardFilter(\'service-cases\')'),'Service/claim UI consumes dashboard drill filters');
+if(process.exitCode)process.exit(process.exitCode);console.log('Phase 47 Agency Performance + Finance contracts passed.');
