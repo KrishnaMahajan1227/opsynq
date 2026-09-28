@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FaChartPie, FaDatabase, FaTools, FaCheckCircle, FaExclamationTriangle,
   FaUsers, FaUserCog, FaFileAlt, FaUpload, FaSignOutAlt, FaChevronDown,
-  FaChevronRight, FaBars, FaTimes, FaLayerGroup, FaTruckLoading
+  FaChevronRight, FaChevronLeft, FaBars, FaLayerGroup, FaTruckLoading
 } from 'react-icons/fa';
 
 const operationalSections = [
@@ -61,7 +61,7 @@ export default function AgencySidebar({ role, activeTab, setActiveTab, collapsed
         <div className="agency-sidebar__mark">O</div>
         {!collapsed && <div className="agency-sidebar__brandcopy"><strong>Opsynq</strong><span>Agency Operations</span></div>}
         <button className="agency-sidebar__collapse" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-          {collapsed ? <FaBars /> : <FaTimes />}
+          {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
         </button>
       </div>
 

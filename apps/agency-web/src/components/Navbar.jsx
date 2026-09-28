@@ -47,8 +47,8 @@ const NavbarComponent = () => {
         <Link className="navbar-brand" to={homePath}>
           <img src={logo} alt="Opsynq logo" className="navbar-logo" height="32" />
           <span className="navbar-brand-text d-none d-sm-flex">
-            <span className="navbar-title">Opsynq Agency Operations</span>
-            <span className="navbar-subtitle">Operations Suite</span>
+            <span className="navbar-title">Opsynq Field Operations</span>
+            <span className="navbar-subtitle">Agency & Technician Workspace</span>
           </span>
         </Link>
 

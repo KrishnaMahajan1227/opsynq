@@ -12,6 +12,7 @@ import FieldVerification from './pages/FieldVerification';
 import UserLocationTracker from './components/UserLocationTracker';
 import ResilienceStatus from './components/ResilienceStatus';
 import {installAgencyAxiosResilience} from './resilientAxios';
+import './final-design-system.css';
 installAgencyAxiosResilience();
 
 const ProtectedRoute = ({ children }) => {

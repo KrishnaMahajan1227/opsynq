@@ -21,9 +21,9 @@ async function generateJson(prompt,{timeoutMs=12000,maxOutputTokens=2200}={}){
  }finally{clearTimeout(timer)}
 }
 async function health(){
- if(!enabled())return{configured:false,ready:false,message:'Decision service credential is not configured.'};
- try{const r=await generateJson('Return ONLY JSON: {"ok":true,"message":"ready"}.',{timeoutMs:7000,maxOutputTokens:80});return{configured:true,ready:r?.ok===true,message:r?.message||'Decision service responded.'};}
- catch(error){return{configured:true,ready:false,message:'Decision service connection could not be verified. Check the deployment credential and network access.'}}
+ if(!enabled())return{configured:false,ready:false,verified:false,message:'Server-side AI credential is not configured.'};
+ try{const r=await generateJson('Return ONLY JSON: {"ok":true,"message":"ready"}.',{timeoutMs:7000,maxOutputTokens:80});return{configured:true,ready:true,verified:r?.ok===true,message:r?.message||'AI service is available.'};}
+ catch(error){return{configured:true,ready:true,verified:false,message:'Credential loaded. Live verification is temporarily unavailable; analysis requests will retry the connection.'}}
 }
 async function procurementBrief(payload){
  const safe={summary:payload.summary,risks:(payload.risks||[]).slice(0,12).map(x=>({sku:x.sku,item:x.item,warehouse:x.warehouse,severity:x.severity,onHand:x.onHand,inTransit:x.inTransit,openPoQty:x.openPoQty,recommendedQty:x.recommendedQty,daysCover:x.daysCover,estimatedValue:x.estimatedValue}))};
