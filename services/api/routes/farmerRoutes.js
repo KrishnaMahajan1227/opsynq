@@ -1,0 +1,32 @@
+const express = require('express');
+const router = express.Router();
+const farmerController = require('../controllers/farmerController');
+const uploadController = require('../controllers/upload');
+const { protect } = require('../middleware/authMiddleware');
+const { authorizeRoles } = require('../middleware/roleMiddleware');
+
+// File Upload Routes
+router.post('/upload', protect, uploadController.uploadFiles);
+router.post('/uploadExcel', protect, authorizeRoles('admin', 'superadmin'), farmerController.uploadExcel);
+router.post('/uploadJsrExcel', protect, authorizeRoles('admin', 'superadmin'), farmerController.uploadJsrExcel);
+
+// Audit and User Data Routes
+router.get('/audit-logs', protect, authorizeRoles('admin', 'superadmin'), farmerController.getAuditLogs);
+router.get('/users', protect, authorizeRoles('admin', 'superadmin'), farmerController.getUsers);
+
+// Change Request Management
+router.get('/requests', protect, authorizeRoles('superadmin'),  farmerController.getAllRequests);
+router.get('/change-requests', protect, farmerController.getChangeRequests);
+router.post('/change-requests/:id/approve', protect, authorizeRoles('superadmin'), farmerController.approveChangeRequest);
+router.post('/change-requests/:id/reject', protect, authorizeRoles('superadmin'), farmerController.rejectChangeRequest);
+
+// Farmer Routes
+router.get('/', protect, farmerController.getFarmers);
+router.get('/detail-context/:id', protect, farmerController.getFarmerDetailContext);
+router.post('/:id/evidence/:requirementId', protect, farmerController.submitFarmerEvidence);
+router.get('/:id', protect, farmerController.getFarmerById);
+router.put('/:id', protect, farmerController.updateFarmer);
+router.delete('/:id', protect, farmerController.deleteFarmer);
+router.post('/bulk-update', protect, farmerController.bulkUpdateFarmers);
+
+module.exports = router;

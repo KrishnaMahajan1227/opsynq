@@ -1,0 +1,152 @@
+import {
+  Activity,ArrowRightLeft,BarChart3,Bell,Boxes,Building2,CheckCircle2,CircleAlert,ClipboardCheck,
+  FileText,History,Home,Layers3,Navigation,PackageCheck,PackageOpen,PackagePlus,ScanLine,ShieldCheck,
+  ShoppingCart,Truck,UploadCloud,UsersRound,Warehouse,UserCog,Wrench,WalletCards,BriefcaseBusiness,MapPin
+} from 'lucide-react';
+
+export const platformGroups=[
+  {id:'platform',label:'Platform',icon:Layers3,items:[
+    {id:'overview',label:'Overview',icon:Layers3,keywords:'dashboard global control tower'},
+    {id:'companies',label:'Companies',icon:Building2,keywords:'organizations tenants company directory'},
+    {id:'approvals',label:'Approvals',icon:ClipboardCheck,keywords:'registration company approval requests'},
+    {id:'system-status',label:'System Status',icon:Activity,keywords:'health readiness api database version runtime'}
+  ]}
+];
+
+const ALL_COMPANY=['company_owner','company_admin'];
+const ROLE_MODULES={
+  company_owner:'*',
+  company_admin:'*',
+  operations_manager:[
+    'my-workspace','action-center','company-overview',
+    'work-orders','work-packages','agencies','beneficiary-records','beneficiary-imports','geo-operations',
+    'logistics-overview','shipments','material-issues','agency-stock',
+    'installed-assets','service-cases','service-plans',
+    'sla','agency-performance','compliance','approval-center',
+    'analytics','notifications','documents','automation','readiness','evidence-control','regulatory-reports'
+  ],
+  program_manager:[
+    'my-workspace','company-overview',
+    'programs','contracts','work-orders','work-packages','agencies','beneficiary-records','beneficiary-imports','geo-operations',
+    'financial-control','claims','sla','agency-performance','compliance',
+    'analytics','notifications','documents','audit','readiness','evidence-control','regulatory-reports'
+  ],
+  inventory_manager:[
+    'my-workspace','company-overview',
+    'inventory-overview','item-master','warehouses','stock','scanner','procurement-intelligence','logistics-overview','shipments','material-issues','agency-stock',
+    'reconciliation','pdi','analytics','notifications','documents','readiness'
+  ],
+  procurement_manager:[
+    'my-workspace','company-overview',
+    'item-master','warehouses','procurement','procurement-intelligence','stock','pdi',
+    'analytics','notifications','documents'
+  ],
+  finance_user:[
+    'my-workspace','company-overview','financial-control','claims','insurance','regulatory-reports','analytics','notifications','documents','audit'
+  ],
+  quality_user:[
+    'my-workspace','company-overview','action-center','beneficiary-records','geo-operations',
+    'installed-assets','asset-lifecycle','service-cases','service-plans','reconciliation',
+    'sla','agency-performance','compliance','insurance','pdi','regulatory-reports',
+    'analytics','notifications','documents','audit','readiness','evidence-control'
+  ],
+  logistics_manager:[
+    'my-workspace','company-overview',
+    'warehouses','stock','scanner','logistics-overview','shipments','fleet','material-issues','agency-stock',
+    'reconciliation','analytics','notifications','documents','readiness'
+  ],
+  viewer:[
+    'my-workspace','company-overview','analytics','notifications','documents'
+  ]
+};
+
+const rolesFor=id=>Object.entries(ROLE_MODULES).filter(([,mods])=>mods==='*'||mods.includes(id)).map(([role])=>role);
+const item=(id,label,icon,keywords,manageCapability)=>({id,label,icon,keywords,manageCapability,roles:rolesFor(id)});
+
+export const companyGroups=[
+  {id:'workspace',label:'Workspace',icon:Home,items:[
+    item('my-workspace','My Workspace',Home,'home favorites pinned recent modules shortcuts'),
+    item('action-center','Action Center',CircleAlert,'priority action pending critical attention inbox'),
+    item('company-overview','Dashboard',Activity,'dashboard command overview health attention')
+  ]},
+  {id:'delivery',label:'Delivery',icon:BriefcaseBusiness,items:[
+    item('programs','Programs',Layers3,'scheme project program','operations.write'),
+    item('contracts','Contracts / LOA',ClipboardCheck,'contract loa tender award','operations.write'),
+    item('work-orders','Work Orders',Building2,'work order execution','operations.write'),
+    item('work-packages','Work Packages',PackageCheck,'allocation agency package','operations.write'),
+    item('agencies','Agencies',UsersRound,'agency implementation partner','operations.write'),
+    item('beneficiary-records','Beneficiary Records',UsersRound,'farmer beneficiary records details photos status'),
+    item('geo-operations','Geo Operations',MapPin,'map geography sites survey installation complaint location geotag'),
+    item('beneficiary-imports','Beneficiary Imports',UploadCloud,'farmer beneficiary excel bulk import','operations.write')
+  ]},
+  {id:'supply-chain',label:'Supply Chain',icon:Truck,items:[
+    item('inventory-overview','Inventory Overview',Boxes,'inventory dashboard stock'),
+    item('item-master','Item Master',PackagePlus,'sku product material master','inventory.write'),
+    item('warehouses','Warehouses',Warehouse,'warehouse location stock','inventory.write'),
+    item('procurement','Procurement',ShoppingCart,'purchase order po grn goods receipt','procurement.write'),
+    item('procurement-intelligence','Procurement Intelligence',ShoppingCart,'ai reorder replenishment low stock forecast draft po'),
+    item('stock','Stock & Transfers',ArrowRightLeft,'inventory balance movement transfer','inventory.write'),
+    item('scanner','Barcode / Serial Scan',ScanLine,'barcode qr serial scanner'),
+    item('logistics-overview','Logistics Overview',Truck,'logistics transport dashboard'),
+    item('shipments','Shipments & Tracking',Navigation,'dispatch shipment tracking driver','logistics.write'),
+    item('fleet','Drivers & Vehicles',UsersRound,'driver vehicle fleet','logistics.write'),
+    item('material-issues','Technician Material',PackageOpen,'technician issue custody material','logistics.write'),
+    item('agency-stock','Agency Stock Accountability',Truck,'agency dispatched received damaged missing stock custody'),
+    item('pdi','PDI & Asset Inspection',ClipboardCheck,'pre dispatch inspection pdi serial quality supplier brand','pdi.write')
+  ]},
+  {id:'asset-care',label:'Asset Care',icon:Wrench,items:[
+    item('installed-assets','Installed Assets',PackageCheck,'farmer installed serial asset','service.write'),
+    item('asset-lifecycle','Asset Lifecycle',Activity,'asset history replacement return','service.write'),
+    item('service-cases','Service / Warranty',CircleAlert,'complaint service breakdown warranty','service.write'),
+    item('service-plans','Warranty & AMC',ShieldCheck,'amc warranty coverage plan','service.write'),
+    item('reconciliation','Reconciliation',ClipboardCheck,'stock mismatch exception serial','logistics.write'),
+    item('insurance','Asset Insurance',ShieldCheck,'insurance policy insurer expiry coverage claim farmer asset','insurance.write')
+  ]},
+  {id:'finance-assurance',label:'Finance & Assurance',icon:WalletCards,items:[
+    item('sla','SLA Rules',ClipboardCheck,'sla due delayed breach','assurance.write'),
+    item('financial-control','Financial Control',WalletCards,'company finance procurement commitment receivables agency commercial'),
+    item('claims','Claims & Receivables',Building2,'claim payment receivable commercial','finance.write'),
+    item('agency-performance','Agency Performance',BarChart3,'agency scorecard performance'),
+    item('compliance','Quality & Compliance',ShieldCheck,'inspection compliance claim ready quality','assurance.write'),
+    item('approval-center','Approval Center',CheckCircle2,'approval exception waiver','approvals.decide'),
+    item('evidence-control','Evidence Control',ClipboardCheck,'survey installation final inspection evidence checklist photos documents'),
+    item('regulatory-reports','Regulatory Reports',FileText,'jcr office installer asset imei district agency synopsis regulatory export')
+  ]},
+  {id:'administration',label:'Administration',icon:UserCog,items:[
+    item('bulk-center','Bulk & Exports',UploadCloud,'bulk import export csv excel','approvals.decide'),
+    item('analytics','Analytics & Reports',BarChart3,'analytics reports metrics'),
+    item('notifications','Notifications',Bell,'alerts notification'),
+    item('documents','Documents',FileText,'document loa invoice grn proof'),
+    item('audit','Audit Trail',History,'audit history changes'),
+    item('team-access','Team & Access',UserCog,'company users roles permissions access team','team.manage'),
+    item('automation','Automation & Health',Activity,'automation scheduler system health','automation.run'),
+    item('master-data','Master Data',Layers3,'geography brand supplier scheme component tender field master data'),
+    item('readiness','Readiness & Data Quality',ShieldCheck,'uat readiness integrity data quality validation')
+  ]}
+];
+
+export const flattenModules=(companyMode=false)=>(companyMode?companyGroups:platformGroups).flatMap(g=>g.items.map(x=>({...x,groupId:g.id,groupLabel:g.label})));
+export const moduleForPage=(page,companyMode=false)=>flattenModules(companyMode).find(m=>m.id===page);
+export const moduleVisibleToUser=(module,user,companyMode=false)=>{
+  if(!module)return false;
+  if(!companyMode||user?.role==='platform_superadmin')return true;
+  return Array.isArray(module.roles)&&module.roles.includes(user?.role);
+};
+export const groupsForUser=(user,companyMode=false)=>(companyMode?companyGroups:platformGroups).map(group=>({
+  ...group,
+  items:group.items.filter(x=>moduleVisibleToUser(x,user,companyMode))
+})).filter(group=>group.items.length);
+export const flattenModulesForUser=(user,companyMode=false)=>groupsForUser(user,companyMode).flatMap(g=>g.items.map(x=>({...x,groupId:g.id,groupLabel:g.label})));
+export const roleModuleIds=role=>ROLE_MODULES[role]==='*'?flattenModules(true).map(m=>m.id):[...(ROLE_MODULES[role]||[])];
+export const defaultCompanyPageForRole=role=>({
+  company_owner:'company-overview',
+  company_admin:'company-overview',
+  operations_manager:'company-overview',
+  program_manager:'company-overview',
+  inventory_manager:'company-overview',
+  procurement_manager:'company-overview',
+  finance_user:'company-overview',
+  quality_user:'company-overview',
+  logistics_manager:'company-overview',
+  viewer:'company-overview'
+}[role]||'my-workspace');

@@ -1,0 +1,15 @@
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..');let failed=false;
+const must=(cond,msg)=>{if(cond)console.log(`✓ ${msg}`);else{failed=true;console.error(`✗ ${msg}`)}};
+const server=fs.readFileSync(path.join(root,'services/api/server.js'),'utf8');
+const registry=fs.readFileSync(path.join(root,'apps/platform-web/src/layout/moduleRegistry.jsx'),'utf8');
+const workspace=fs.readFileSync(path.join(root,'apps/platform-web/src/features/company/CompanyWorkspace.jsx'),'utf8');
+const readinessRoute=fs.readFileSync(path.join(root,'services/api/routes/platform/readinessRoutes.js'),'utf8');
+const readinessController=fs.readFileSync(path.join(root,'services/api/controllers/platform/readinessController.js'),'utf8');
+must(server.includes("/api/platform/readiness"),'readiness API mounted');
+must(registry.includes("item('readiness','Readiness & Data Quality'"),'Readiness & Data Quality module registered');
+must(workspace.includes("'readiness':ReadinessPage"),'Readiness screen mapped in Company workspace');
+must(readinessRoute.includes("rolesFor('readiness.read')"),'readiness API protected by readiness-read capability');
+must(readinessController.includes('InstalledAsset')&&readinessController.includes('BeneficiaryContext')&&readinessController.includes('Shipment'),'readiness audit spans execution, assets and logistics');
+must(server.includes('/api/health/ready'),'database-backed readiness endpoint exists');
+if(failed)process.exit(1);console.log('✓ Opsynq UAT architecture contracts passed');

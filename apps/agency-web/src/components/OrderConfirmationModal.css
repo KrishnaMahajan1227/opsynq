@@ -1,0 +1,214 @@
+/* OrderConfirmationModal — Premium Design System
+   Scoped with .order-confirmation-modal prefix, --sz-* tokens. */
+
+.order-confirmation-modal .modal-content {
+  border: none;
+  border-radius: var(--sz-radius-lg);
+  box-shadow: var(--sz-shadow-lg);
+  overflow: hidden;
+}
+
+.order-confirmation-modal .modal-header {
+  background: linear-gradient(135deg, var(--sz-navy-800), var(--sz-navy-900));
+  border-bottom: none;
+  padding: 1.25rem 1.5rem;
+  position: relative;
+}
+.order-confirmation-modal .modal-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--sz-gold-500), var(--sz-blue-600), var(--sz-navy-900));
+}
+.order-confirmation-modal .modal-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+.order-confirmation-modal .modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+  opacity: 0.85;
+  transition: opacity 0.2s var(--sz-ease);
+}
+.order-confirmation-modal .modal-header .btn-close:hover { opacity: 1; }
+
+.order-confirmation-modal .modal-body { padding: 1.5rem; background: var(--sz-ink-50); }
+
+.order-confirmation-modal .modal-footer {
+  border-top: 1px solid var(--sz-ink-100);
+  padding: 1.1rem 1.5rem;
+  background: #fff;
+}
+.order-confirmation-modal .modal-footer .btn {
+  font-weight: 600;
+  padding: 0.65rem 1.4rem;
+  border-radius: var(--sz-radius-sm);
+  transition: all 0.2s var(--sz-ease);
+}
+.order-confirmation-modal .modal-footer .btn:hover { transform: translateY(-1px); box-shadow: var(--sz-shadow-sm); }
+
+.order-confirmation-modal .form-label {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--sz-ink-700);
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.order-confirmation-modal .form-control,
+.order-confirmation-modal .form-select {
+  border: 1.5px solid var(--sz-ink-200);
+  border-radius: var(--sz-radius-sm);
+  padding: 0.55rem 0.85rem;
+  font-size: 0.9rem;
+  background: #fff;
+  color: var(--sz-ink-900);
+  transition: all 0.2s var(--sz-ease);
+}
+.order-confirmation-modal .form-control:focus,
+.order-confirmation-modal .form-select:focus {
+  border-color: var(--sz-blue-600);
+  box-shadow: 0 0 0 3px rgba(46, 95, 242, 0.14);
+  outline: none;
+}
+
+.order-confirmation-modal .inspection-data .info-item {
+  font-size: 0.9rem;
+  background: linear-gradient(135deg, var(--sz-ink-50), #ffffff);
+  border: 1px solid var(--sz-ink-100);
+  border-radius: var(--sz-radius-sm);
+  padding: 0.85rem 1rem;
+  transition: all 0.2s var(--sz-ease);
+}
+.order-confirmation-modal .inspection-data .info-item:hover { box-shadow: var(--sz-shadow-xs); }
+.order-confirmation-modal .info-item strong {
+  text-transform: uppercase;
+  color: var(--sz-navy-900);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.order-confirmation-modal .info-image {
+  max-width: 150px;
+  margin-top: 5px;
+  border: 2px solid var(--sz-ink-200);
+  border-radius: var(--sz-radius-sm);
+  transition: all 0.2s var(--sz-ease);
+}
+.order-confirmation-modal .info-image:hover { border-color: var(--sz-blue-400); transform: scale(1.03); }
+
+.order-confirmation-modal .site-photos {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.order-confirmation-modal .site-photo {
+  max-width: 100px;
+  border: 2px solid var(--sz-ink-200);
+  border-radius: var(--sz-radius-sm);
+  transition: all 0.2s var(--sz-ease);
+}
+.order-confirmation-modal .site-photo:hover { border-color: var(--sz-blue-400); transform: scale(1.03); box-shadow: var(--sz-shadow-sm); }
+
+.order-confirmation-modal .form-section {
+  background: #fff;
+  border: 1px solid var(--sz-ink-100);
+  border-radius: var(--sz-radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--sz-shadow-xs);
+  position: relative;
+}
+.order-confirmation-modal .form-section h6 {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sz-navy-900);
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--sz-ink-100);
+  padding-bottom: 0.5rem;
+  position: relative;
+}
+.order-confirmation-modal .form-section h6::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 50px;
+  height: 2px;
+  background: var(--sz-blue-600);
+}
+
+.order-confirmation-modal .signature-canvas {
+  border: 1.5px solid var(--sz-ink-300);
+  border-radius: var(--sz-radius-sm);
+  background-color: #fff;
+  transition: border-color 0.2s var(--sz-ease);
+}
+.order-confirmation-modal .signature-canvas:hover { border-color: var(--sz-blue-400); }
+
+.order-confirmation-modal .signature-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+.order-confirmation-modal .signature-actions .btn {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--sz-radius-sm);
+  transition: all 0.2s var(--sz-ease);
+}
+.order-confirmation-modal .signature-actions .btn:hover { transform: translateY(-1px); }
+
+.order-confirmation-modal .add-panel-btn {
+  margin-top: 10px;
+  font-weight: 600;
+  border-radius: var(--sz-radius-sm);
+}
+
+.order-confirmation-modal .form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+.order-confirmation-modal .form-actions .btn {
+  font-weight: 600;
+  padding: 0.65rem 1.4rem;
+  border-radius: var(--sz-radius-sm);
+}
+
+.order-confirmation-modal .alert {
+  font-size: 0.88rem;
+  border-radius: var(--sz-radius-sm);
+  border: none;
+}
+.order-confirmation-modal .alert-danger {
+  background: var(--sz-danger-50);
+  color: var(--sz-danger-700);
+}
+
+@media (max-width: 576px) {
+  .order-confirmation-modal .modal-title { font-size: 1.1rem; }
+  .order-confirmation-modal .modal-body { padding: 1rem; }
+  .order-confirmation-modal .form-section { padding: 1rem; }
+  .order-confirmation-modal .form-actions { flex-direction: column; }
+  .order-confirmation-modal .form-actions .btn { width: 100%; }
+}
+
+/* Technician mobile neutral override */
+.order-confirmation-modal .modal-content { background:#fff!important; border:1px solid #e4e7ec!important; box-shadow:0 18px 55px rgba(16,24,40,.14)!important; }
+.order-confirmation-modal .modal-header { background:#17202b!important; }
+@media (max-width:575.98px) {
+  .order-confirmation-modal .modal-dialog { width:100%!important; max-width:none!important; height:100%!important; margin:0!important; }
+  .order-confirmation-modal .modal-content { min-height:100vh!important; height:100vh!important; border:0!important; border-radius:0!important; }
+  .order-confirmation-modal .modal-header { padding:14px 15px!important; }
+  .order-confirmation-modal .modal-body { padding:10px!important; }
+  .order-confirmation-modal .modal-footer { position:sticky; bottom:0; background:#fff; z-index:4; padding:10px!important; }
+}

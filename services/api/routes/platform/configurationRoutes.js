@@ -1,0 +1,10 @@
+const router=require('express').Router();
+const c=require('../../controllers/platform/configurationController');
+const {protectPlatform,requireCompanyScope,requirePlatformRoles}=require('../../middleware/platform/platformAuth');
+router.use(protectPlatform,requireCompanyScope);
+const admin=requirePlatformRoles('company_owner','company_admin');
+const evidenceRead=requirePlatformRoles('company_owner','company_admin','operations_manager','program_manager','quality_user');
+const qualityWrite=requirePlatformRoles('company_owner','company_admin','quality_user');
+router.get('/master-data',admin,c.listMaster);router.post('/master-data',admin,c.saveMaster);router.patch('/master-data/:id',admin,c.toggleMaster);
+router.get('/evidence-requirements',evidenceRead,c.listRequirements);router.post('/evidence-requirements',qualityWrite,c.saveRequirement);router.get('/beneficiaries/:farmerId/evidence',evidenceRead,c.evidenceStatus);router.patch('/evidence-submissions/:id',qualityWrite,c.verifySubmission);
+module.exports=router;

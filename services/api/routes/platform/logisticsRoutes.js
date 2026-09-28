@@ -1,0 +1,30 @@
+const router=require('express').Router();
+const c=require('../../controllers/platform/logisticsController');
+const {protectPlatform,requirePlatformRoles,requireCompanyScope}=require('../../middleware/platform/platformAuth');
+const {rolesFor}=require('../../security/platformCapabilities');
+const read=rolesFor('logistics.read');
+const assetRead=rolesFor('assets.read');
+const manage=rolesFor('logistics.write');
+router.get('/public/track/:token',c.publicTrackingInfo);
+router.post('/public/track/:token/location',c.publicTrackingUpdate);
+router.use(protectPlatform,requireCompanyScope);
+router.get('/dashboard',requirePlatformRoles(...read),c.dashboard);
+router.get('/refs',requirePlatformRoles(...read),c.refs);
+router.get('/drivers',requirePlatformRoles(...read),c.listDrivers);router.post('/drivers',requirePlatformRoles(...manage),c.createDriver);
+router.get('/vehicles',requirePlatformRoles(...read),c.listVehicles);router.post('/vehicles',requirePlatformRoles(...manage),c.createVehicle);
+router.get('/shipments',requirePlatformRoles(...read),c.listShipments);router.post('/shipments',requirePlatformRoles(...manage),c.createShipment);
+router.post('/shipments/:id/dispatch',requirePlatformRoles(...manage),c.dispatchShipment);
+router.post('/shipments/:id/receive',requirePlatformRoles(...manage),c.podUpload,c.receiveShipment);
+router.get('/shipments/:id/tracking',requirePlatformRoles(...read),c.shipmentTracking);
+router.get('/technician-links',requirePlatformRoles(...read),c.listTechnicianLinks);router.post('/technician-links',requirePlatformRoles(...manage),c.linkTechnician);
+router.get('/material-issues',requirePlatformRoles(...read),c.listMaterialIssues);router.post('/material-issues',requirePlatformRoles(...manage),c.issueMaterial);
+router.get('/reconciliation',requirePlatformRoles(...assetRead),c.reconciliation);
+
+router.get('/asset-lifecycle/summary',requirePlatformRoles(...assetRead),c.assetLifecycleSummary);
+router.get('/installed-assets',requirePlatformRoles(...assetRead),c.listInstalledAssets);
+router.get('/installed-assets/:id',requirePlatformRoles(...assetRead),c.assetDetail);
+router.post('/installed-assets/:id/replace',requirePlatformRoles(...manage),c.replaceInstalledAsset);
+router.post('/material-returns',requirePlatformRoles(...manage),c.returnIssuedSerial);
+router.post('/serials/mark-damaged',requirePlatformRoles(...manage),c.markSerialDamaged);
+
+module.exports=router;

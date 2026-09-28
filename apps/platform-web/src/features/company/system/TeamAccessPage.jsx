@@ -1,0 +1,27 @@
+import React,{useEffect,useMemo,useState}from'react';
+import{Edit3,Plus,Search,ShieldCheck,UserCheck,UserX}from'lucide-react';
+import{api,teamPath}from'../../../core/api';
+import{usePermissions}from'../../../core/accessControl.jsx';
+import{Modal,PageHeader,Status}from'../../../components/common';
+
+const roleLabel=r=>String(r||'').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+const defaultForm={name:'',email:'',mobile:'',password:'',role:'viewer',isActive:true};
+
+export function TeamAccessPage({companyId}){
+ const{can,user}=usePermissions(),canManage=can('team.manage');
+ const[items,setItems]=useState([]),[roles,setRoles]=useState([]),[q,setQ]=useState(''),[edit,setEdit]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(true);
+ const load=()=>{setLoading(true);setError('');return api(teamPath(companyId,`/?q=${encodeURIComponent(q)}`)).then(d=>{setItems(d.items||[]);setRoles(d.assignableRoles||[])}).catch(e=>setError(e.message)).finally(()=>setLoading(false))};
+ useEffect(()=>{load()},[companyId]);
+ const rows=useMemo(()=>items.filter(x=>`${x.name} ${x.email||''} ${x.mobile||''} ${x.role}`.toLowerCase().includes(q.toLowerCase())),[items,q]);
+ return <><PageHeader eyebrow="COMPANY ACCESS CONTROL" title="Team & Access" text="Manage company users, operational roles and account status without exposing platform-level controls." actions={canManage?<button className="btn primary" onClick={()=>setEdit({})}><Plus size={16}/> Add team member</button>:null}/>
+ <div className="command-bar"><div className="search-box"><Search size={17}/><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()} placeholder="Search name, mobile, email or role…"/></div><button className="btn secondary" onClick={load}>Search</button><span className="result-count">{rows.length} users</span></div>
+ {error&&<div className="alert error">{error}</div>}
+ <section className="table-panel"><div className="table-wrap"><table><thead><tr><th>User</th><th>Contact</th><th>Role</th><th>Last login</th><th>Status</th><th>Access</th></tr></thead><tbody>{loading?<tr><td colSpan="6" className="empty">Loading company users…</td></tr>:rows.map(x=>{const owner=x.role==='company_owner',self=String(x._id||x.id)===String(user?.id);return <tr key={x._id}><td><b>{x.name}</b><small>{self?'Signed-in account':''}</small></td><td>{x.mobile}<small>{x.email||'—'}</small></td><td>{roleLabel(x.role)}</td><td>{x.lastLoginAt?new Date(x.lastLoginAt).toLocaleString():'Never'}</td><td><Status value={x.isActive?'ACTIVE':'INACTIVE'}/></td><td>{canManage&&!owner?<button className="mini" onClick={()=>setEdit(x)}><Edit3 size={14}/> Manage</button>:owner?<span className="access-lock"><ShieldCheck size={14}/> Platform controlled</span>:<span className="muted-action">View only</span>}</td></tr>})}{!loading&&!rows.length&&<tr><td colSpan="6" className="empty">No company users match this view.</td></tr>}</tbody></table></div></section>
+ {edit&&<TeamMemberModal companyId={companyId} item={edit._id?edit:null} roles={roles} close={()=>setEdit(null)} done={()=>{setEdit(null);load()}}/>}</>
+}
+
+function TeamMemberModal({companyId,item,roles,close,done}){
+ const[f,setF]=useState(item?{name:item.name||'',email:item.email||'',mobile:item.mobile||'',password:'',role:item.role||'viewer',isActive:item.isActive!==false}:defaultForm),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{const body={...f};if(item&&!body.password)delete body.password;await api(teamPath(companyId,item?`/${item._id}`:''),{method:item?'PATCH':'POST',body:JSON.stringify(body)});done()}catch(x){setError(x.message)}finally{setBusy(false)}};
+ return <Modal title={item?'Manage team member':'Add team member'} close={close}><form className="form" onSubmit={submit}>{error&&<div className="alert error">{error}</div>}<label>Name<input required value={f.name} onChange={e=>setF({...f,name:e.target.value})}/></label><div className="two"><label>Mobile<input required value={f.mobile} onChange={e=>setF({...f,mobile:e.target.value})}/></label><label>Email<input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></label></div><label>Role<select value={f.role} onChange={e=>setF({...f,role:e.target.value})}>{roles.map(r=><option key={r} value={r}>{roleLabel(r)}</option>)}</select></label><label>{item?'Reset password (optional)':'Temporary password'}<input type="password" required={!item} minLength="12" value={f.password} onChange={e=>setF({...f,password:e.target.value})} placeholder={item?'Leave blank to keep current password':'Minimum 12 characters'}/></label>{item&&<label className="toggle-line"><input type="checkbox" checked={f.isActive} onChange={e=>setF({...f,isActive:e.target.checked})}/><span>{f.isActive?<><UserCheck size={15}/> Account active</>:<><UserX size={15}/> Account inactive</>}</span></label>}<div className="modal-actions"><button type="button" className="btn secondary" onClick={close}>Cancel</button><button className="btn primary" disabled={busy}>{busy?'Saving…':item?'Save access':'Create user'}</button></div></form></Modal>
+}

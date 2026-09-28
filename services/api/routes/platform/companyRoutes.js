@@ -1,0 +1,14 @@
+const router = require('express').Router();
+const controller = require('../../controllers/platform/companyController');
+const { protectPlatform, requirePlatformRoles } = require('../../middleware/platform/platformAuth');
+router.use(protectPlatform, requirePlatformRoles('platform_superadmin'));
+router.get('/summary', controller.summary);
+router.get('/portfolio', controller.portfolio);
+router.get('/', controller.list);
+router.post('/', controller.create);
+router.get('/:id', controller.getOne);
+router.patch('/:id', controller.update);
+router.patch('/:id/status', controller.setStatus);
+router.post('/:id/users', controller.createCompanyUser);
+router.patch('/:id/users/:userId', controller.updateCompanyUser);
+module.exports = router;

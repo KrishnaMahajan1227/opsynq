@@ -1,0 +1,18 @@
+const router=require('express').Router();
+const c=require('../../controllers/platform/serviceController');
+const {protectPlatform,requirePlatformRoles,requireCompanyScope}=require('../../middleware/platform/platformAuth');
+const {rolesFor}=require('../../security/platformCapabilities');
+const read=rolesFor('company.read');
+const serviceRead=rolesFor('service.read');
+const financeRead=rolesFor('finance.read');
+const assuranceRead=rolesFor('assurance.read');
+const serviceWrite=rolesFor('service.write');
+const financeWrite=rolesFor('finance.write');
+const adminWrite=rolesFor('assurance.write');
+router.use(protectPlatform,requireCompanyScope);
+router.get('/dashboard',requirePlatformRoles(...read),c.dashboard);
+router.get('/cases',requirePlatformRoles(...serviceRead),c.listCases);router.post('/cases',requirePlatformRoles(...serviceWrite),c.createCase);router.patch('/cases/:id',requirePlatformRoles(...serviceWrite),c.updateCase);
+router.get('/sla-rules',requirePlatformRoles(...assuranceRead),c.listRules);router.post('/sla-rules',requirePlatformRoles(...adminWrite),c.createRule);router.patch('/sla-rules/:id',requirePlatformRoles(...adminWrite),c.updateRule);
+router.get('/claims',requirePlatformRoles(...financeRead),c.listClaims);router.post('/claims',requirePlatformRoles(...financeWrite),c.createClaim);router.patch('/claims/:id',requirePlatformRoles(...financeWrite),c.updateClaim);
+router.get('/service-plans',requirePlatformRoles(...serviceRead),c.listPlans);router.post('/service-plans',requirePlatformRoles(...serviceWrite),c.createPlan);
+module.exports=router;

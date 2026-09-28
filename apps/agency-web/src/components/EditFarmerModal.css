@@ -1,0 +1,177 @@
+/* EditFarmerModal — Premium Design System
+   Scoped with .efm prefix, using --sz-* tokens. */
+
+.efm .efm__modal-dialog { max-width: 60% !important; }
+.efm .modal-dialog { max-width: 100%; }
+
+@media print {
+  body * { visibility: hidden; }
+  .efm { visibility: visible; position: absolute; top: 0; left: 0; width: 100%; }
+  .efm .efm__modal-dialog { max-width: 100% !important; }
+}
+
+.efm .modal-content {
+  border: none;
+  border-radius: var(--sz-radius-lg);
+  box-shadow: var(--sz-shadow-lg);
+}
+
+.efm .modal-header {
+  background: linear-gradient(135deg, var(--sz-navy-800), var(--sz-navy-900));
+  border-bottom: none;
+  border-radius: var(--sz-radius-lg) var(--sz-radius-lg) 0 0;
+  padding: 1.25rem 1.75rem;
+}
+.efm .modal-header .modal-title,
+.efm .modal-header .btn-close {
+  color: #fff;
+}
+.efm .modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+  opacity: 0.8;
+  transition: opacity 0.2s var(--sz-ease);
+}
+.efm .modal-header .btn-close:hover { opacity: 1; }
+
+.efm .modal-body { padding: 1.75rem; background: var(--sz-ink-50); }
+
+.efm .modal-footer {
+  border-top: 1px solid var(--sz-ink-100);
+  padding: 1.1rem 1.75rem;
+  background: #fff;
+}
+.efm .modal-footer .btn { border-radius: var(--sz-radius-sm); font-weight: 600; }
+
+/* Section wrapper */
+.efm .efm__section {
+  border: 1px solid var(--sz-ink-100);
+  padding: 1.25rem;
+  border-radius: var(--sz-radius-md);
+  margin-bottom: 1.5rem;
+  background: #fff;
+  box-shadow: var(--sz-shadow-xs);
+  position: relative;
+}
+.efm .efm__section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sz-gold-500), var(--sz-blue-600));
+  border-radius: var(--sz-radius-md) var(--sz-radius-md) 0 0;
+  opacity: 0.7;
+}
+
+.efm .efm__section-legend {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--sz-navy-900);
+  padding: 0 0.5rem;
+  margin-bottom: 0.75rem;
+  width: auto;
+  letter-spacing: 0.01em;
+}
+
+/* Form controls */
+.efm .efm__form-group { margin-bottom: 1rem; }
+.efm .efm__form-label {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--sz-ink-700);
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.efm .efm__form-control,
+.efm .efm__form-select {
+  border-radius: var(--sz-radius-sm);
+  font-size: 0.9rem;
+  padding: 0.55rem 0.85rem;
+  border: 1.5px solid var(--sz-ink-200);
+  transition: all 0.2s var(--sz-ease);
+  background: var(--sz-ink-50);
+  color: var(--sz-ink-900);
+}
+.efm .efm__form-control:focus,
+.efm .efm__form-select:focus {
+  border-color: var(--sz-blue-600);
+  box-shadow: 0 0 0 3px rgba(46, 95, 242, 0.14);
+  background: #fff;
+  outline: none;
+}
+
+/* Buttons */
+.efm .efm__btn {
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: var(--sz-radius-sm);
+  padding: 0.5rem 1rem;
+  transition: all 0.2s var(--sz-ease);
+}
+.efm .efm__btn:hover { transform: translateY(-1px); box-shadow: var(--sz-shadow-sm); }
+
+/* Accordion */
+.efm .accordion-button {
+  background-color: var(--sz-ink-50);
+  font-weight: 600;
+  color: var(--sz-navy-900);
+  font-size: 0.9rem;
+}
+.efm .accordion-button:not(.collapsed) {
+  background: var(--sz-blue-50);
+  color: var(--sz-blue-700);
+}
+.efm .accordion-body { background-color: #fff; padding: 1.25rem; }
+
+/* Image containers */
+.efm .efm__img-container {
+  width: 100%;
+  max-height: 120px;
+  overflow: hidden;
+  border: 1px solid var(--sz-ink-200);
+  border-radius: var(--sz-radius-sm);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--sz-ink-50);
+}
+.efm .efm__img-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.efm .efm__img-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--sz-ink-50);
+  border: 1px dashed var(--sz-ink-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sz-ink-400);
+  font-size: 0.85rem;
+}
+
+.efm .efm__subheading {
+  font-family: 'Sora', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--sz-navy-900);
+  margin-bottom: 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .efm .efm__modal-dialog { max-width: 80% !important; }
+}
+@media (max-width: 768px) {
+  .efm .efm__modal-dialog { max-width: 95% !important; }
+  .efm .efm__section { padding: 0.85rem; }
+  .efm .efm__section-legend { font-size: 0.9rem; }
+  .efm .efm__form-control, .efm .efm__form-select { font-size: 0.85rem; padding: 0.45rem 0.7rem; }
+  .efm .efm__btn { font-size: 0.85rem; padding: 0.45rem 0.8rem; }
+}

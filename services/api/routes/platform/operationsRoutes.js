@@ -1,0 +1,27 @@
+const router=require('express').Router();
+const multer=require('multer');
+const c=require('../../controllers/platform/operationsController');
+const {protectPlatform,requirePlatformRoles,requireCompanyScope}=require('../../middleware/platform/platformAuth');
+const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:10*1024*1024},fileFilter:(req,file,cb)=>{const ok=/\.(xlsx|xls)$/i.test(file.originalname);cb(ok?null:new Error('Only .xlsx or .xls files are allowed.'),ok);}});
+const {rolesFor}=require('../../security/platformCapabilities');
+const readRoles=rolesFor('overview.read');
+const operationsRead=rolesFor('operations.read');
+const beneficiaryRead=rolesFor('beneficiary.read');
+const writeRoles=rolesFor('operations.write');
+const canRead=requirePlatformRoles(...readRoles),canOperationsRead=requirePlatformRoles(...operationsRead),canBeneficiaryRead=requirePlatformRoles(...beneficiaryRead),canWrite=requirePlatformRoles(...writeRoles);
+router.use(protectPlatform,requireCompanyScope);
+router.get('/dashboard',canRead,c.dashboard);
+router.get('/geo-overview',canBeneficiaryRead,c.geoOverview);
+router.get('/programs',canOperationsRead,c.listPrograms);router.post('/programs',canWrite,c.createProgram);router.patch('/programs/:id',canWrite,c.updateProgram);router.delete('/programs/:id',canWrite,c.closeProgram);
+router.get('/contracts',canOperationsRead,c.listContracts);router.post('/contracts',canWrite,c.createContract);router.patch('/contracts/:id',canWrite,c.updateContract);router.delete('/contracts/:id',canWrite,c.closeContract);
+router.get('/work-orders',canOperationsRead,c.listWorkOrders);router.post('/work-orders',canWrite,c.createWorkOrder);router.patch('/work-orders/:id',canWrite,c.updateWorkOrder);router.delete('/work-orders/:id',canWrite,c.closeWorkOrder);
+router.get('/agencies',canOperationsRead,c.listAgencies);router.post('/agencies',canWrite,c.createAgency);router.patch('/agencies/:id',canWrite,c.updateAgency);router.delete('/agencies/:id',canWrite,c.archiveAgency);
+router.get('/work-packages',canOperationsRead,c.listWorkPackages);router.post('/work-packages',canWrite,c.createWorkPackage);router.patch('/work-packages/:id',canWrite,c.updateWorkPackage);router.patch('/work-packages/:id/assign',canWrite,c.assignPackage);router.delete('/work-packages/:id',canWrite,c.closeWorkPackage);
+router.get('/beneficiaries',canBeneficiaryRead,c.listBeneficiaries);
+// IMPORTANT: fixed/static beneficiary routes must be declared before /:farmerId.
+router.get('/beneficiaries/template',canOperationsRead,c.downloadBeneficiaryTemplate);
+router.post('/beneficiaries/import',canWrite,upload.single('file'),c.importBeneficiaries);
+router.get('/beneficiaries/imports',canOperationsRead,c.listImports);
+router.get('/beneficiaries/imports/:id/errors',canOperationsRead,c.downloadImportErrors);
+router.get('/beneficiaries/:farmerId',canBeneficiaryRead,c.getBeneficiaryDetail);
+module.exports=router;

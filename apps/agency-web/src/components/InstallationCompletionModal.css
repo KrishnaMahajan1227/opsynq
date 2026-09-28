@@ -1,0 +1,623 @@
+/* InstallationCompletionModal - Premium Design System
+   Uses --sz-* tokens. Scoped with .installation-modal prefix. */
+
+.installation-modal {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --bs-modal-border-radius: var(--sz-radius-xl);
+}
+
+.installation-modal .modal-dialog {
+  max-width: 95vw;
+  width: 100%;
+  margin: 1rem auto;
+}
+
+.installation-modal .modal-content {
+  border: none;
+  border-radius: var(--sz-radius-xl);
+  box-shadow: var(--sz-shadow-lg);
+  background: linear-gradient(135deg, #ffffff 0%, var(--sz-ink-50) 100%);
+  overflow: hidden;
+}
+
+/* Modal Header */
+.installation-modal .modal-header {
+  background: linear-gradient(135deg, var(--sz-navy-800), var(--sz-navy-900));
+  border-bottom: none;
+  padding: 1.5rem 2rem;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.installation-modal .modal-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--sz-gold-500), var(--sz-blue-600), var(--sz-navy-900));
+}
+.installation-modal .modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+  opacity: 0.85;
+  transition: opacity 0.2s var(--sz-ease);
+}
+.installation-modal .modal-header .btn-close:hover { opacity: 1; }
+
+.installation-modal .modal-title {
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(1.15rem, 2.5vw, 1.4rem);
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.installation-modal .header-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.installation-modal .btn-header {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--sz-radius-sm);
+  transition: all 0.2s var(--sz-ease);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.installation-modal .btn-header:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Modal Body */
+.installation-modal .modal-body {
+  padding: 1.75rem;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sz-blue-300) var(--sz-ink-100);
+}
+.installation-modal .modal-body::-webkit-scrollbar { width: 6px; }
+.installation-modal .modal-body::-webkit-scrollbar-track { background: var(--sz-ink-100); border-radius: var(--sz-radius-sm); }
+.installation-modal .modal-body::-webkit-scrollbar-thumb { background: var(--sz-blue-300); border-radius: var(--sz-radius-sm); }
+
+/* Alert */
+.installation-modal .alert-danger {
+  background: linear-gradient(135deg, var(--sz-danger-50), var(--sz-danger-100));
+  border: 1px solid var(--sz-danger-200);
+  color: var(--sz-danger-700);
+  border-radius: var(--sz-radius-md);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+.installation-modal .alert-danger::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--sz-danger-500);
+}
+.installation-modal .alert-icon { color: var(--sz-danger-500); font-size: 1.2rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+/* Accordion */
+.installation-modal .accordion { border: none; gap: 1.25rem; }
+.installation-modal .accordion-item {
+  border: 1px solid var(--sz-ink-100);
+  border-radius: var(--sz-radius-lg);
+  margin-bottom: 1.25rem;
+  background: #ffffff;
+  box-shadow: var(--sz-shadow-sm);
+  overflow: hidden;
+  transition: all 0.3s var(--sz-ease);
+  position: relative;
+}
+.installation-modal .accordion-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sz-blue-600), var(--sz-blue-700));
+  opacity: 0;
+  transition: opacity 0.3s var(--sz-ease);
+}
+.installation-modal .accordion-item:hover { box-shadow: var(--sz-shadow-md); }
+.installation-modal .accordion-item:hover::before { opacity: 1; }
+
+.installation-modal .accordion-button {
+  background: linear-gradient(135deg, var(--sz-ink-50), #ffffff);
+  color: var(--sz-navy-900);
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: clamp(1rem, 2.5vw, 1.1rem);
+  padding: 1.1rem 1.5rem;
+  border: none;
+  transition: all 0.3s var(--sz-ease);
+}
+.installation-modal .accordion-button:not(.collapsed) {
+  background: linear-gradient(135deg, var(--sz-blue-50), var(--sz-blue-100));
+  color: var(--sz-blue-700);
+  box-shadow: inset 0 -1px 0 var(--sz-blue-200);
+}
+.installation-modal .accordion-button:focus { box-shadow: none; }
+.installation-modal .accordion-button::after {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%232e5ff2'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+}
+.installation-modal .accordion-body { padding: 1.5rem; background: #ffffff; }
+
+/* Inspection Data Grid */
+.installation-modal .inspection-data {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+}
+.installation-modal .inspection-data .col-12,
+.installation-modal .inspection-data .col-sm-6,
+.installation-modal .inspection-data .col-md-4 {
+  padding: 0 !important;
+  margin-bottom: 1rem !important;
+}
+
+.installation-modal .info-item {
+  background: linear-gradient(135deg, var(--sz-ink-50), #ffffff);
+  border: 1px solid var(--sz-ink-100);
+  border-radius: var(--sz-radius-md);
+  padding: 1rem 1.1rem;
+  font-size: 0.88rem;
+  color: var(--sz-ink-600);
+  transition: all 0.2s var(--sz-ease);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.installation-modal .info-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--sz-blue-600);
+  opacity: 0;
+  transition: opacity 0.2s var(--sz-ease);
+}
+.installation-modal .info-item:hover { border-color: var(--sz-blue-300); box-shadow: var(--sz-shadow-sm); }
+.installation-modal .info-item:hover::before { opacity: 1; }
+.installation-modal .info-item strong {
+  color: var(--sz-navy-900);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.installation-modal .info-item .value {
+  font-weight: 500;
+  color: var(--sz-ink-700);
+  font-size: 0.92rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.installation-modal .info-image,
+.installation-modal .site-photo {
+  border-radius: var(--sz-radius-sm);
+  border: 2px solid var(--sz-ink-200);
+  transition: all 0.3s var(--sz-ease);
+  cursor: pointer;
+  max-width: 100%;
+  height: auto;
+  margin-top: 0.5rem;
+}
+.installation-modal .info-image:hover,
+.installation-modal .site-photo:hover {
+  border-color: var(--sz-blue-400);
+  transform: scale(1.03);
+  box-shadow: var(--sz-shadow-md);
+}
+.installation-modal .site-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.installation-modal .site-photos .site-photo { width: 100%; height: 120px; object-fit: cover; margin-top: 0; }
+
+/* Form Sections */
+.installation-modal .form-section {
+  background: linear-gradient(135deg, #ffffff, var(--sz-ink-50));
+  border: 1px solid var(--sz-ink-100);
+  border-radius: var(--sz-radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s var(--sz-ease);
+}
+.installation-modal .form-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sz-blue-600), var(--sz-blue-700));
+}
+.installation-modal .form-section:hover { border-color: var(--sz-blue-300); box-shadow: var(--sz-shadow-sm); }
+
+.installation-modal .form-section h6 {
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(1rem, 2.5vw, 1.1rem);
+  font-weight: 700;
+  color: var(--sz-navy-900);
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid var(--sz-ink-100);
+  position: relative;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.installation-modal .form-section h6::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: var(--sz-blue-600);
+}
+
+/* Form Elements */
+.installation-modal .form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sz-ink-700);
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.installation-modal .form-label .text-danger { color: var(--sz-danger-500); font-size: 1.1em; }
+
+.installation-modal .form-control,
+.installation-modal .form-select {
+  border-radius: var(--sz-radius-sm);
+  border: 1.5px solid var(--sz-ink-200);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.9rem;
+  color: var(--sz-ink-900);
+  background: #ffffff;
+  transition: all 0.2s var(--sz-ease);
+  font-weight: 500;
+}
+.installation-modal .form-control:focus,
+.installation-modal .form-select:focus {
+  border-color: var(--sz-blue-600);
+  box-shadow: 0 0 0 3px rgba(46, 95, 242, 0.14);
+  outline: none;
+}
+.installation-modal .form-control::placeholder { color: var(--sz-ink-400); font-weight: 400; }
+
+/* Panel Management */
+.installation-modal .panel-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--sz-ink-50), #ffffff);
+  border-radius: var(--sz-radius-md);
+  border: 1px solid var(--sz-ink-100);
+  transition: all 0.2s var(--sz-ease);
+}
+.installation-modal .panel-row:hover { border-color: var(--sz-blue-300); box-shadow: var(--sz-shadow-xs); }
+.installation-modal .panel-row .form-group { flex: 1; min-width: 200px; }
+
+.installation-modal .btn-remove-panel {
+  background: linear-gradient(135deg, var(--sz-danger-500), var(--sz-danger-600));
+  border: none;
+  color: white;
+  padding: 0.6rem 1rem;
+  border-radius: var(--sz-radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s var(--sz-ease);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+}
+.installation-modal .btn-remove-panel:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-2px); box-shadow: var(--sz-shadow-md); }
+.installation-modal .btn-remove-panel:disabled { background: var(--sz-ink-300); color: var(--sz-ink-500); cursor: not-allowed; }
+
+.installation-modal .btn-add-panel {
+  background: linear-gradient(135deg, var(--sz-blue-600), var(--sz-blue-700));
+  border: none;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--sz-radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s var(--sz-ease);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.installation-modal .btn-add-panel:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: var(--sz-shadow-md); }
+
+/* Complaint Section */
+.installation-modal .complaint-section {
+  background: linear-gradient(135deg, var(--sz-warning-50), var(--sz-warning-100));
+  border: 2px solid var(--sz-warning-300);
+  border-radius: var(--sz-radius-lg);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.installation-modal .btn-raise-complaint {
+  background: linear-gradient(135deg, var(--sz-warning-500), var(--sz-warning-600));
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 0.85rem 1.5rem;
+  border-radius: var(--sz-radius-sm);
+  transition: all 0.2s var(--sz-ease);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+.installation-modal .btn-raise-complaint:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: var(--sz-shadow-md); }
+
+/* Signature Section */
+.installation-modal .signature-container {
+  background: linear-gradient(135deg, var(--sz-ink-50), #ffffff);
+  border: 2px solid var(--sz-ink-200);
+  border-radius: var(--sz-radius-md);
+  padding: 1.1rem;
+  transition: all 0.2s var(--sz-ease);
+}
+.installation-modal .signature-container:hover { border-color: var(--sz-blue-300); }
+.installation-modal .signature-canvas {
+  border: 2px dashed var(--sz-ink-300);
+  border-radius: var(--sz-radius-sm);
+  background: #ffffff;
+  width: 100%;
+  height: 180px;
+  touch-action: none;
+  transition: all 0.2s var(--sz-ease);
+  cursor: crosshair;
+}
+.installation-modal .signature-canvas:hover { border-color: var(--sz-blue-400); }
+.installation-modal .signature-actions { margin-top: 0.75rem; display: flex; gap: 0.6rem; }
+.installation-modal .btn-signature {
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--sz-radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s var(--sz-ease);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.installation-modal .btn-signature-clear {
+  background: var(--sz-ink-100);
+  color: var(--sz-ink-700);
+  border: 1px solid var(--sz-ink-300);
+}
+.installation-modal .btn-signature-clear:hover { background: var(--sz-ink-200); transform: translateY(-1px); }
+.installation-modal .btn-signature-capture {
+  background: linear-gradient(135deg, var(--sz-blue-600), var(--sz-blue-700));
+  color: white;
+}
+.installation-modal .btn-signature-capture:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: var(--sz-shadow-sm); }
+.installation-modal .signature-preview-container {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  background: var(--sz-success-50);
+  border: 1px solid var(--sz-success-200);
+  border-radius: var(--sz-radius-sm);
+}
+.installation-modal .signature-preview {
+  border-radius: var(--sz-radius-sm);
+  border: 2px solid var(--sz-success-300);
+  max-width: 200px;
+  height: auto;
+}
+
+/* Form Actions */
+.installation-modal .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--sz-ink-100);
+  margin-top: 1.5rem;
+  position: relative;
+}
+.installation-modal .form-actions::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0;
+  width: 100px;
+  height: 2px;
+  background: var(--sz-blue-600);
+}
+.installation-modal .btn-action {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--sz-radius-sm);
+  transition: all 0.2s var(--sz-ease);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 140px;
+  justify-content: center;
+}
+.installation-modal .btn-cancel {
+  background: var(--sz-ink-100);
+  color: var(--sz-ink-700);
+  border: 2px solid var(--sz-ink-300);
+}
+.installation-modal .btn-cancel:hover { background: var(--sz-ink-200); transform: translateY(-2px); }
+.installation-modal .btn-submit {
+  background: linear-gradient(135deg, var(--sz-success-500), var(--sz-success-600));
+  color: white;
+}
+.installation-modal .btn-submit:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-2px); box-shadow: var(--sz-shadow-md); }
+.installation-modal .btn-submit:disabled { background: var(--sz-ink-300); color: var(--sz-ink-500); cursor: not-allowed; transform: none; }
+
+/* File Upload */
+.installation-modal .file-upload-container { position: relative; }
+.installation-modal .form-control[type="file"] {
+  padding: 0.85rem;
+  border: 2px dashed var(--sz-ink-300);
+  background: var(--sz-ink-50);
+  cursor: pointer;
+  transition: all 0.2s var(--sz-ease);
+}
+.installation-modal .form-control[type="file"]:hover { border-color: var(--sz-blue-400); background: var(--sz-blue-50); }
+.installation-modal .form-control[type="file"]:focus { border-style: solid; border-color: var(--sz-blue-600); background: #fff; }
+
+/* Animations */
+@keyframes slideInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.installation-modal .modal-content { animation: slideInUp 0.3s var(--sz-ease); }
+.installation-modal .accordion-item { animation: fadeIn 0.4s ease-out; }
+.installation-modal .form-section { animation: fadeIn 0.35s ease-out; }
+
+.installation-modal .btn-submit.loading { position: relative; color: transparent; }
+.installation-modal .btn-submit.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .installation-modal .modal-dialog { max-width: 98vw; }
+  .installation-modal .inspection-data { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.85rem; }
+}
+@media (max-width: 992px) {
+  .installation-modal .panel-row { flex-direction: column; align-items: stretch; gap: 0.85rem; }
+  .installation-modal .panel-row .form-group { min-width: 100%; }
+  .installation-modal .btn-remove-panel { width: 100%; justify-content: center; }
+  .installation-modal .inspection-data { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+}
+@media (max-width: 768px) {
+  .installation-modal .modal-header { flex-direction: column; align-items: flex-start; padding: 1.1rem; gap: 0.75rem; }
+  .installation-modal .header-controls { width: 100%; justify-content: space-between; }
+  .installation-modal .modal-body { padding: 1.1rem; }
+  .installation-modal .form-section { padding: 1.1rem; }
+  .installation-modal .signature-canvas { height: 150px; }
+  .installation-modal .form-actions { flex-direction: column; gap: 0.6rem; }
+  .installation-modal .btn-action { width: 100%; }
+  .installation-modal .inspection-data { grid-template-columns: 1fr; gap: 0.85rem; }
+}
+@media (max-width: 576px) {
+  .installation-modal .modal-dialog { margin: 0.25rem; }
+  .installation-modal .modal-header, .installation-modal .modal-body { padding: 1rem; }
+  .installation-modal .form-section { padding: 1rem; }
+  .installation-modal .signature-canvas { height: 120px; }
+  .installation-modal .site-photos { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .installation-modal *, .installation-modal *::before, .installation-modal *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Technician mobile neutral override */
+.installation-modal .modal-content { background:#fff; border:1px solid #e4e7ec; box-shadow:0 18px 55px rgba(16,24,40,.14); }
+.installation-modal .modal-header { background:#17202b; }
+.installation-modal .modal-header::before { display:none; }
+.installation-modal .accordion-button:not(.collapsed) { color:#17202b; background:#f7f8fa; }
+.installation-modal .btn-action.btn-primary,
+.installation-modal .btn-action.btn-success { background:#1f4b3f; border-color:#1f4b3f; }
+@media (max-width:575.98px) {
+  .installation-modal .modal-dialog { width:100%; max-width:none; height:100%; margin:0; }
+  .installation-modal .modal-content { min-height:100vh; height:100vh; border:0; border-radius:0; }
+  .installation-modal .modal-header { padding:14px 15px; gap:8px; }
+  .installation-modal .modal-body { padding:10px; }
+  .installation-modal .form-section { padding:13px; border-radius:10px; }
+  .installation-modal .accordion-body { padding:13px; }
+  .installation-modal .form-actions { position:sticky; bottom:0; z-index:5; background:#fff; border-top:1px solid #e4e7ec; padding:10px; margin:0 -10px -10px; }
+  .installation-modal .btn-action { min-height:46px; }
+}
+
+/* Phase 5 — issued inventory context inside technician installation */
+.installation-modal .issued-inventory-section {
+  border: 1px solid #d7e0dc;
+  background: #f8faf9;
+  box-shadow: none;
+}
+.installation-modal .issued-inventory-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+.installation-modal .issued-inventory-head h6 { display:flex; align-items:center; gap:.5rem; margin:0; color:#17251f; }
+.installation-modal .issued-inventory-head p { margin:.35rem 0 0; color:#5b6862; font-size:.84rem; max-width:680px; }
+.installation-modal .inventory-count { white-space:nowrap; border:1px solid #d6ded9; background:#fff; color:#33443c; padding:.35rem .6rem; border-radius:999px; font-size:.75rem; font-weight:700; }
+.installation-modal .issued-inventory-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:.65rem; }
+.installation-modal .issued-inventory-item { border:1px solid #dce4e0; border-radius:10px; background:#fff; padding:.8rem; display:flex; align-items:center; justify-content:space-between; gap:.75rem; min-width:0; }
+.installation-modal .issued-inventory-item > div { min-width:0; display:flex; flex-direction:column; gap:.15rem; }
+.installation-modal .issued-inventory-item strong { color:#486258; font-size:.68rem; letter-spacing:.08em; }
+.installation-modal .issued-inventory-item span { color:#24342d; font-size:.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.installation-modal .issued-inventory-item code { color:#17251f; font-weight:700; background:transparent; padding:0; font-size:.8rem; word-break:break-all; }
+.installation-modal .btn-use-issued { display:inline-flex; align-items:center; gap:.35rem; background:#1f4d3d !important; border-color:#1f4d3d !important; padding:.45rem .65rem !important; font-size:.76rem !important; white-space:nowrap; }
+.installation-modal .inventory-empty-state { border:1px dashed #cfd9d4; background:#fff; color:#64726c; padding:.85rem; border-radius:9px; font-size:.83rem; }
+@media(max-width:600px){.installation-modal .issued-inventory-head{flex-direction:column}.installation-modal .issued-inventory-item{align-items:flex-end}.installation-modal .inventory-count{white-space:normal}}

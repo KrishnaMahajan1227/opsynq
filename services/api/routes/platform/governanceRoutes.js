@@ -1,0 +1,17 @@
+const router=require('express').Router();
+const c=require('../../controllers/platform/governanceController');
+const {protectPlatform,requirePlatformRoles,requireCompanyScope}=require('../../middleware/platform/platformAuth');
+const {rolesFor}=require('../../security/platformCapabilities');
+const read=rolesFor('company.read');
+const write=rolesFor('governance.write');
+const auditRead=rolesFor('audit.read');
+router.use(protectPlatform,requireCompanyScope);
+router.get('/analytics',requirePlatformRoles(...read),c.analytics);
+router.get('/notifications',requirePlatformRoles(...read),c.listNotifications);
+router.post('/notifications',requirePlatformRoles(...write),c.createNotification);
+router.patch('/notifications/:id/read',requirePlatformRoles(...read),c.readNotification);
+router.get('/documents',requirePlatformRoles(...read),c.listDocuments);
+router.post('/documents',requirePlatformRoles(...write),c.uploadMiddleware,c.uploadDocument);
+router.patch('/documents/:id/archive',requirePlatformRoles(...write),c.archiveDocument);
+router.get('/audit',requirePlatformRoles(...auditRead),c.audit);
+module.exports=router;

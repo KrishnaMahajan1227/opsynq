@@ -1,0 +1,2 @@
+const mongoose=require('mongoose');
+const schema=new mongoose.Schema({companyId:{type:mongoose.Schema.Types.ObjectId,ref:'Organization',required:true,index:true},name:{type:String,required:true},mobile:{type:String,required:true},licenseNumber:String,isActive:{type:Boolean,default:true},lastLocation:{latitude:Number,longitude:Number,accuracy:Number,capturedAt:Date,updatedAt:Date}},{timestamps:true}); schema.index({companyId:1,mobile:1},{unique:true}); module.exports=mongoose.model('Driver',schema);

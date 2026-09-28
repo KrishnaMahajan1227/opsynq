@@ -1,0 +1,50 @@
+/* Field verification — technician-first, neutral, mobile responsive */
+.fv-modal { --fv-ink:#17202b; --fv-muted:#667085; --fv-line:#e4e7ec; --fv-soft:#f7f8fa; --fv-accent:#1f4b3f; }
+.fv-modal .modal-dialog { max-width:920px; }
+.fv-modal .modal-content { border:1px solid var(--fv-line); border-radius:16px; overflow:hidden; box-shadow:0 18px 55px rgba(16,24,40,.14); background:#fff; }
+.fv-modal .modal-header.fv-header { padding:16px 20px; background:#fff; border-bottom:1px solid var(--fv-line); }
+.fv-modal .fv-header .modal-title { color:var(--fv-ink); font-size:1.08rem; font-weight:750; letter-spacing:-.01em; }
+.fv-modal .fv-header .btn-close { opacity:.65; }
+.fv-body { padding:16px; background:#f6f7f8; }
+.fv-footer { position:sticky; bottom:0; z-index:3; padding:12px 16px; border-top:1px solid var(--fv-line); background:rgba(255,255,255,.97); backdrop-filter:blur(8px); display:flex; gap:8px; justify-content:flex-end; }
+.fv-footer .btn { min-height:42px; border-radius:9px; font-size:.82rem; font-weight:700; box-shadow:none!important; }
+.fv-footer .btn-success { background:var(--fv-accent); border-color:var(--fv-accent); }
+.fv-footer .btn-success:hover { background:#173b32; border-color:#173b32; }
+.fv-toast { position:fixed; top:80px; right:18px; z-index:1090; min-width:280px; border-radius:10px; overflow:hidden; }
+.fv-accordion { display:flex; flex-direction:column; gap:10px; }
+.fv-accordion .accordion-item { border:1px solid var(--fv-line); border-radius:12px!important; overflow:hidden; background:#fff; }
+.fv-accordion .accordion-header, .fv-accordion .accordion-button { border-radius:0!important; }
+.fv-accordion .accordion-button { min-height:50px; padding:13px 15px; background:#fff; color:var(--fv-ink); font-size:.88rem; font-weight:750; box-shadow:none!important; }
+.fv-accordion .accordion-button:not(.collapsed) { background:#fbfcfc; color:var(--fv-ink); border-bottom:1px solid var(--fv-line); }
+.fv-accordion .accordion-button::after { filter:none; opacity:.65; }
+.fv-accordion .accordion-body { padding:16px; }
+.fv-body .form-label { margin-bottom:6px; color:#475467; font-size:.76rem; font-weight:700; }
+.fv-body .form-control, .fv-body .form-select { min-height:43px; border:1px solid #d7dce2; border-radius:9px; color:var(--fv-ink); font-size:.86rem; box-shadow:none; background:#fff; }
+.fv-body .form-control:focus, .fv-body .form-select:focus { border-color:#96aaa3; box-shadow:0 0 0 3px rgba(31,75,63,.08); }
+.fv-input--readonly { background:#f4f5f6!important; color:#667085!important; }
+.fv-btn-primary { min-height:42px; border-radius:9px!important; border:1px solid var(--fv-accent)!important; background:var(--fv-accent)!important; color:#fff!important; font-size:.82rem!important; font-weight:700!important; box-shadow:none!important; }
+.fv-img-card { height:100%; border:1px solid var(--fv-line); border-radius:10px; overflow:hidden; box-shadow:none; }
+.fv-img-card img { height:150px; object-fit:cover; background:#f2f4f7; }
+.fv-img-card .card-footer { border-top:1px solid var(--fv-line); background:#fff; color:#667085; font-size:.74rem; font-weight:650; }
+.fv-sig-canvas { width:100%!important; height:150px!important; border:1px dashed #aeb7c2; border-radius:10px; background:#fff; touch-action:none; }
+.fv-sig-buttons { display:flex; gap:8px; flex-wrap:wrap; }
+.fv-sig-buttons .btn { border-radius:8px; font-size:.78rem; font-weight:700; box-shadow:none!important; }
+.fv-spinner { min-height:150px; display:flex; align-items:center; justify-content:center; gap:10px; color:#667085; }
+
+@media (max-width: 575.98px) {
+  .fv-modal.modal-dialog { width:100%; max-width:none; height:100%; margin:0; }
+  .fv-modal .modal-content { min-height:100vh; height:100vh; border:0; border-radius:0; }
+  .fv-modal .modal-header.fv-header { padding:14px 15px; }
+  .fv-modal .fv-header .modal-title { font-size:1rem; }
+  .fv-body { padding:10px; }
+  .fv-accordion { gap:8px; }
+  .fv-accordion .accordion-button { min-height:48px; padding:12px 13px; }
+  .fv-accordion .accordion-body { padding:13px; }
+  .fv-body .mb-3 { margin-bottom:12px!important; }
+  .fv-footer { display:grid; grid-template-columns:1fr 1fr; padding:10px; }
+  .fv-footer .btn { width:100%; margin:0!important; }
+  .fv-footer .btn-success { grid-column:1 / -1; grid-row:1; min-height:46px; }
+  .fv-toast { top:12px; left:12px; right:12px; min-width:0; width:auto; }
+  .fv-sig-canvas { height:135px!important; }
+  .fv-img-card img { height:180px; }
+}

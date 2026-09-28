@@ -1,0 +1,37 @@
+{
+  "name": "opsynq-platform-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed:platform": "node seed/platformSuperadmin.js",
+    "db:test": "node scripts/testDb.js",
+    "seed": "node seed/bootstrap.js",
+    "seed:all": "node seed/bootstrap.js",
+    "automation:run": "node scripts/runAutomation.js",
+    "snapshot": "node scripts/exportCompanySnapshot.js",
+    "seed:demo": "node seed/demoData.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^1.41.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-async-handler": "^1.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongo-sanitize": "^1.1.0",
+    "mongodb": "^6.15.0",
+    "mongoose": "^8.13.1",
+    "multer": "^1.4.5-lts.2",
+    "multer-storage-cloudinary": "^4.0.0",
+    "react-signature-canvas": "^1.1.0-alpha.2",
+    "socket.io": "^4.8.1",
+    "xlsx": "^0.18.5"
+  }
+}

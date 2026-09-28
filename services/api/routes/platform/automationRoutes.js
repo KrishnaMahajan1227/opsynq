@@ -1,0 +1,11 @@
+const router=require('express').Router();
+const c=require('../../controllers/platform/automationController');
+const {protectPlatform,requirePlatformRoles,requireCompanyScope}=require('../../middleware/platform/platformAuth');
+const {rolesFor}=require('../../security/platformCapabilities');
+const read=rolesFor('automation.read');
+const run=rolesFor('automation.run');
+router.use(protectPlatform,requireCompanyScope);
+router.get('/summary',requirePlatformRoles(...read),c.summary);
+router.get('/health',requirePlatformRoles(...read),c.health);
+router.post('/run/:job',requirePlatformRoles(...run),c.run);
+module.exports=router;

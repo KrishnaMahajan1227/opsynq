@@ -1,0 +1,31 @@
+import React,{useEffect,useMemo,useState}from'react';
+import{MapContainer,TileLayer,CircleMarker,Popup,useMap}from'react-leaflet';
+import'leaflet/dist/leaflet.css';
+import{MapPin,Search,Navigation,UsersRound}from'lucide-react';
+import{api,opPath}from'../../../core/api';
+import{FilterButton,FilterDrawer,Status,DetailDrawer,InfoGrid}from'../../../components/common';
+
+const tone=status=>status==='Complaint Raised'?'#b4473f':['Installation Completed','Closed'].includes(status)?'#2f7d5b':status==='Ready for Installation'?'#3d6f9f':status==='Dispatch Completed'?'#7b6a42':'#8b7854';
+function FitPins({pins}){const map=useMap();useEffect(()=>{if(!pins.length)return;const bounds=pins.map(p=>[p.latitude,p.longitude]);map.fitBounds(bounds,{padding:[28,28],maxZoom:11})},[map,pins]);return null}
+export function GeoOperationsPage({companyId,onNavigate}){
+ const[data,setData]=useState({pins:[],districts:[],statuses:[]}),[q,setQ]=useState(''),[district,setDistrict]=useState(''),[status,setStatus]=useState(''),[survey,setSurvey]=useState(''),[filtersOpen,setFiltersOpen]=useState(false),[selected,setSelected]=useState(null),[error,setError]=useState('');
+ const load=()=>{const qs=new URLSearchParams();if(district)qs.set('district',district);if(status)qs.set('status',status);if(survey)qs.set('survey',survey);api(opPath(companyId,`/geo-overview?${qs}`)).then(setData).catch(e=>setError(e.message))};
+ useEffect(()=>{load()},[companyId,district,status,survey]);
+ const pins=useMemo(()=>data.pins.filter(p=>!q||`${p.beneficiaryId} ${p.name} ${p.district} ${p.village} ${p.agency?.name||''}`.toLowerCase().includes(q.toLowerCase())),[data.pins,q]);
+ const districts=[...new Set(data.pins.map(p=>p.district).filter(Boolean))].sort();
+ const filterCount=[district,status,survey].filter(Boolean).length;
+ return <>
+  <div className="command-bar"><div className="search-box"><Search size={17}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search beneficiary, district, village or agency"/></div><FilterButton count={filterCount} onClick={()=>setFiltersOpen(true)}/><span className="result-count">{pins.length} mapped sites</span></div>
+  <FilterDrawer open={filtersOpen} close={()=>setFiltersOpen(false)} title="Map filters" onReset={()=>{setDistrict('');setStatus('');setSurvey('')}}>
+   <label>District<select value={district} onChange={e=>setDistrict(e.target.value)}><option value="">All districts</option>{districts.map(x=><option key={x}>{x}</option>)}</select></label>
+   <label>Execution status<select value={status} onChange={e=>setStatus(e.target.value)}><option value="">All statuses</option>{['Pending','Pending Installation','Move to Installation','Ordered','Dispatch Completed','Ready for Installation','Installation Completed','Complaint Raised','Closed'].map(x=><option key={x}>{x}</option>)}</select></label>
+   <label>Survey status<select value={survey} onChange={e=>setSurvey(e.target.value)}><option value="">All survey states</option>{['Pending','In Progress','Completed'].map(x=><option key={x}>{x}</option>)}</select></label>
+  </FilterDrawer>
+  {error&&<div className="alert error">{error}<button className="btn secondary small" onClick={load}>Retry</button></div>}
+  <section className="geo-command-grid">
+   <div className="geo-map-panel"><div className="geo-map-head"><span><MapPin size={17}/><b>Live execution geography</b></span><small>Site coordinates and geo-tagged evidence locations</small></div><div className="geo-map-canvas">{pins.length?<MapContainer center={[20.5,78.9]} zoom={6} scrollWheelZoom><TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/><FitPins pins={pins}/>{pins.map(p=><CircleMarker key={p.farmerId} center={[p.latitude,p.longitude]} radius={8} pathOptions={{color:tone(p.status),fillColor:tone(p.status),fillOpacity:.82,weight:2}} eventHandlers={{click:()=>setSelected(p)}}><Popup><div className="geo-popup"><b>{p.name}</b><span>{p.beneficiaryId}</span><span>{p.village}, {p.district}</span><span>{p.status}</span><button onClick={()=>setSelected(p)}>View details</button></div></Popup></CircleMarker>)}</MapContainer>:<div className="map-empty"><MapPin/><b>No mapped sites match this view.</b></div>}</div></div>
+   <aside className="geo-summary-panel"><div className="geo-summary-title"><Navigation size={17}/><div><b>Execution coverage</b><small>Current mapped portfolio</small></div></div><div className="geo-stat"><strong>{pins.length}</strong><span>Mapped beneficiaries</span></div><div className="geo-list">{(data.statuses||[]).slice(0,8).map(x=><button key={x.status} onClick={()=>setStatus(x.status)}><span><i style={{background:tone(x.status)}}/>{x.status}</span><b>{x.count}</b></button>)}</div><div className="geo-districts"><small>Top districts</small>{(data.districts||[]).slice(0,6).map(x=><button key={x.district} onClick={()=>setDistrict(x.district)}><span>{x.district}</span><b>{x.count}</b></button>)}</div></aside>
+  </section>
+  {selected&&<DetailDrawer open title={selected.name} subtitle={`${selected.beneficiaryId} · ${selected.village||selected.district}`} close={()=>setSelected(null)} actions={<button className="btn primary" onClick={()=>onNavigate?.('beneficiary-records',{farmerId:selected.farmerId})}><UsersRound size={16}/> Open beneficiary record</button>}><div className="detail-section"><h3>Execution location</h3><InfoGrid items={[{label:'Status',value:selected.status},{label:'Survey',value:selected.surveyStatus},{label:'District',value:selected.district},{label:'Taluka',value:selected.taluka},{label:'Village',value:selected.village},{label:'Agency',value:selected.agency?.name},{label:'Work package',value:selected.workPackage?.code},{label:'Program',value:selected.program?.name},{label:'Latitude',value:selected.latitude},{label:'Longitude',value:selected.longitude},{label:'Accuracy',value:selected.accuracy?`${Math.round(selected.accuracy)} m`:'Site record'},{label:'Geo source',value:selected.geoSource},{label:'Captured',value:selected.capturedAt?new Date(selected.capturedAt).toLocaleString():'Recorded site coordinate'}]}/></div><div className="geo-coordinate-card"><MapPin size={18}/><div><b>{Number(selected.latitude).toFixed(6)}, {Number(selected.longitude).toFixed(6)}</b><small>{selected.geoSource} · {selected.district}</small></div></div></DetailDrawer>}
+ </>
+}

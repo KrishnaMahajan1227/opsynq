@@ -1,0 +1,13 @@
+const router=require('express').Router();
+const c=require('../../controllers/platform/intelligenceController');
+const {protectPlatform,requirePlatformRoles,requireCompanyScope}=require('../../middleware/platform/platformAuth');
+const {rolesFor}=require('../../security/platformCapabilities');
+router.use(protectPlatform,requireCompanyScope);
+router.get('/replenishment',requirePlatformRoles(...rolesFor('procurement.read')),c.replenishment);
+router.post('/replenishment/refresh',requirePlatformRoles(...rolesFor('procurement.write')),c.refreshReplenishment);
+router.post('/replenishment/:id/draft-po',requirePlatformRoles(...rolesFor('procurement.write')),c.createDraftPO);
+router.post('/replenishment/:id/approve',requirePlatformRoles(...rolesFor('procurement.approve')),c.approveDraftPO);
+router.post('/replenishment/:id/dismiss',requirePlatformRoles(...rolesFor('procurement.write')),c.dismissPlan);
+router.get('/agency-stock',requirePlatformRoles(...rolesFor('logistics.read')),c.agencyStock);
+router.get('/finance-control',requirePlatformRoles(...rolesFor('finance.read')),c.financeControl);
+module.exports=router;

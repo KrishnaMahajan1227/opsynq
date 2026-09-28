@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+build/
+coverage/
+.DS_Store
+services/api/uploads/*
+!services/api/uploads/.gitkeep
+
+# Runtime operational snapshots
+services/api/backups/*.json
