@@ -18,7 +18,7 @@ const ROLE_MODULES={
   company_owner:'*',
   company_admin:'*',
   operations_manager:[
-    'my-workspace','action-center','company-overview',
+    'my-workspace','action-center','company-overview','supply-chain',
     'programs','work-orders','work-packages','agencies','beneficiary-records','beneficiary-imports','geo-operations',
     'logistics-overview','shipments','material-issues','agency-stock',
     'installed-assets','service-cases','service-plans',
@@ -32,12 +32,12 @@ const ROLE_MODULES={
     'analytics','notifications','documents','audit','readiness','evidence-control','regulatory-reports'
   ],
   inventory_manager:[
-    'my-workspace','company-overview',
+    'my-workspace','company-overview','supply-chain',
     'inventory-overview','item-master','warehouses','stock','scanner','procurement-intelligence','logistics-overview','shipments','material-issues','agency-stock',
     'reconciliation','pdi','analytics','notifications','documents','readiness'
   ],
   procurement_manager:[
-    'my-workspace','company-overview',
+    'my-workspace','company-overview','supply-chain',
     'item-master','warehouses','procurement','procurement-intelligence','stock','pdi',
     'analytics','notifications','documents'
   ],
@@ -51,7 +51,7 @@ const ROLE_MODULES={
     'analytics','notifications','documents','audit','readiness','evidence-control'
   ],
   logistics_manager:[
-    'my-workspace','company-overview',
+    'my-workspace','company-overview','supply-chain',
     'warehouses','stock','scanner','logistics-overview','shipments','fleet','material-issues','agency-stock',
     'reconciliation','analytics','notifications','documents','readiness'
   ],
@@ -77,20 +77,9 @@ export const companyGroups=[
     item('beneficiary-imports','Beneficiary Imports',UploadCloud,'farmer beneficiary excel bulk import','operations.write')
   ]},
   {id:'supply-chain',label:'Supply Chain',icon:Truck,items:[
-    item('inventory-overview','Supply Chain Overview',Boxes,'inventory dashboard stock'),
-    item('item-master','Item Master',PackagePlus,'sku product material master','inventory.write'),
-    item('warehouses','Warehouses',Warehouse,'warehouse location stock','inventory.write'),
-    item('procurement','Purchase Orders & GRN',ShoppingCart,'purchase order po grn goods receipt','procurement.write'),
-    item('procurement-intelligence','Procurement Intelligence',ShoppingCart,'ai reorder replenishment low stock forecast draft po'),
-    item('stock','Warehouse Stock & Transfers',ArrowRightLeft,'inventory balance movement transfer','inventory.write'),
-    item('scanner','Barcode / Serial Scan',ScanLine,'barcode qr serial scanner'),
-    item('logistics-overview','Dispatch Overview',Truck,'logistics transport dashboard'),
-    item('shipments','Dispatch & Shipment Tracking',Navigation,'dispatch shipment tracking driver','logistics.write'),
-    item('fleet','Drivers & Vehicles',UsersRound,'driver vehicle fleet','logistics.write'),
-    item('material-issues','Technician Material Custody',PackageOpen,'technician issue custody material','logistics.write'),
-    item('agency-stock','Agency Material Accountability',Truck,'agency dispatched received damaged missing stock custody'),
-    item('pdi','PDI & Asset Inspection',ClipboardCheck,'pre dispatch inspection pdi serial quality supplier brand','pdi.write')
+    item('supply-chain','Supply Chain Control',Truck,'procurement inventory warehouse dispatch shipment driver vehicle agency technician material custody control tower')
   ]},
+
   {id:'asset-care',label:'Asset Care',icon:Wrench,items:[
     item('installed-assets','Installed Assets',PackageCheck,'farmer installed serial asset','service.write'),
     item('asset-lifecycle','Asset Lifecycle',Activity,'asset history replacement return','service.write'),
@@ -122,11 +111,27 @@ export const companyGroups=[
   ]}
 ];
 
-const hiddenCompanyModules=[
+const hiddenDeliveryModules=[
   item('contracts','Contracts / LOA',ClipboardCheck,'contract loa tender award','operations.write'),
   item('work-orders','Work Orders',Building2,'work order execution','operations.write'),
   item('work-packages','Work Packages',PackageCheck,'allocation agency package','operations.write')
 ].map(x=>({...x,groupId:'delivery',groupLabel:'Delivery'}));
+const hiddenSupplyModules=[
+  item('inventory-overview','Supply Chain Overview',Boxes,'inventory dashboard stock'),
+  item('item-master','Item Master',PackagePlus,'sku product material master','inventory.write'),
+  item('warehouses','Warehouses',Warehouse,'warehouse location stock','inventory.write'),
+  item('procurement','Purchase Orders & GRN',ShoppingCart,'purchase order po grn goods receipt','procurement.write'),
+  item('procurement-intelligence','Procurement Intelligence',ShoppingCart,'ai reorder replenishment low stock forecast draft po'),
+  item('stock','Warehouse Stock & Transfers',ArrowRightLeft,'inventory balance movement transfer','inventory.write'),
+  item('scanner','Barcode / Serial Scan',ScanLine,'barcode qr serial scanner'),
+  item('logistics-overview','Dispatch Overview',Truck,'logistics transport dashboard'),
+  item('shipments','Dispatch & Shipment Tracking',Navigation,'dispatch shipment tracking driver','logistics.write'),
+  item('fleet','Drivers & Vehicles',UsersRound,'driver vehicle fleet','logistics.write'),
+  item('material-issues','Technician Material Custody',PackageOpen,'technician issue custody material','logistics.write'),
+  item('agency-stock','Agency Material Accountability',Truck,'agency dispatched received damaged missing stock custody'),
+  item('pdi','PDI & Asset Inspection',ClipboardCheck,'pre dispatch inspection pdi serial quality supplier brand','pdi.write')
+].map(x=>({...x,groupId:'supply-chain',groupLabel:'Supply Chain'}));
+const hiddenCompanyModules=[...hiddenDeliveryModules,...hiddenSupplyModules];
 
 export const flattenModules=(companyMode=false)=>(companyMode?companyGroups:platformGroups).flatMap(g=>g.items.map(x=>({...x,groupId:g.id,groupLabel:g.label})));
 export const moduleForPage=(page,companyMode=false)=>(companyMode?[...flattenModules(true),...hiddenCompanyModules]:flattenModules(false)).find(m=>m.id===page);

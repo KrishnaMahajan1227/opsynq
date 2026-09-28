@@ -51,15 +51,15 @@ export function Shell({user,page,setPage,logout,companyMode=false,companyId=null
  useEffect(()=>{const forbidden=e=>{setPermissionNotice(e.detail?.message||'You do not have permission for this action.');const id=setTimeout(()=>setPermissionNotice(''),4200);return()=>clearTimeout(id)};window.addEventListener('opsynq:forbidden',forbidden);return()=>window.removeEventListener('opsynq:forbidden',forbidden)},[]);
  useEffect(()=>{let live=true;const check=()=>fetch(`${(String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')||(import.meta.env.PROD?'':'http://localhost:3000'))}/api/health/ready`).then(r=>{if(live)setApiState(r.ok?'ready':'attention')}).catch(()=>{if(live)setApiState('offline')});check();const id=setInterval(check,30000);return()=>{live=false;clearInterval(id)}},[]);
  const groups=useMemo(()=>groupsForUser(user,companyMode),[user,companyMode]),modules=useMemo(()=>flattenModulesForUser(user,companyMode),[user,companyMode]);
- const searchAllowedPages=useMemo(()=>companyMode?new Set([...modules.map(m=>m.id),'contracts','work-orders','work-packages']):null,[modules,companyMode]);
+ const supplyHidden=['inventory-overview','item-master','warehouses','procurement','procurement-intelligence','stock','scanner','logistics-overview','shipments','fleet','material-issues','agency-stock','pdi'];const searchAllowedPages=useMemo(()=>companyMode?new Set([...modules.map(m=>m.id),'contracts','work-orders','work-packages',...supplyHidden]):null,[modules,companyMode]);
  const[compact,setCompact]=useState(()=>localStorage.getItem(compactKey)==='1'),[navQuery,setNavQuery]=useState(''),[palette,setPalette]=useState(false),[mobileOpen,setMobileOpen]=useState(false),[navTrail,setNavTrail]=useState([]);
  const initialGroups=()=>Object.fromEntries(groups.map((g,i)=>[g.id,i===0]));
  const[openGroups,setOpenGroups]=useState(()=>{try{return {...initialGroups(),...(JSON.parse(localStorage.getItem(storageKey(companyMode)))||{})}}catch{return initialGroups()}});
  const current=moduleForPage(page,companyMode);
- const navActivePage=companyMode&&['contracts','work-orders','work-packages'].includes(page)?'programs':page;
+ const navActivePage=companyMode&&['contracts','work-orders','work-packages'].includes(page)?'programs':companyMode&&supplyHidden.includes(page)?'supply-chain':page;
  const trailKey=`opsynq.nav.trail.${companyMode?'company':'platform'}.${companyId||'global'}`;
  useEffect(()=>{let existing=[];try{existing=JSON.parse(sessionStorage.getItem(trailKey)||'[]')}catch{}const next=[...existing.filter(id=>id!==page),page].slice(-4);setNavTrail(next);try{sessionStorage.setItem(trailKey,JSON.stringify(next))}catch{}},[page,trailKey]);
- useEffect(()=>{if(current){const activeGroup=['contracts','work-orders','work-packages'].includes(page)?'delivery':current.groupId;setOpenGroups(Object.fromEntries(groups.map(g=>[g.id,g.id===activeGroup])))}else if(modules.length&&page!==modules[0].id)setPage(modules[0].id)},[page,companyMode,user]);
+ useEffect(()=>{if(current){const activeGroup=['contracts','work-orders','work-packages'].includes(page)?'delivery':supplyHidden.includes(page)?'supply-chain':current.groupId;setOpenGroups(Object.fromEntries(groups.map(g=>[g.id,g.id===activeGroup])))}else if(modules.length&&page!==modules[0].id)setPage(modules[0].id)},[page,companyMode,user]);
  useEffect(()=>{localStorage.setItem(storageKey(companyMode),JSON.stringify(openGroups))},[openGroups,companyMode]);
  useEffect(()=>{localStorage.setItem(compactKey,compact?'1':'0')},[compact]);
  useEffect(()=>{const key=e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPalette(true)}if(e.key==='Escape'){setPalette(false);setMobileOpen(false)}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)},[]);
@@ -80,7 +80,7 @@ export function Shell({user,page,setPage,logout,companyMode=false,companyId=null
   </aside>
   <main className="workspace">
    <div className="workspace-tools"><button className="mobile-nav-trigger" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={18}/><span>Menu</span></button><span className={`api-state api-${apiState}`} title="Backend readiness"><i></i>{apiState==='ready'?'System ready':apiState==='checking'?'Checking system…':apiState==='offline'?'API offline':'System attention'}</span><GlobalSearch companyId={companyId} onNavigate={go} allowedPages={searchAllowedPages}/>{companyMode&&companyId&&<NotificationBell companyId={companyId} onNavigate={go}/>}<button className="module-switch" onClick={()=>setPalette(true)}><Menu size={16}/> All modules</button></div>
-   {companyMode&&navTrail.length>0&&<div className="workspace-breadcrumbs" aria-label="Recent navigation"><span>Workspace</span>{navTrail.map((id,i)=>{const m=moduleForPage(id,companyMode);if(!m)return null;return <React.Fragment key={`${id}-${i}`}><ChevronRight size={12}/><button className={id===page?'active':''} onClick={()=>id!==page&&go(id)}>{m.label}</button></React.Fragment>})}</div>}
+   {companyMode&&navTrail.length>0&&<div className="workspace-breadcrumbs" aria-label="Navigation context"><span>Workspace</span>{(supplyHidden.includes(page)?['supply-chain',page]:navTrail).map((id,i)=>{const m=moduleForPage(id,companyMode);if(!m)return null;return <React.Fragment key={`${id}-${i}`}><ChevronRight size={12}/><button className={id===page?'active':''} onClick={()=>id!==page&&go(id)}>{m.label}</button></React.Fragment>})}</div>}
    {permissionNotice&&<div className="permission-toast">{permissionNotice}</div>}
    {children}
   </main>

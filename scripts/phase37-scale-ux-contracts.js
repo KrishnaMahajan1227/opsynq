@@ -10,7 +10,7 @@ const controller=read('services/api/controllers/platform/operationsController.js
 const visibleDelivery=(reg.match(/\{id:'delivery',[\s\S]*?\]\},/)||[''])[0];
 const singleDelivery = visibleDelivery.includes("item('programs','Delivery Portfolio'") && !visibleDelivery.includes("item('contracts'") && !visibleDelivery.includes("item('work-orders'") && !visibleDelivery.includes("item('work-packages'");
 const hiddenHierarchy = reg.includes('hiddenCompanyModules') && reg.includes("item('work-packages','Work Packages'");
-const hiddenActive = shell.includes("navActivePage=companyMode&&['contracts','work-orders','work-packages'].includes(page)?'programs':page");
+const hiddenActive = shell.includes("['contracts','work-orders','work-packages'].includes(page)?'programs'") && shell.includes("supplyHidden.includes(page)?'supply-chain':page");
 const folderPaging = ops.includes('FOLDER_PAGE_SIZE=24') && ops.includes('folderPages') && ops.includes('portfolio-pager');
 const agencyPaging = ops.includes('PAGE_SIZE=25') && ops.includes('pageRows=rows.slice');
 const recordTable = ops.includes('record-table-panel') && ops.includes('record-table-wrap') && ops.includes('record-table');

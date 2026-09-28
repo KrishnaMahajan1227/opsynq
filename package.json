@@ -1,7 +1,7 @@
 {
   "name": "opsynq-global-platform",
   "private": true,
-  "version": "0.38.0",
+  "version": "0.39.0",
   "workspaces": [
     "apps/*",
     "services/*"
@@ -25,7 +25,7 @@
     "ready:check": "npm run doctor",
     "automation:run": "cd services/api && node scripts/runAutomation.js",
     "snapshot": "cd services/api && node scripts/exportCompanySnapshot.js",
-    "qa:source": "node scripts/source-sanity.js && node scripts/module-contracts.js && node scripts/effect-contracts.js && node scripts/permission-contracts.js && node scripts/role-navigation-contracts.js && node scripts/jsx-syntax.js && node scripts/phase24-contracts.js && node scripts/phase26-contracts.js && node scripts/phase27-contracts.js && node scripts/phase28-contracts.js && node scripts/phase29-contracts.js && node scripts/phase30-contracts.js && node scripts/phase31-contracts.js && node scripts/phase31-hotfix-contracts.js && node scripts/phase32-functional-contracts.js && node scripts/phase33-contracts.js && node scripts/phase34-security-contracts.js && node scripts/phase35-hierarchy-contracts.js && node scripts/phase36-ux-contracts.js && node scripts/phase37-scale-ux-contracts.js && node scripts/phase38-data-flow-contracts.js",
+    "qa:source": "node scripts/source-sanity.js && node scripts/module-contracts.js && node scripts/effect-contracts.js && node scripts/permission-contracts.js && node scripts/role-navigation-contracts.js && node scripts/jsx-syntax.js && node scripts/phase24-contracts.js && node scripts/phase26-contracts.js && node scripts/phase27-contracts.js && node scripts/phase28-contracts.js && node scripts/phase29-contracts.js && node scripts/phase30-contracts.js && node scripts/phase31-contracts.js && node scripts/phase31-hotfix-contracts.js && node scripts/phase32-functional-contracts.js && node scripts/phase33-contracts.js && node scripts/phase34-security-contracts.js && node scripts/phase35-hierarchy-contracts.js && node scripts/phase36-ux-contracts.js && node scripts/phase37-scale-ux-contracts.js && node scripts/phase38-data-flow-contracts.js && node scripts/phase39-supply-chain-contracts.js",
     "qa:contracts": "node scripts/module-contracts.js",
     "qa:routes": "node scripts/route-contracts.js",
     "qa:release": "npm run qa:source && npm run qa:routes && node scripts/release-gate.js",
@@ -58,7 +58,8 @@
     "vercel-build": "npm run build",
     "qa:phase36": "node scripts/phase36-ux-contracts.js",
     "qa:phase37": "node scripts/phase37-scale-ux-contracts.js",
-    "qa:phase38": "node scripts/phase38-data-flow-contracts.js"
+    "qa:phase38": "node scripts/phase38-data-flow-contracts.js",
+    "qa:phase39": "node scripts/phase39-supply-chain-contracts.js"
   },
   "devDependencies": {
     "vite": "6.4.3",

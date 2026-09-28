@@ -9,10 +9,13 @@ const shipmentLineSchema=new mongoose.Schema({
  receiptNotes:String
 },{_id:false});
 const schema=new mongoose.Schema({
- companyId:{type:mongoose.Schema.Types.ObjectId,ref:'Organization',required:true,index:true},shipmentNo:{type:String,required:true},workPackageId:{type:mongoose.Schema.Types.ObjectId,ref:'WorkPackage'},fromWarehouseId:{type:mongoose.Schema.Types.ObjectId,ref:'Warehouse'},toWarehouseId:{type:mongoose.Schema.Types.ObjectId,ref:'Warehouse'},agencyId:{type:mongoose.Schema.Types.ObjectId,ref:'Organization'},driverId:{type:mongoose.Schema.Types.ObjectId,ref:'Driver'},vehicleId:{type:mongoose.Schema.Types.ObjectId,ref:'Vehicle'},items:{type:[shipmentLineSchema],default:[]},status:{type:String,enum:['DRAFT','DISPATCHED','IN_TRANSIT','DELIVERED','PARTIAL','CANCELLED'],default:'DRAFT'},trackingTokenHash:String,trackingExpiresAt:Date,dispatchedAt:Date,deliveredAt:Date,proofOfDelivery:{type:mongoose.Schema.Types.Mixed,default:{}}
+ companyId:{type:mongoose.Schema.Types.ObjectId,ref:'Organization',required:true,index:true},shipmentNo:{type:String,required:true},workPackageId:{type:mongoose.Schema.Types.ObjectId,ref:'WorkPackage'},fromWarehouseId:{type:mongoose.Schema.Types.ObjectId,ref:'Warehouse'},toWarehouseId:{type:mongoose.Schema.Types.ObjectId,ref:'Warehouse'},agencyId:{type:mongoose.Schema.Types.ObjectId,ref:'Organization'},driverId:{type:mongoose.Schema.Types.ObjectId,ref:'Driver'},vehicleId:{type:mongoose.Schema.Types.ObjectId,ref:'Vehicle'},items:{type:[shipmentLineSchema],default:[]},status:{type:String,enum:['DRAFT','DISPATCHED','IN_TRANSIT','DELIVERED','PARTIAL','CANCELLED'],default:'DRAFT'},priority:{type:String,enum:['LOW','NORMAL','HIGH','URGENT'],default:'NORMAL',index:true},plannedDepartureAt:Date,expectedDeliveryAt:Date,routeNotes:String,issueFlag:{type:Boolean,default:false,index:true},issueNote:String,trackingTokenHash:String,trackingExpiresAt:Date,dispatchedAt:Date,deliveredAt:Date,proofOfDelivery:{type:mongoose.Schema.Types.Mixed,default:{}}
 },{timestamps:true});
 schema.index({companyId:1,shipmentNo:1},{unique:true});
 
 schema.index({companyId:1,agencyId:1,status:1,createdAt:-1});
 schema.index({companyId:1,workPackageId:1,createdAt:-1});
+schema.index({companyId:1,driverId:1,status:1,expectedDeliveryAt:1});
+schema.index({companyId:1,vehicleId:1,status:1,expectedDeliveryAt:1});
+schema.index({companyId:1,priority:1,status:1,createdAt:-1});
 module.exports=mongoose.model('Shipment',schema);
