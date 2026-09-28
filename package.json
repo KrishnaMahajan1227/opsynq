@@ -1,7 +1,7 @@
 {
   "name": "opsynq-global-platform",
   "private": true,
-  "version": "0.45.0",
+  "version": "0.45.1",
   "workspaces": [
     "apps/*",
     "services/*"
@@ -74,5 +74,8 @@
   },
   "engines": {
     "node": "24.x"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
   }
 }
