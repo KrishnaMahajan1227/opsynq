@@ -1,10 +1,11 @@
 // src/controllers/installationController.js
 const multer = require('multer');
+const mongoose = require('mongoose');
 const { storage } = require('../config/cloudinary');
 const upload = multer({ storage });
 const Farmer = require('../models/Farmer');
 const { protect } = require('../middleware/authMiddleware');
-const { getIssuedInventory, prepareInstallation, finalizeInstallation } = require('../utils/assetLifecycle');
+const { getIssuedInventory, resolveIssuedScan, prepareInstallation, finalizeInstallation } = require('../utils/assetLifecycle');
 const { canAccessFarmer } = require('../utils/agencyScope');
 
 /**
@@ -38,6 +39,7 @@ exports.completeInstallation = [
         controllerNoUnique,
         imeiNoUnique,
         panels, // Array of panel serial numbers
+        additionalItems, // Additional serialized accessories installed at site
         installationDoneYesNo,
         pumpNotOperatingYesNo,
         complaintIssue,
@@ -73,6 +75,13 @@ exports.completeInstallation = [
         console.log('Validation failed: At least one panel required');
         return res.status(400).json({ message: 'At least one panel serial number is required.' });
       }
+      let additionalItemsArray = [];
+      if (additionalItems) {
+        try { additionalItemsArray = Array.isArray(additionalItems) ? additionalItems : JSON.parse(additionalItems); }
+        catch { return res.status(400).json({ message: 'Additional installed items are invalid.' }); }
+        if (!Array.isArray(additionalItemsArray) || additionalItemsArray.length > 100) return res.status(400).json({ message: 'Additional installed items are invalid.' });
+        additionalItemsArray = additionalItemsArray.map(x => String(x || '').trim()).filter(Boolean);
+      }
 
       // Validate complaint fields if pump is not operating
       const hasComplaint = pumpNotOperatingYesNo === 'No';
@@ -107,6 +116,7 @@ exports.completeInstallation = [
           motor: motorNoUnique,
           controller: controllerNoUnique,
           panels: panelsArray,
+          additionalItems: additionalItemsArray,
         });
       } catch (inventoryError) {
         return res.status(inventoryError.statusCode || 409).json({ message: inventoryError.message });
@@ -177,23 +187,23 @@ exports.completeInstallation = [
         updateData.finalsurveyorsignatureUrl = req.files.finalSurveyorSignature[0].path;
       }
 
-      // Update the farmer document using updateOne
-      await Farmer.updateOne(
-        { _id: farmerId },
-        { $set: updateData },
-        { runValidators: true }
-      );
-
       let installedAssets = [];
-      if (!hasComplaint && installationDoneYesNo === 'Yes' && inventoryPrepared.linked) {
+      const shouldCloseInventory = !hasComplaint && installationDoneYesNo === 'Yes' && inventoryPrepared.linked;
+      if (shouldCloseInventory) {
+        const session = await mongoose.startSession();
         try {
-          installedAssets = await finalizeInstallation({ prepared: inventoryPrepared, farmerId, technicianUserId: req.user._id });
-        } catch (inventoryError) {
-          console.error('Inventory finalization failed:', inventoryError);
-          return res.status(inventoryError.statusCode || 409).json({
-            message: `Installation details were saved, but inventory closing failed: ${inventoryError.message}. Please contact an administrator before retrying.`
+          await session.withTransaction(async () => {
+            await Farmer.updateOne({ _id: farmerId }, { $set: updateData }, { runValidators: true, session });
+            installedAssets = await finalizeInstallation({ prepared: inventoryPrepared, farmerId, technicianUserId: req.user._id, session });
           });
+        } catch (inventoryError) {
+          console.error('Installation transaction failed:', inventoryError);
+          return res.status(inventoryError.statusCode || 409).json({ message: `Installation was not saved because inventory reconciliation failed: ${inventoryError.message}` });
+        } finally {
+          await session.endSession();
         }
+      } else {
+        await Farmer.updateOne({ _id: farmerId }, { $set: updateData }, { runValidators: true });
       }
 
       // Fetch the updated document to confirm
@@ -212,6 +222,18 @@ exports.completeInstallation = [
     }
   },
 ];
+
+exports.scanIssuedMaterial = async (req, res) => {
+  try {
+    const farmer = await Farmer.findById(req.params.farmerId).select('_id beneficiaryId beneficiaryName surveyorName surveyorMobile jsrTechnician installedByTechnicianName reworkAssignTechnician confirmedBy');
+    if (!farmer) return res.status(404).json({ message: 'Farmer not found.' });
+    if (!(await canAccessFarmer(req.user, farmer))) return res.status(403).json({ message: 'You do not have access to this beneficiary.' });
+    const data = await resolveIssuedScan({ farmerId: farmer._id, technicianUserId: req.user._id, code: req.body?.code });
+    return res.json({ item: data.item });
+  } catch (err) {
+    return res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : 'Unable to validate scanned material.' });
+  }
+};
 
 exports.getMyIssuedMaterial = async (req, res) => {
   try {

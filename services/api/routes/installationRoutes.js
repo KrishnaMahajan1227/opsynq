@@ -6,6 +6,7 @@ const installationController = require('../controllers/installationController');
 
 // Define the POST route for complete-installation
 router.get('/issued-material/:farmerId', protect, installationController.getMyIssuedMaterial);
+router.post('/scan-issued-material/:farmerId', protect, installationController.scanIssuedMaterial);
 router.post('/complete-installation', protect, ...installationController.completeInstallation);
 
 module.exports = router;

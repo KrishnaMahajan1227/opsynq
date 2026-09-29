@@ -72,6 +72,10 @@ export default function InstallationCompletionModal({
   // Opsynq Phase 5 inventory context for mapped company/work-package farmers
   const [issuedInventory, setIssuedInventory] = useState({ linked: false, items: [] });
   const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [scanCode, setScanCode] = useState('');
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanMessage, setScanMessage] = useState('');
+  const [additionalItems, setAdditionalItems] = useState([]);
 
   const inventoryRole = item => {
     const text = `${item?.itemId?.category || ''} ${item?.itemId?.name || ''} ${item?.itemId?.sku || ''}`.toLowerCase();
@@ -82,20 +86,47 @@ export default function InstallationCompletionModal({
     return 'OTHER';
   };
 
-  const useIssuedSerial = item => {
-    const code = item.serialNumber || item.barcodeValue || '';
-    const role = inventoryRole(item);
+  const selectedCodes = () => [pumpNoUnique, motorNoUnique, controllerNoUnique, ...panelsArray, ...additionalItems.map(x => x.code)].map(x => String(x || '').trim().toLowerCase()).filter(Boolean);
+
+  const addIssuedItem = item => {
+    const code = String(item.serialNumber || item.barcodeValue || '').trim();
+    if (!code) return;
+    const role = item.role || inventoryRole(item);
+    const existing = selectedCodes();
+    if (existing.includes(code.toLowerCase())) { setScanMessage(`${code} is already selected for this beneficiary.`); return; }
     if (role === 'PUMP') setPumpNoUnique(code);
     else if (role === 'MOTOR') setMotorNoUnique(code);
-    else if (role === 'CONTROLLER') setControllerNoUnique(code);
-    else if (role === 'PANEL') {
+    else if (role === 'CONTROLLER') {
+      setControllerNoUnique(code);
+      const attrs = item.scanAttributes || item.metadata?.scanAttributes || {};
+      if (!imeiNoUnique) setImeiNoUnique(String(attrs.imei || attrs.IMEI || attrs.imeiNo || attrs.imeiNumber || ''));
+    } else if (role === 'PANEL') {
       setPanelsArray(prev => {
-        if (prev.includes(code)) return prev;
-        const firstEmpty = prev.findIndex(v => !v.trim());
+        const firstEmpty = prev.findIndex(v => !String(v || '').trim());
         if (firstEmpty >= 0) { const copy = [...prev]; copy[firstEmpty] = code; return copy; }
         return [...prev, code];
       });
+    } else {
+      setAdditionalItems(prev => [...prev, { code, name: item.itemId?.name || item.itemId?.sku || 'Additional serialized item', role: 'OTHER' }]);
     }
+    setScanMessage(`${code} added to this beneficiary's installation.`);
+  };
+
+  const useIssuedSerial = item => addIssuedItem({ ...item, role: inventoryRole(item) });
+
+  const scanIssuedMaterial = async e => {
+    e?.preventDefault?.();
+    const code = scanCode.trim();
+    if (!code || !farmer?._id || scanLoading) return;
+    setError(''); setScanMessage(''); setScanLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(`${API_URL}/api/installation/scan-issued-material/${farmer._id}`, { code }, { headers: { Authorization: `Bearer ${token}` } });
+      addIssuedItem(res.data?.item || {});
+      setScanCode('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Scanned material could not be validated.');
+    } finally { setScanLoading(false); }
   };
 
   // Prefill complaint date with the technician's current local date.
@@ -203,6 +234,9 @@ export default function InstallationCompletionModal({
     setError('');
     setIsSubmitting(false);
     setIssuedInventory({ linked: false, items: [] });
+    setScanCode('');
+    setScanMessage('');
+    setAdditionalItems([]);
   };
 
   // Form submit
@@ -274,6 +308,7 @@ export default function InstallationCompletionModal({
     fd.append('controllerNoUnique', controllerNoUnique);
     fd.append('imeiNoUnique', imeiNoUnique);
     fd.append('panels', JSON.stringify(nonEmptyPanels));
+    fd.append('additionalItems', JSON.stringify(additionalItems.map(x => x.code)));
     fd.append('installationDoneYesNo', installationDoneYesNo);
     fd.append('pumpNotOperatingYesNo', pumpNotOperatingYesNo);
     fd.append('companyAssignedPersonName', companyAssignedPersonName);
@@ -502,6 +537,43 @@ export default function InstallationCompletionModal({
                       </div>
                       {!inventoryLoading && <span className="inventory-count">{issuedInventory.items?.length || 0} serialized assets</span>}
                     </div>
+                    {!inventoryLoading && issuedInventory.linked && (
+                      <div className="beneficiary-scan-box">
+                        <div className="beneficiary-scan-copy">
+                          <strong><ScanLine size={17} /> Scan material for this beneficiary</strong>
+                          <span>Use a barcode/QR handheld scanner or type the serial/barcode and press Enter. Nothing is installed until final submission.</span>
+                        </div>
+                        <Form onSubmit={scanIssuedMaterial} className="beneficiary-scan-form">
+                          <Form.Control
+                            value={scanCode}
+                            onChange={e => setScanCode(e.target.value)}
+                            placeholder="Scan serial / barcode"
+                            autoComplete="off"
+                            aria-label="Scan serial or barcode for beneficiary installation"
+                          />
+                          <Button type="submit" disabled={!scanCode.trim() || scanLoading}>{scanLoading ? 'Checking…' : 'Add item'}</Button>
+                        </Form>
+                        {scanMessage && <div className="scan-success" role="status"><Check size={15} /> {scanMessage}</div>}
+                        <div className="beneficiary-selection-summary" aria-label="Material selected for this beneficiary">
+                          <span><small>Pump</small><strong>{pumpNoUnique ? '1' : '0'}</strong></span>
+                          <span><small>Motor</small><strong>{motorNoUnique ? '1' : '0'}</strong></span>
+                          <span><small>Controller</small><strong>{controllerNoUnique ? '1' : '0'}</strong></span>
+                          <span><small>Panels</small><strong>{panelsArray.filter(x => String(x || '').trim()).length}</strong></span>
+                          <span><small>Other</small><strong>{additionalItems.length}</strong></span>
+                        </div>
+                        {additionalItems.length > 0 && (
+                          <div className="additional-install-items">
+                            <strong>Additional serialized items ({additionalItems.length})</strong>
+                            {additionalItems.map(item => (
+                              <div key={item.code} className="additional-install-row">
+                                <div><span>{item.name}</span><code>{item.code}</code></div>
+                                <button type="button" onClick={() => setAdditionalItems(prev => prev.filter(x => x.code !== item.code))} aria-label={`Remove ${item.code}`}><X size={15} /></button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {!inventoryLoading && issuedInventory.items?.length > 0 ? (
                       <div className="issued-inventory-grid">
                         {issuedInventory.items.map(item => (
@@ -511,11 +583,9 @@ export default function InstallationCompletionModal({
                               <span>{item.itemId?.name || item.itemId?.sku || 'Serialized material'}</span>
                               <code>{item.serialNumber || item.barcodeValue}</code>
                             </div>
-                            {inventoryRole(item) !== 'OTHER' && (
-                              <Button type="button" className="btn-use-issued" onClick={() => useIssuedSerial(item)}>
-                                <ScanLine size={15} /> Use
-                              </Button>
-                            )}
+                            <Button type="button" className="btn-use-issued" onClick={() => useIssuedSerial(item)}>
+                              <ScanLine size={15} /> Use
+                            </Button>
                           </div>
                         ))}
                       </div>
