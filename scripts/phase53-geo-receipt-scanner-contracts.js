@@ -1,0 +1,16 @@
+const fs=require('fs'),path=require('path');
+const root=path.join(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const workspace=read('apps/platform-web/src/features/company/CompanyWorkspace.jsx');
+const dashboard=read('apps/platform-web/src/features/company/operations/OperationsPages.jsx');
+const inventory=read('apps/platform-web/src/features/company/inventory/InventoryPages.jsx');
+const registry=read('apps/platform-web/src/layout/moduleRegistry.jsx');
+const supply=read('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx');
+const must=(ok,msg)=>{if(!ok)throw new Error(msg)};
+must(workspace.includes("import('./geo/GeoOperationsPage.jsx')")&&!workspace.includes("lazyNamed('./geo/GeoOperationsPage"),'Geo Operations uses statically analyzable Vite lazy import');
+must(!dashboard.includes('dashboard-action-center'),'Dashboard duplicate Action Center removed');
+must(!registry.includes("item('scanner','Barcode / Serial Scan'")&&!supply.includes("['scanner','Barcode / serial scan']"),'Standalone scanner navigation removed');
+must(inventory.includes('Receipt items')&&inventory.includes('Scan or type serial / barcode')&&inventory.includes('USB/Bluetooth scanners work as keyboard input'),'Scanner integrated into GRN receipt lines');
+must(inventory.includes('Outstanding PO items are prefilled below')&&inventory.includes('onPO=id=>'),'PO selection prefills outstanding receipt lines');
+must(inventory.includes('BarcodeDetector')&&inventory.includes('getUserMedia'),'Camera scan support remains capability-aware');
+must(inventory.includes('already captured in this receipt')&&inventory.includes('already registered in inventory'),'Duplicate serial capture is guarded');
+console.log('✓ Phase 53 geo import + integrated receipt scanner contracts passed');

@@ -7,7 +7,7 @@ import{roleModuleIds}from'../../../layout/moduleRegistry';
 
 const areas=[
  {id:'procurement',title:'Procurement & Receiving',text:'Plan purchases, receive material and close incoming quality checks.',icon:ShoppingCart,primary:['procurement','Open procurement & GRN'],tools:[['procurement-intelligence','Replenishment review'],['pdi','PDI & asset inspection']]},
- {id:'inventory',title:'Inventory & Warehousing',text:'Control item masters, warehouse balances, transfers and serial traceability.',icon:Warehouse,primary:['stock','Open warehouse stock'],tools:[['item-master','Item master'],['warehouses','Warehouses'],['scanner','Barcode / serial scan']]},
+ {id:'inventory',title:'Inventory & Warehousing',text:'Control item masters, warehouse balances, transfers and serial traceability.',icon:Warehouse,primary:['stock','Open warehouse stock'],tools:[['item-master','Item master'],['warehouses','Warehouses']]},
  {id:'dispatch',title:'Dispatch & Delivery',text:'Plan shipments, assign capacity, monitor ETA and close agency delivery.',icon:Truck,primary:['shipments','Open dispatch tracking'],tools:[['fleet','Fleet & capacity'],['logistics-overview','Dispatch overview']]},
  {id:'field',title:'Agency & Field Custody',text:'Track receipt accountability, technician issue and beneficiary installation.',icon:PackageOpen,primary:['agency-stock','Open agency accountability'],tools:[['material-issues','Technician material custody'],['installed-assets','Installed assets'],['reconciliation','Reconciliation']]}
 ];

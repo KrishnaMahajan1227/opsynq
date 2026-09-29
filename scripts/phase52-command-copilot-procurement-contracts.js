@@ -11,7 +11,7 @@ const ops=read('services/api/controllers/platform/operationsController.js');
 const registry=read('apps/platform-web/src/layout/moduleRegistry.jsx');
 const must=(ok,msg)=>{if(!ok)throw new Error(msg)};
 must(dashboard.includes('execution-bars-chart')&&!dashboard.includes('aria-label="Execution progress trend"'),'Dashboard uses truthful bucketed execution chart');
-must(dashboard.includes('dashboard-action-center')&&dashboard.includes("navigate('action-center')"),'Dashboard Action Center is visible and linked');
+must(!dashboard.includes('dashboard-action-center'),'Dashboard avoids duplicated Action Center panel');
 must(registry.includes("item('action-center','Action Center'")&&registry.includes('hiddenCompanyModules'),'Action Center remains routable without sidebar duplication');
 must(shell.includes('function NotificationBell')&&shell.includes('notification-bell'),'Notification bell remains mounted');
 must(shell.includes('function CompanyAiCopilot')&&shell.includes('opsynq.ai.copilot')&&shell.includes('Recent conversation'),'Persistent contextual AI Copilot present');

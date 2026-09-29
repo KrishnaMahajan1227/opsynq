@@ -33,7 +33,7 @@ const ROLE_MODULES={
   ],
   inventory_manager:[
     'my-workspace','ai-operations','company-overview','supply-chain',
-    'inventory-overview','item-master','warehouses','stock','scanner','procurement-intelligence','logistics-overview','shipments','material-issues','agency-stock',
+    'inventory-overview','item-master','warehouses','stock','procurement-intelligence','logistics-overview','shipments','material-issues','agency-stock',
     'reconciliation','pdi','analytics','notifications','documents','readiness'
   ],
   procurement_manager:[
@@ -52,7 +52,7 @@ const ROLE_MODULES={
   ],
   logistics_manager:[
     'my-workspace','ai-operations','company-overview','supply-chain',
-    'warehouses','stock','scanner','logistics-overview','shipments','fleet','material-issues','agency-stock',
+    'warehouses','stock','logistics-overview','shipments','fleet','material-issues','agency-stock',
     'reconciliation','analytics','notifications','documents','readiness'
   ],
   viewer:[
@@ -129,7 +129,6 @@ const hiddenSupplyModules=[
   item('procurement','Purchase Orders & GRN',ShoppingCart,'purchase order po grn goods receipt','procurement.write'),
   item('procurement-intelligence','Procurement Intelligence',ShoppingCart,'ai reorder replenishment low stock forecast draft po'),
   item('stock','Warehouse Stock & Transfers',ArrowRightLeft,'inventory balance movement transfer','inventory.write'),
-  item('scanner','Barcode / Serial Scan',ScanLine,'barcode qr serial scanner'),
   item('logistics-overview','Dispatch Overview',Truck,'logistics transport dashboard'),
   item('shipments','Dispatch & Shipment Tracking',Navigation,'dispatch shipment tracking driver','logistics.write'),
   item('fleet','Drivers & Vehicles',UsersRound,'driver vehicle fleet','logistics.write'),
