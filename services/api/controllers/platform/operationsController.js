@@ -17,6 +17,7 @@ const EvidenceRequirement=require('../../models/platform/EvidenceRequirement');
 const EvidenceSubmission=require('../../models/platform/EvidenceSubmission');
 const Shipment=require('../../models/platform/Shipment');
 const platformAudit=require('../../utils/platformAudit');
+const {materialReconciliation}=require('../../utils/inventoryTrace');
 
 const companyIdFor=(req)=> req.platformUser.role==='platform_superadmin' ? (req.params.companyId||req.query.companyId||req.body.companyId) : String(req.tenant.companyId||'');
 const ensureCompany=async(req,res)=>{ const companyId=companyIdFor(req); if(!companyId){res.status(400).json({message:'Company context is required.'});return null;} const c=await Organization.findOne({_id:companyId,type:'COMPANY',status:{$ne:'ARCHIVED'}}); if(!c){res.status(404).json({message:'Company not found.'});return null;} return c; };
@@ -288,8 +289,9 @@ exports.getBeneficiaryDetail=async(req,res)=>{
  const submissionByRequirement=new Map(evidenceSubmissions.map(x=>[String(x.requirementId?._id||x.requirementId),x]));
  const evidenceChecklist=evidenceRequirements.map(r=>({requirement:r,submission:submissionByRequirement.get(String(r._id))||null}));
  const shipments=ctx.workPackageId?await Shipment.find({companyId:c._id,workPackageId:ctx.workPackageId._id||ctx.workPackageId}).populate('agencyId','name code').populate('fromWarehouseId','name code').populate('toWarehouseId','name code').populate('items.itemId','sku name').sort({createdAt:-1}).lean():[];
+ const reconciliation=await materialReconciliation({companyId:c._id,farmerId});
  res.json({
-  context:ctx,farmer:ctx.farmerId,assets,materialIssues,serviceCases,compliance,evidenceChecklist,evidenceSubmissions,shipments,
+  context:ctx,farmer:ctx.farmerId,assets,materialIssues,serviceCases,compliance,evidenceChecklist,evidenceSubmissions,shipments,materialReconciliation:reconciliation,
   lineage:{
    source:{type:ctx.sourceImportBatchId?'IMPORT':'MANUAL',batch:ctx.sourceImportBatchId||null,row:ctx.sourceRowNumber||null,authority:ctx.sourceAuthority||null},
    assignment:{assignedAt:ctx.assignedAt||ctx.createdAt,history:ctx.assignmentHistory||[],agency:ctx.agencyId||null},

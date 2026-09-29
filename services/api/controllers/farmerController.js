@@ -1111,6 +1111,7 @@ exports.getFarmerDetailContext = async (req, res) => {
     const AgencyUserLink = require('../models/platform/AgencyUserLink');
     const EvidenceRequirement = require('../models/platform/EvidenceRequirement');
     const EvidenceSubmission = require('../models/platform/EvidenceSubmission');
+    const { materialReconciliation } = require('../utils/inventoryTrace');
 
     const farmer = await Farmer.findById(req.params.id).lean();
     if (!farmer) return res.status(404).json({ message: 'Farmer not found.' });
@@ -1155,6 +1156,8 @@ exports.getFarmerDetailContext = async (req, res) => {
       context?.companyId?._id ? EvidenceSubmission.find({companyId:context.companyId._id,farmerId:farmer._id}).lean() : [],
     ]);
 
+    const reconciliation = context?.companyId?._id ? await materialReconciliation({ companyId: context.companyId._id, farmerId: farmer._id, agencyId: context.agencyId?._id || context.agencyId }) : null;
+
     const submissionByReq=new Map((evidenceSubmissions||[]).map(x=>[String(x.requirementId),x]));
     const evidenceChecklist=(evidenceRequirements||[]).map(r=>({requirement:r,submission:submissionByReq.get(String(r._id))||null}));
     res.json({
@@ -1164,6 +1167,7 @@ exports.getFarmerDetailContext = async (req, res) => {
       serviceCases,
       compliance,
       evidenceChecklist,
+      materialReconciliation: reconciliation,
     });
   } catch (err) {
     console.error('Error in getFarmerDetailContext:', err);

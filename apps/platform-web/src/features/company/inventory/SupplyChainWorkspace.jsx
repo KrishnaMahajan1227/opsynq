@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState}from'react';
-import{ArrowRight,BrainCircuit,CheckCircle2,CircleAlert,ClipboardCheck,PackageOpen,PackagePlus,ShoppingCart,Truck,UsersRound,Warehouse,ChevronDown,ArrowRightLeft}from'lucide-react';
+import{ArrowRight,BrainCircuit,CheckCircle2,CircleAlert,ClipboardCheck,PackageOpen,PackagePlus,ShoppingCart,Truck,UsersRound,Warehouse,ChevronDown,ArrowRightLeft,ScanLine}from'lucide-react';
 import{api,invPath,logPath}from'../../../core/api';
 import{fmt}from'../../../core/format';
 import{PageHeader,Status}from'../../../components/common';
@@ -10,6 +10,7 @@ const quickActions=[
  {id:'procurement',label:'Create purchase order',help:'Start a governed supplier commitment',icon:ShoppingCart,action:'new-po'},
  {id:'procurement',label:'Receive / scan GRN',help:'Receive PO lines and capture serials',icon:ClipboardCheck,action:'receive'},
  {id:'stock',label:'Transfer stock',help:'Move stock between warehouses',icon:ArrowRightLeft,action:'transfer'},
+ {id:'stock',label:'Trace serial / barcode',help:'See complete custody and installation history',icon:ScanLine,action:'trace'},
  {id:'shipments',label:'Create dispatch',help:'Plan company-to-agency movement',icon:Truck,action:'new-dispatch'}
 ];
 const areas=[

@@ -17,4 +17,6 @@ router.get('/purchase-orders',requirePlatformRoles(...procurementRead),c.listPur
 router.post('/receipts',requirePlatformRoles(...procurementRoles),c.receiveGoods);
 router.get('/stock',requirePlatformRoles(...inventoryRead),c.listStock);router.post('/transfers',requirePlatformRoles(...inventoryRoles),c.transferStock);
 router.get('/scan',requirePlatformRoles(...inventoryRead),c.scanLookup);
+router.get('/trace',requirePlatformRoles(...inventoryRead),c.traceAsset);
+router.get('/beneficiary-material/:farmerId',requirePlatformRoles(...inventoryRead),c.beneficiaryMaterial);
 module.exports=router;

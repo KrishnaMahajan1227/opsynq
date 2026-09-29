@@ -166,6 +166,7 @@ export default function FarmerDetailView({ farmer, onBack }) {
   const serviceCases = context?.serviceCases || [];
   const compliance = context?.compliance || [];
   const materialIssues = context?.materialIssues || [];
+  const materialReconciliation = context?.materialReconciliation || null;
   const evidenceChecklist = context?.evidenceChecklist || [];
   const siteParts=String(farmer.siteLocation||'').split(',').map(x=>Number(String(x).trim()));
   const siteGeo=siteParts.length>=2&&Number.isFinite(siteParts[0])&&Number.isFinite(siteParts[1])?{latitude:siteParts[0],longitude:siteParts[1]}:null;
@@ -253,6 +254,18 @@ export default function FarmerDetailView({ farmer, onBack }) {
           <Field label="Material received date" value={fmtDate(farmer.materialReceivedDate)} />
           <Field label="Shortage / damage" value={farmer.shortageDamagedRemarks} wide />
         </Section>
+
+        {materialReconciliation && <Section icon={<FaBoxOpen />} title="Material reconciliation" full>
+          <div className="agency-material-recon farmer-detail-field--wide">
+            <div><small>Issued</small><strong>{materialReconciliation.totals?.issued || 0}</strong></div>
+            <div><small>Installed</small><strong>{materialReconciliation.totals?.installed || 0}</strong></div>
+            <div><small>Remaining</small><strong>{materialReconciliation.totals?.remaining || 0}</strong></div>
+            <div><small>Returned</small><strong>{materialReconciliation.totals?.returned || 0}</strong></div>
+            <div><small>Damaged / missing</small><strong>{Number(materialReconciliation.totals?.damaged || 0) + Number(materialReconciliation.totals?.missing || 0)}</strong></div>
+            <div><small>Mismatch</small><strong>{materialReconciliation.totals?.mismatch || 0}</strong></div>
+          </div>
+          {(materialReconciliation.items || []).map((item) => <div key={item.itemId} className="farmer-context-row farmer-detail-field--wide"><div><strong>{item.sku || 'Item'} · {item.name}</strong><span>{item.role || 'OTHER'} · Issued {item.issued} · Installed {item.installed} · Remaining {item.remaining}</span></div><Badge bg={Number(item.mismatch || 0) > 0 || Number(item.damaged || 0) > 0 || Number(item.missing || 0) > 0 ? 'warning' : 'success'}>{Number(item.mismatch || 0) > 0 ? `${item.mismatch} mismatch` : 'Reconciled'}</Badge></div>)}
+        </Section>}
 
         <Section icon={<FaTools />} title="Pump, installation & commissioning">
           <Field label="Vendor" value={farmer.assignedVendorCompanyName} wide />
