@@ -1626,23 +1626,27 @@ export default function DashboardSuperAdmin() {
                               variant="outline-danger"
                               size="sm"
                               onClick={async () => {
-                                if (window.confirm('Are you sure you want to delete this record?')) {
-                                  try {
-                                    await axios.delete(`${API_URL}/api/farmers/${f._id}`, auth);
-                                    await refreshAll();
-                                    setToast({
-                                      show: true,
-                                      variant: 'success',
-                                      message: 'Farmer deleted successfully',
-                                    });
-                                  } catch (error) {
-                                    console.error('Failed to delete farmer:', error);
-                                    setToast({
-                                      show: true,
-                                      variant: 'danger',
-                                      message: 'Failed to delete farmer',
-                                    });
-                                  }
+                                const reason = window.prompt('Please provide a reason for deletion:');
+                                if (!reason?.trim()) {
+                                  setToast({ show: true, variant: 'warning', message: 'Deletion cancelled: Reason required' });
+                                  return;
+                                }
+                                if (!window.confirm('Delete this beneficiary record? This action is audited.')) return;
+                                try {
+                                  await axios.delete(`${API_URL}/api/farmers/${f._id}`, { ...auth, data: { reason: reason.trim() } });
+                                  await refreshAll();
+                                  setToast({
+                                    show: true,
+                                    variant: 'success',
+                                    message: 'Farmer deleted successfully',
+                                  });
+                                } catch (error) {
+                                  console.error('Failed to delete farmer:', error);
+                                  setToast({
+                                    show: true,
+                                    variant: 'danger',
+                                    message: `Failed to delete farmer: ${error.response?.data?.message || error.message}`,
+                                  });
                                 }
                               }}
                             >

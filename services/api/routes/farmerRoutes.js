@@ -26,8 +26,8 @@ router.get('/', protect, farmerController.getFarmers);
 router.get('/detail-context/:id', protect, farmerController.getFarmerDetailContext);
 router.post('/:id/evidence/:requirementId', protect, farmerController.submitFarmerEvidence);
 router.get('/:id', protect, farmerController.getFarmerById);
-router.put('/:id', protect, farmerController.updateFarmer);
-router.delete('/:id', protect, farmerController.deleteFarmer);
-router.post('/bulk-update', protect, farmerController.bulkUpdateFarmers);
+router.put('/:id', protect, authorizeRoles('admin', 'superadmin'), farmerController.updateFarmer);
+router.delete('/:id', protect, authorizeRoles('admin', 'superadmin'), farmerController.deleteFarmer);
+router.post('/bulk-update', protect, authorizeRoles('admin', 'superadmin'), farmerController.bulkUpdateFarmers);
 
 module.exports = router;
