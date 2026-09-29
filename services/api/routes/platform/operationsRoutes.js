@@ -17,10 +17,14 @@ router.get('/beneficiary-filter-options',canBeneficiaryRead,c.beneficiaryFilterO
 router.get('/programs',canOperationsRead,c.listPrograms);router.post('/programs',canWrite,c.createProgram);router.patch('/programs/:id',canWrite,c.updateProgram);router.delete('/programs/:id',canWrite,c.closeProgram);
 router.get('/contracts',canOperationsRead,c.listContracts);router.post('/contracts',canWrite,c.createContract);router.patch('/contracts/:id',canWrite,c.updateContract);router.delete('/contracts/:id',canWrite,c.closeContract);
 router.get('/work-orders',canOperationsRead,c.listWorkOrders);router.post('/work-orders',canWrite,c.createWorkOrder);router.patch('/work-orders/:id',canWrite,c.updateWorkOrder);router.delete('/work-orders/:id',canWrite,c.closeWorkOrder);
-router.get('/agencies',canOperationsRead,c.listAgencies);router.post('/agencies',canWrite,c.createAgency);router.patch('/agencies/:id',canWrite,c.updateAgency);router.delete('/agencies/:id',canWrite,c.archiveAgency);
+router.get('/agencies',canOperationsRead,c.listAgencies);router.post('/agencies',canWrite,c.createAgency);router.patch('/agencies/bulk',canWrite,c.bulkUpdateAgencies);router.delete('/agencies/bulk',canWrite,c.bulkArchiveAgencies);router.patch('/agencies/:id',canWrite,c.updateAgency);router.delete('/agencies/:id',canWrite,c.archiveAgency);
 router.get('/work-packages',canOperationsRead,c.listWorkPackages);router.post('/work-packages',canWrite,c.createWorkPackage);router.patch('/work-packages/:id',canWrite,c.updateWorkPackage);router.patch('/work-packages/:id/assign',canWrite,c.assignPackage);router.delete('/work-packages/:id',canWrite,c.closeWorkPackage);
 router.get('/beneficiaries',canBeneficiaryRead,c.listBeneficiaries);
+router.post('/beneficiaries',canWrite,c.createBeneficiary);
 router.patch('/beneficiaries/bulk',canWrite,c.bulkUpdateBeneficiaries);
+router.delete('/beneficiaries/bulk',canWrite,c.bulkDeleteBeneficiaries);
+router.patch('/beneficiaries/:farmerId',canWrite,c.updateBeneficiary);
+router.delete('/beneficiaries/:farmerId',canWrite,c.deleteBeneficiary);
 // IMPORTANT: fixed/static beneficiary routes must be declared before /:farmerId.
 router.get('/beneficiaries/template',canOperationsRead,c.downloadBeneficiaryTemplate);
 router.post('/beneficiaries/import',canWrite,upload.single('file'),c.importBeneficiaries);
