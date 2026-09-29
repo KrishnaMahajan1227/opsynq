@@ -27,20 +27,42 @@ const safeRegex=v=>new RegExp(String(v||'').slice(0,100).replace(/[.*+?^${}()|[\
 exports.dashboard=async(req,res)=>{
  const company=await ensureCompany(req,res); if(!company)return;
  const q={companyId:company._id};
+ const period=['week','month','year'].includes(String(req.query.period||''))?String(req.query.period):'month';
+ const now=new Date(),start=new Date(now);
+ if(period==='week')start.setUTCDate(start.getUTCDate()-6);
+ else if(period==='year')start.setUTCMonth(start.getUTCMonth()-11,1);
+ else start.setUTCDate(start.getUTCDate()-29);
+ start.setUTCHours(0,0,0,0);
+ const bucketFormat=period==='year'?'%Y-%m':'%Y-%m-%d';
  const [programs,contracts,workOrders,workPackages,agencies,beneficiaries,pendingPackages]=await Promise.all([
    Program.countDocuments(q),Contract.countDocuments(q),WorkOrder.countDocuments(q),WorkPackage.countDocuments(q),
    Organization.countDocuments({type:'AGENCY',parentOrganization:company._id,status:'ACTIVE'}),BeneficiaryContext.countDocuments(q),
    WorkPackage.countDocuments({...q,status:{$in:['READY','ASSIGNED','IN_PROGRESS','BLOCKED']}})
  ]);
- const packageAgg=await WorkPackage.aggregate([{$match:{companyId:company._id}},{$group:{_id:'$status',count:{$sum:1},quantity:{$sum:'$assignedQuantity'}}}]);
- const companyContexts=await BeneficiaryContext.find(q).select('farmerId agencyId').populate('agencyId','name code').lean();
- const farmerIds=companyContexts.map(x=>x.farmerId).filter(Boolean);
- const farmers=farmerIds.length?await Farmer.find({_id:{$in:farmerIds}}).select('applicationStatus inspectionStatus district').lean():[];
- const farmerById=new Map(farmers.map(f=>[String(f._id),f]));
- const beneficiaryStatus={},surveyStatus={},districtMap={};
- for(const ctx of companyContexts){const f=farmerById.get(String(ctx.farmerId));if(!f)continue;const app=f.applicationStatus||'Pending',survey=f.inspectionStatus||'Pending',district=f.district||'Unspecified';beneficiaryStatus[app]=(beneficiaryStatus[app]||0)+1;surveyStatus[survey]=(surveyStatus[survey]||0)+1;districtMap[district]=districtMap[district]||{district,count:0,completed:0,inProgress:0,complaints:0,agencies:new Set()};const row=districtMap[district];row.count++;if(['Installation Completed','Closed'].includes(app))row.completed++;else if(app==='Complaint Raised')row.complaints++;else row.inProgress++;if(ctx.agencyId?._id)row.agencies.add(String(ctx.agencyId._id));}
- const districts=Object.values(districtMap).map(x=>({...x,agencies:x.agencies.size,completionPercent:x.count?Math.round(x.completed/x.count*100):0})).sort((a,b)=>b.count-a.count);
- res.json({company:{id:company._id,name:company.name,code:company.code},programs,contracts,workOrders,workPackages,agencies,beneficiaries,pendingPackages,packageStatus:packageAgg,beneficiaryStatus:Object.entries(beneficiaryStatus).map(([status,count])=>({status,count})),surveyStatus:Object.entries(surveyStatus).map(([status,count])=>({status,count})),districts});
+ const [packageAgg,rollup,surveyTrend,installationTrend]=await Promise.all([
+  WorkPackage.aggregate([{$match:{companyId:company._id}},{$group:{_id:'$status',count:{$sum:1},quantity:{$sum:'$assignedQuantity'}}}]),
+  BeneficiaryContext.aggregate([
+   {$match:q},
+   {$lookup:{from:Farmer.collection.name,localField:'farmerId',foreignField:'_id',as:'farmer'}},
+   {$unwind:{path:'$farmer',preserveNullAndEmptyArrays:false}},
+   {$lookup:{from:WorkPackage.collection.name,localField:'workPackageId',foreignField:'_id',as:'pkg'}},
+   {$unwind:{path:'$pkg',preserveNullAndEmptyArrays:true}},
+   {$project:{agencyId:1,app:{$ifNull:['$farmer.applicationStatus','Pending']},survey:{$ifNull:['$farmer.inspectionStatus','Pending']},district:{$ifNull:['$farmer.district',{$ifNull:['$pkg.geography.district','Unspecified']}]},state:{$ifNull:['$pkg.geography.state','Unspecified']}}},
+   {$facet:{
+    beneficiaryStatus:[{$group:{_id:'$app',count:{$sum:1}}},{$sort:{count:-1}}],
+    surveyStatus:[{$group:{_id:'$survey',count:{$sum:1}}},{$sort:{count:-1}}],
+    districts:[{$group:{_id:'$district',count:{$sum:1},completed:{$sum:{$cond:[{$in:['$app',['Installation Completed','Closed']]},1,0]}},complaints:{$sum:{$cond:[{$eq:['$app','Complaint Raised']},1,0]}},inProgress:{$sum:{$cond:[{$and:[{$not:[{$in:['$app',['Installation Completed','Closed']]}]},{$ne:['$app','Complaint Raised']}]},1,0]}},agencies:{$addToSet:'$agencyId'}}},{$project:{_id:0,district:'$_id',count:1,completed:1,complaints:1,inProgress:1,agencies:{$size:{$filter:{input:'$agencies',as:'a',cond:{$ne:['$$a',null]}}}},completionPercent:{$cond:[{$gt:['$count',0]},{$round:[{$multiply:[{$divide:['$completed','$count']},100]},0]},0]}}},{$sort:{count:-1}}],
+    states:[{$group:{_id:'$state',count:{$sum:1},completed:{$sum:{$cond:[{$in:['$app',['Installation Completed','Closed']]},1,0]}},complaints:{$sum:{$cond:[{$eq:['$app','Complaint Raised']},1,0]}},inProgress:{$sum:{$cond:[{$and:[{$not:[{$in:['$app',['Installation Completed','Closed']]}]},{$ne:['$app','Complaint Raised']}]},1,0]}},agencies:{$addToSet:'$agencyId'},districts:{$addToSet:'$district'}}},{$project:{_id:0,state:'$_id',count:1,completed:1,complaints:1,inProgress:1,agencies:{$size:{$filter:{input:'$agencies',as:'a',cond:{$ne:['$$a',null]}}}},districts:{$size:{$filter:{input:'$districts',as:'d',cond:{$and:[{$ne:['$$d',null]},{$ne:['$$d','']}]}}}},completionPercent:{$cond:[{$gt:['$count',0]},{$round:[{$multiply:[{$divide:['$completed','$count']},100]},0]},0]}}},{$sort:{count:-1}}]
+   }}
+  ]),
+  EvidenceSubmission.aggregate([{$match:{companyId:company._id,stage:'SURVEY',status:{$in:['SUBMITTED','VERIFIED']},updatedAt:{$gte:start}}},{$group:{_id:'$farmerId',eventAt:{$max:'$updatedAt'}}},{$group:{_id:{$dateToString:{format:bucketFormat,date:'$eventAt',timezone:'UTC'}},count:{$sum:1}}},{$sort:{_id:1}}]),
+  InstalledAsset.aggregate([{$match:{companyId:company._id,installedAt:{$gte:start}}},{$group:{_id:'$farmerId',eventAt:{$min:'$installedAt'}}},{$group:{_id:{$dateToString:{format:bucketFormat,date:'$eventAt',timezone:'UTC'}},count:{$sum:1}}},{$sort:{_id:1}}])
+ ]);
+ const summary=rollup?.[0]||{},trendMap=new Map();
+ for(const x of surveyTrend||[])trendMap.set(x._id,{period:x._id,surveys:Number(x.count||0),installations:0});
+ for(const x of installationTrend||[]){const row=trendMap.get(x._id)||{period:x._id,surveys:0,installations:0};row.installations=Number(x.count||0);trendMap.set(x._id,row)}
+ const pad=n=>String(n).padStart(2,'0'),keyFor=d=>period==='year'?`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}`:`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;const cursor=new Date(start);while(cursor<=now){const key=keyFor(cursor);if(!trendMap.has(key))trendMap.set(key,{period:key,surveys:0,installations:0});if(period==='year')cursor.setUTCMonth(cursor.getUTCMonth()+1,1);else cursor.setUTCDate(cursor.getUTCDate()+1)}
+ res.json({company:{id:company._id,name:company.name,code:company.code},period,trend:[...trendMap.values()].sort((a,b)=>String(a.period).localeCompare(String(b.period))),programs,contracts,workOrders,workPackages,agencies,beneficiaries,pendingPackages,packageStatus:packageAgg,beneficiaryStatus:(summary.beneficiaryStatus||[]).map(x=>({status:x._id,count:x.count})),surveyStatus:(summary.surveyStatus||[]).map(x=>({status:x._id,count:x.count})),states:summary.states||[],districts:summary.districts||[]});
 };
 
 

@@ -323,3 +323,9 @@ h1, h2, h3, h4, h5, h6 {
 .form-control,.form-select,input.form-control,select.form-control{min-height:40px;border-radius:var(--ops-control-radius);font-size:.84rem;padding:.45rem .7rem}
 .input-group>.form-control,.input-group>.form-select,.input-group>.btn{min-height:40px}
 textarea.form-control{min-height:88px;line-height:1.45;resize:vertical}
+
+/* Phase 49 — interaction affordance + route-level loading */
+.agency-route-loader{min-height:55vh;display:grid;place-items:center;align-content:center;gap:8px;color:#425049;text-align:center}.agency-route-loader span{width:34px;height:34px;border:3px solid #dfe7e3;border-top-color:#315f4d;border-radius:50%;animation:agency-spin .8s linear infinite}.agency-route-loader b{font-size:.88rem}.agency-route-loader small{font-size:.72rem;color:#76827c}@keyframes agency-spin{to{transform:rotate(360deg)}}
+:where(button:not(:disabled),a[href],.card[role="button"],.clickable-row,.sidebar-nav-link){transition:background-color .14s ease,border-color .14s ease,box-shadow .14s ease,transform .14s ease,color .14s ease}
+:where(button:not(:disabled),a[href],.card[role="button"],.clickable-row,.sidebar-nav-link):focus-visible{outline:2px solid #3d6f5e!important;outline-offset:2px}
+.dashboard-admin .clickable-row:hover,.dashboard-superadmin .clickable-row:hover,.td-task-card:hover{box-shadow:0 5px 16px rgba(22,54,42,.08)!important;border-color:#bccbc4!important}.quick-nav-grid button:hover,.workflow-health__grid button:hover,.attention-list button:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(22,54,42,.07)!important}

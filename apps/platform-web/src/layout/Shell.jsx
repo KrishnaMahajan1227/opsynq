@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState}from'react';
-import{ArrowLeft,Bell,Check,ChevronDown,ChevronRight,Command,LogOut,Menu,PanelLeftClose,PanelLeftOpen,Search,X}from'lucide-react';
+import{ArrowLeft,Bell,BrainCircuit,Check,ChevronDown,ChevronRight,Command,LogOut,Menu,PanelLeftClose,PanelLeftOpen,Search,Send,X}from'lucide-react';
 import {Brand} from '../components/common';
 import {api} from '../core/api';
 import {flattenModulesForUser,moduleForPage,groupsForUser} from './moduleRegistry';
@@ -22,7 +22,7 @@ function NotificationBell({companyId,onNavigate}){
  const load=async()=>{if(!companyId)return;setLoading(true);try{const d=await api(`/api/platform/governance/notifications?companyId=${companyId}`);setItems((d.items||[]).slice(0,20));setUnread(Number(d.unread||0))}catch{}finally{setLoading(false)}};
  useEffect(()=>{if(!companyId)return;load();const id=setInterval(load,45000);return()=>{clearInterval(id);clearTimeout(hoverTimer.current)}},[companyId]);
  const close=()=>{setOpen(false);setPinned(false)};
- const mark=async n=>{if(!n.isRead){try{await api(`/api/platform/governance/notifications/${n._id}/read?companyId=${companyId}`,{method:'PATCH'});setItems(v=>v.map(x=>x._id===n._id?{...x,isRead:true}:x));setUnread(v=>Math.max(0,v-1))}catch{}}if(n.actionUrl){const target=String(n.actionUrl).replace(/^.*page=/,'').replace(/^\//,'');if(target)onNavigate(target)}close()};
+ const mark=async n=>{if(!n.isRead){try{await api(`/api/platform/governance/notifications/${n._id}/read?companyId=${companyId}`,{method:'PATCH'});setItems(v=>v.map(x=>x._id===n._id?{...x,isRead:true}:x));setUnread(v=>Math.max(0,v-1))}catch{}}const entityPage={WorkPackage:'work-packages',Beneficiary:'beneficiary-records',Farmer:'beneficiary-records',Shipment:'shipments',ServiceCase:'service-cases',CommercialClaim:'claims',PurchaseOrder:'procurement',InventoryItem:'stock',Approval:'approval-center',EvidenceSubmission:'evidence-control'};let target='';if(n.actionUrl)target=String(n.actionUrl).replace(/^.*page=/,'').replace(/^\//,'');if(!target&&n.entityType)target=entityPage[String(n.entityType)]||'';if(target)onNavigate(target,n.entityId?{recordId:String(n.entityId)}:{});close()};
  const enter=()=>{clearTimeout(hoverTimer.current);hoverTimer.current=setTimeout(()=>{setOpen(true);load()},120)};
  const leave=()=>{clearTimeout(hoverTimer.current);if(!pinned)hoverTimer.current=setTimeout(()=>setOpen(false),220)};
  const bellLabel=unread?`Notifications, ${unread} unread`:'Notifications';
@@ -37,6 +37,15 @@ function NotificationBell({companyId,onNavigate}){
    <button className="notification-all" onClick={()=>{onNavigate('notifications');close()}}>Open notification center</button>
   </div>}
  </div>
+}
+
+function CompanyAiCopilot({companyId,page,pageLabel,onNavigate}){
+ const key=`opsynq.ai.copilot:${companyId||'self'}`,[open,setOpen]=useState(false),[question,setQuestion]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[messages,setMessages]=useState(()=>{try{return JSON.parse(sessionStorage.getItem(key)||'[]')}catch{return[]}}),endRef=useRef(null);
+ useEffect(()=>{try{sessionStorage.setItem(key,JSON.stringify(messages.slice(-30)))}catch{}if(open)setTimeout(()=>endRef.current?.scrollIntoView({block:'end'}),20)},[messages,open,key]);
+ const scope=useMemo(()=>{if(['programs','contracts','work-orders','work-packages','agencies','beneficiary-records','geo-operations','beneficiary-imports'].includes(page))return'DELIVERY';if(['supply-chain','procurement','stock','shipments','fleet','inventory-overview','item-master','warehouses','procurement-intelligence','scanner','logistics-overview','material-issues','agency-stock','pdi'].includes(page))return'SUPPLY';if(['service-cases','service-plans','installed-assets','asset-lifecycle','reconciliation','insurance','compliance','evidence-control'].includes(page))return'SERVICE';if(['financial-control','claims','regulatory-reports'].includes(page))return'FINANCE';return'EXECUTIVE'},[page]);
+ const ask=async raw=>{const text=String(raw||question).trim();if(!text||busy)return;const userMessage={role:'user',text,at:Date.now(),page:pageLabel||page};setMessages(v=>[...v,userMessage]);setQuestion('');setBusy(true);setError('');try{const recent=messages.slice(-6).map(m=>`${m.role==='assistant'?'Assistant':'User'}: ${String(m.text||'').slice(0,700)}`).join('\n');const contextual=`Current screen: ${pageLabel||page||'Company workspace'}. ${recent?`Recent conversation:\n${recent}\n`:''}User question: ${text}`;const d=await api(`/api/platform/ai/brief?companyId=${companyId}`,{method:'POST',body:JSON.stringify({scope,question:contextual})});setMessages(v=>[...v,{role:'assistant',text:String(d.brief||'No response returned.'),at:Date.now(),scope,page:pageLabel||page}])}catch(e){setError(e.message||'AI request failed.')}finally{setBusy(false)}};
+ const quick=label=>ask(label);
+ return <div className={`ai-copilot ${open?'open':''}`}><button className="ai-copilot-launch" onClick={()=>setOpen(v=>!v)} aria-label={open?'Close AI Copilot':'Open AI Copilot'}><BrainCircuit size={18}/><span>AI Copilot</span>{messages.length>0&&<i/>}</button>{open&&<section className="ai-copilot-panel" aria-label="Company AI Copilot"><header><div><BrainCircuit size={18}/><span><b>AI Copilot</b><small>{pageLabel||'Company workspace'} · {scope.toLowerCase()}</small></span></div><div><button onClick={()=>onNavigate?.('ai-operations')} title="Open Operations Intelligence">Workspace</button><button className="icon-btn" onClick={()=>setOpen(false)} aria-label="Close AI Copilot"><X size={15}/></button></div></header><div className="ai-copilot-context"><button onClick={()=>quick('Brief this screen. Highlight the most important facts, risks and next decisions.')}>Brief this screen</button><button onClick={()=>quick('What needs attention now? Give me the operational priority and why.')}>What needs attention?</button></div><div className="ai-copilot-messages">{!messages.length&&<div className="ai-copilot-empty"><b>Ask about this workspace</b><span>I can explain current operational signals, summarize risks and help you review what to resolve next. Controlled changes still require manual confirmation.</span></div>}{messages.map((m,i)=><article key={`${m.at}-${i}`} className={m.role}><small>{m.role==='assistant'?'AI Copilot':'You'}{m.page?` · ${m.page}`:''}</small><p>{m.text}</p></article>)}{busy&&<article className="assistant thinking"><small>AI Copilot</small><p>Reviewing company data…</p></article>}<div ref={endRef}/></div>{error&&<div className="ai-copilot-error">{error}</div>}<form className="ai-copilot-compose" onSubmit={e=>{e.preventDefault();ask()}}><textarea rows="2" value={question} onChange={e=>setQuestion(e.target.value)} placeholder={`Ask about ${pageLabel||'this screen'}…`} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask()}}}/><button disabled={busy||!question.trim()} aria-label="Send to AI Copilot"><Send size={17}/></button></form></section>}</div>
 }
 
 function GlobalSearch({companyId,onNavigate,allowedPages=null}){
@@ -66,7 +75,7 @@ export function Shell({user,page,setPage,logout,companyMode=false,companyId=null
  useEffect(()=>{localStorage.setItem(compactKey,compact?'1':'0')},[compact]);
  useEffect(()=>{const key=e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPalette(true)}if(e.key==='Escape'){setPalette(false);setMobileOpen(false)}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)},[]);
  const visibleGroups=groups.map(g=>({...g,items:g.items.filter(m=>`${m.label} ${m.keywords||''}`.toLowerCase().includes(navQuery.toLowerCase()))})).filter(g=>g.items.length);
- const go=id=>{if(companyMode&&companyId)recordRecent(`company:${companyId}`,id);setPage(id);setNavQuery('');setMobileOpen(false)};
+ const go=(id,filter)=>{if(companyMode&&companyId)recordRecent(`company:${companyId}`,id);setPage(id,filter);setNavQuery('');setMobileOpen(false)};
 
  return <div className={`app-shell ${compact?'compact':''} ${mobileOpen?'mobile-nav-open':''}`}>
   {compact&&<button className="sidebar-expand-handle" aria-label="Expand sidebar navigation" title="Expand navigation" onClick={()=>setCompact(false)}><PanelLeftOpen size={17}/></button>}
@@ -88,6 +97,7 @@ export function Shell({user,page,setPage,logout,companyMode=false,companyId=null
    {permissionNotice&&<div className="permission-toast">{permissionNotice}</div>}
    {children}
   </main>
+  {companyMode&&companyId&&aiModule&&<CompanyAiCopilot companyId={companyId} page={page} pageLabel={current?.label||page} onNavigate={go}/>}
   <CommandPalette open={palette} onClose={()=>setPalette(false)} modules={modules} onSelect={go}/>
  </div>
 }

@@ -1,14 +1,14 @@
-import React from 'react';
+import React,{Suspense,lazy} from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import NavbarComponent from './components/Navbar';
 import UnifiedLoginRedirect from './components/UnifiedLoginRedirect';
 import AuthHandoff from './components/AuthHandoff';
-import Register from './pages/Register';
-import DashboardSuperAdmin from './pages/DashboardSuperAdmin';
-import DashboardAdmin from './pages/DashboardAdmin';
-import DashboardTechnician from './pages/DashboardTechnician';
-import UploadExcel from './pages/UploadExcel';
-import FieldVerification from './pages/FieldVerification';
+const Register=lazy(()=>import('./pages/Register'));
+const DashboardSuperAdmin=lazy(()=>import('./pages/DashboardSuperAdmin'));
+const DashboardAdmin=lazy(()=>import('./pages/DashboardAdmin'));
+const DashboardTechnician=lazy(()=>import('./pages/DashboardTechnician'));
+const UploadExcel=lazy(()=>import('./pages/UploadExcel'));
+const FieldVerification=lazy(()=>import('./pages/FieldVerification'));
 import UserLocationTracker from './components/UserLocationTracker';
 import ResilienceStatus from './components/ResilienceStatus';
 import {installAgencyAxiosResilience} from './resilientAxios';
@@ -28,6 +28,7 @@ const App = () => {
       <div className="d-flex flex-column min-vh-100"><ResilienceStatus />
         <NavbarComponent />
         <div className="app-content flex-grow-1">
+          <Suspense fallback={<div className="agency-route-loader"><span/><b>Loading workspace…</b><small>Preparing the latest operational view.</small></div>}>
           <Routes>
             <Route path="/" element={<UnifiedLoginRedirect />} />
             <Route path="/auth/handoff" element={<AuthHandoff />} />
@@ -39,6 +40,7 @@ const App = () => {
             <Route path="/field-verification" element={<ProtectedRoute><FieldVerification /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to={localStorage.getItem('token')?(localStorage.getItem('userRole')==='superadmin'?'/dashboard/superadmin':localStorage.getItem('userRole')==='admin'?'/dashboard/admin':'/dashboard/technician'):'/'} replace />} />
           </Routes>
+          </Suspense>
         </div>
       </div>
     </Router>

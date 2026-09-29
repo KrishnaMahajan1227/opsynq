@@ -11,7 +11,7 @@ const seed=read('services/api/seed/demoData.js');
 const css=read('apps/platform-web/src/styles/index.css');
 check(shell.includes('onMouseEnter={enter}')&&shell.includes('onMouseLeave={leave}')&&shell.includes('items.slice(0,6)'),'notification bell has compact hover/click preview');
 check(gov.includes('Notification details')&&gov.includes('Notification filters'),'notification center provides detailed filtered view');
-check(((ops.includes('dashboard-kpis')&&ops.includes('Beneficiary execution funnel'))||(ops.includes('command-kpis')&&ops.includes('Execution pipeline')))&&ops.includes('opsynq.dashboard.filter.'),'dashboard KPIs and stage rows are actionable');
+check(((ops.includes('dashboard-kpis')&&ops.includes('Beneficiary execution funnel'))||(ops.includes('command-kpis')&&(ops.includes('Execution pipeline')||ops.includes('Execution mix'))))&&ops.includes('opsynq.dashboard.filter.'),'dashboard KPIs and stage rows are actionable');
 check(opsController.includes('beneficiaryStatus')&&opsController.includes('surveyStatus')&&opsController.includes('districts'),'dashboard API exposes beneficiary, survey and district execution aggregates');
 check(opsController.includes('req.query.district')&&opsController.includes('req.query.survey'),'beneficiary API supports dashboard drill-down filters');
 check(seed.includes("'OPS-DM-024'")&&seed.includes('demoSurveyPhotos')&&seed.includes('demoInstallPhotos'),'scenario-rich demo beneficiary seed is present');

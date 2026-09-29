@@ -11,7 +11,7 @@ for(const role of roles){
  if(!dashboard.includes(`${role}:`)){failed=true;console.error(`✗ Phase 31 dashboard missing role composition for ${role}`)}
  if(!registry.includes(`${role}:'company-overview'`)){failed=true;console.error(`✗ ${role} does not land on its role dashboard`)}
 }
-for(const marker of ['Inventory Control','Procurement Control','Commercial Control','Quality & Service','Logistics Control','Execution pipeline','District execution','command-kpis','command-panel'])if(!dashboard.includes(marker)){failed=true;console.error(`✗ dashboard marker missing: ${marker}`)}
+for(const marker of ['Inventory Control','Procurement Control','Commercial Control','Quality & Service','Logistics Control','Execution mix','State execution','command-kpis','command-panel'])if(!dashboard.includes(marker)){failed=true;console.error(`✗ dashboard marker missing: ${marker}`)}
 if(!policy.includes("'overview.read':withSuper(ALL_COMPANY_ROLES)")){failed=true;console.error('✗ role dashboard API is not available to every company role')}
 if(!platform.includes('Global Command')||!platform.includes('command-kpis')){failed=true;console.error('✗ Platform Superadmin dashboard was not migrated to the command dashboard system')}
 if(!agencyCss.includes('Phase 31 — unified restrained dashboard presentation')){failed=true;console.error('✗ Agency dashboard presentation contract missing')}

@@ -65,9 +65,8 @@ const item=(id,label,icon,keywords,manageCapability)=>({id,label,icon,keywords,m
 
 export const companyGroups=[
   {id:'workspace',label:'Workspace',icon:Home,items:[
-    item('my-workspace','My Workspace',Home,'home favorites pinned recent modules shortcuts'),
-    item('action-center','Action Center',CircleAlert,'priority action pending critical attention inbox'),
-    item('company-overview','Dashboard',Activity,'dashboard command overview health attention')
+    item('company-overview','Dashboard',Activity,'dashboard command overview health attention'),
+    item('my-workspace','My Workspace',Home,'home favorites pinned recent modules shortcuts')
   ]},
   {id:'intelligence',label:'AI Operations',icon:BrainCircuit,items:[
     item('ai-operations','Operations Intelligence',BrainCircuit,'automated monitoring proposals decision support risk recommendations approvals')
@@ -138,7 +137,7 @@ const hiddenSupplyModules=[
   item('agency-stock','Agency Material Accountability',Truck,'agency dispatched received damaged missing stock custody'),
   item('pdi','PDI & Asset Inspection',ClipboardCheck,'pre dispatch inspection pdi serial quality supplier brand','pdi.write')
 ].map(x=>({...x,groupId:'supply-chain',groupLabel:'Supply Operations'}));
-const hiddenCompanyModules=[...hiddenDeliveryModules,...hiddenSupplyModules];
+const hiddenCompanyModules=[...hiddenDeliveryModules,...hiddenSupplyModules,{...item('action-center','Action Center',CircleAlert,'daily operational attention exceptions approvals service claims compliance'),groupId:'workspace',groupLabel:'Workspace'}];
 
 export const flattenModules=(companyMode=false)=>(companyMode?companyGroups:platformGroups).flatMap(g=>g.items.map(x=>({...x,groupId:g.id,groupLabel:g.label})));
 export const moduleForPage=(page,companyMode=false)=>(companyMode?[...flattenModules(true),...hiddenCompanyModules]:flattenModules(false)).find(m=>m.id===page);
