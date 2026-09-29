@@ -14,5 +14,5 @@ router.get('/dashboard',requirePlatformRoles(...read),c.dashboard);
 router.get('/cases',requirePlatformRoles(...serviceRead),c.listCases);router.post('/cases',requirePlatformRoles(...serviceWrite),c.createCase);router.patch('/cases/:id',requirePlatformRoles(...serviceWrite),c.updateCase);
 router.get('/sla-rules',requirePlatformRoles(...assuranceRead),c.listRules);router.post('/sla-rules',requirePlatformRoles(...adminWrite),c.createRule);router.patch('/sla-rules/:id',requirePlatformRoles(...adminWrite),c.updateRule);
 router.get('/claims',requirePlatformRoles(...financeRead),c.listClaims);router.post('/claims',requirePlatformRoles(...financeWrite),c.createClaim);router.patch('/claims/:id',requirePlatformRoles(...financeWrite),c.updateClaim);
-router.get('/service-plans',requirePlatformRoles(...serviceRead),c.listPlans);router.post('/service-plans',requirePlatformRoles(...serviceWrite),c.createPlan);
+router.get('/service-plans',requirePlatformRoles(...serviceRead),c.listPlans);router.post('/service-plans',requirePlatformRoles(...serviceWrite),c.createPlan);router.patch('/service-plans/:id',requirePlatformRoles(...serviceWrite),c.updatePlan);
 module.exports=router;
