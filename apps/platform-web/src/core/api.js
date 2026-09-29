@@ -1,5 +1,5 @@
 import {cacheResponse,getCachedResponse,queueWrite} from './offlineStore';
-export const API=String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')||(import.meta.env.PROD?'':'http://localhost:3000');
+export const API=String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'');
 export const tokenKey='opsynq_platform_token';
 const memoryCache=new Map();
 const DEFAULT_CACHE_TTL=15000;

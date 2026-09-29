@@ -14,4 +14,4 @@ for(const app of apps){
 }
 function shutdown(code=0){for(const c of children){if(!c.killed)c.kill()}process.exit(code)}
 process.on('SIGINT',()=>shutdown(0));process.on('SIGTERM',()=>shutdown(0));
-console.log('Opsynq frontends starting: Platform http://localhost:5173 · Agency http://localhost:5174');
+console.log('Opsynq frontend: http://localhost:5173 · Agency: http://localhost:5173/agency/');

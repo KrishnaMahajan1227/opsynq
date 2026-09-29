@@ -29,7 +29,10 @@ const unifiedAuthRoutes = require('./routes/unifiedAuthRoutes');
 const { requestContext, authRateLimit, rejectUnsafeKeys } = require('./middleware/security');
 
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+const dotenv=require('dotenv');
+// Local development may keep server-only credentials either beside the API or at repo root.
+// Load the API-specific files first; root files are fallback only and never override them.
+for(const envFile of [path.resolve(__dirname,'.env.local'),path.resolve(__dirname,'.env'),path.resolve(__dirname,'../../.env.local'),path.resolve(__dirname,'../../.env')])dotenv.config({path:envFile,override:false,quiet:true});
 const { assertSecurityConfig } = require('./utils/securityConfig');
 assertSecurityConfig();
 
