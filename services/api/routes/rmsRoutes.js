@@ -1,0 +1,18 @@
+const router=require('express').Router();
+const c=require('../controllers/rmsController');
+const {protectRms,requireRmsManage}=require('../middleware/rmsAuth');
+router.use(protectRms);
+router.get('/overview',c.overview);
+router.get('/devices',c.devices);
+router.get('/devices/:id',c.deviceDetail);
+router.get('/devices/:id/history',c.history);
+router.get('/alerts',c.alerts);
+router.post('/alerts/:id/acknowledge',c.acknowledge);
+router.get('/providers',c.providers);
+router.get('/rules',c.rules);
+router.patch('/rules',requireRmsManage,c.updateRules);
+router.patch('/devices/:id/mapping',requireRmsManage,c.mapDevice);
+router.get('/beneficiaries/:farmerId',c.beneficiary);
+router.post('/demo/devices/:id/scenario',requireRmsManage,c.demoScenario);
+router.post('/providers/:id/test',requireRmsManage,c.integrationTest);
+module.exports=router;

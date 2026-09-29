@@ -17,7 +17,7 @@ const UserLocationTracker = () => {
     const role = localStorage.getItem('userRole') || 'user';
     if (!token || (!userId && !mobile) || !navigator.geolocation) return undefined;
 
-    const socket = io(SOCKET_SERVER_URL, { transports: ['websocket', 'polling'], auth: { token: localStorage.getItem('token') } });
+    const socket = io(SOCKET_SERVER_URL, { withCredentials: true, transports: ['websocket', 'polling'], auth: { token: localStorage.getItem('token') } });
     socketRef.current = socket;
 
     const emitPosition = (position) => {

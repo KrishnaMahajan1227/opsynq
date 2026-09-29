@@ -106,6 +106,6 @@ exports.submitFieldVerification = async (req, res) => {
     });
   } catch (err) {
     console.error('Error in field verification:', err);
-    return res.status(500).json({ message: err.message || 'Server error' });
+    return res.status(500).json({ message: 'Server error' });
   }
 };

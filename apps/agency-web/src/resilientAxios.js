@@ -2,7 +2,7 @@ import axios from 'axios';
 import {cacheResponse,getCachedResponse,queueWrite} from './offlineStore';
 let installed=false;
 export function installAgencyAxiosResilience(){
- if(installed)return;installed=true;
+ if(installed)return;installed=true;axios.defaults.withCredentials=true;
  axios.interceptors.response.use(async response=>{const method=String(response.config?.method||'get').toUpperCase();if(method==='GET')cacheResponse(`GET:${response.config.url}`,response.data);return response;},async error=>{
   const cfg=error.config||{},method=String(cfg.method||'get').toUpperCase(),url=cfg.url||'';
   if(error.response)return Promise.reject(error);

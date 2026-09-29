@@ -23,10 +23,10 @@ export default function AuthHandoff() {
     axios.post(`${API_URL}/api/unified-auth/agency-handoff/exchange`, { code })
       .then(({ data }) => {
         if (!active) return;
-        localStorage.setItem('token', data.token);
+        if(data.token)localStorage.setItem('token', data.token);else localStorage.removeItem('token');
+        localStorage.setItem('opsynq_agency_session','1');
         localStorage.setItem('userRole', data.user.role);
         localStorage.setItem('username', data.user.username || data.user.mobile);
-        localStorage.setItem('userId', data.user.id);
         localStorage.setItem('userMobile', data.user.mobile);
         if (normalizeRole(data.user.role) === 'fieldtechnician') localStorage.setItem('technicianMobile', data.user.mobile);
         navigate(targetFor(data.user.role), { replace: true });

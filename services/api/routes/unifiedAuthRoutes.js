@@ -8,5 +8,6 @@ router.post('/agency-handoff/exchange', authRateLimit, controller.exchangeAgency
 router.post('/forgot-password', recoveryRateLimit, controller.forgotPassword);
 router.post('/reset-password/validate', recoveryRateLimit, controller.validateResetToken);
 router.post('/reset-password', recoveryRateLimit, controller.resetPassword);
+router.post('/logout', controller.logout);
 
 module.exports = router;

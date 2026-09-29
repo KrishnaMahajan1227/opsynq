@@ -1,7 +1,7 @@
 import {
   Activity,ArrowRightLeft,BarChart3,Bell,Boxes,Building2,CheckCircle2,CircleAlert,ClipboardCheck,
   FileText,History,Home,Layers3,Navigation,PackageCheck,PackageOpen,PackagePlus,ScanLine,ShieldCheck,
-  ShoppingCart,Truck,UploadCloud,UsersRound,Warehouse,UserCog,Wrench,WalletCards,BriefcaseBusiness,MapPin,BrainCircuit
+  ShoppingCart,Truck,UploadCloud,UsersRound,Warehouse,UserCog,Wrench,WalletCards,BriefcaseBusiness,MapPin,BrainCircuit,RadioTower,Settings2
 } from 'lucide-react';
 
 export const platformGroups=[
@@ -18,7 +18,7 @@ const ROLE_MODULES={
   company_owner:'*',
   company_admin:'*',
   operations_manager:[
-    'my-workspace','ai-operations','action-center','company-overview','supply-chain',
+    'my-workspace','ai-operations','action-center','company-overview','supply-chain','rms-overview','rms-live-assets','rms-alerts','rms-health','rms-performance','rms-map','rms-commissioning','rms-mapping',
     'programs','work-orders','work-packages','agencies','beneficiary-records','beneficiary-imports','geo-operations',
     'logistics-overview','shipments','material-issues','agency-stock',
     'installed-assets','service-cases','service-plans',
@@ -26,7 +26,7 @@ const ROLE_MODULES={
     'analytics','notifications','documents','automation','readiness','evidence-control','regulatory-reports'
   ],
   program_manager:[
-    'my-workspace','ai-operations','company-overview',
+    'my-workspace','ai-operations','company-overview','rms-overview','rms-live-assets','rms-alerts','rms-health','rms-performance','rms-map','rms-commissioning','rms-mapping',
     'programs','contracts','work-orders','work-packages','agencies','beneficiary-records','beneficiary-imports','geo-operations',
     'financial-control','claims','sla','agency-performance','compliance',
     'analytics','notifications','documents','audit','readiness','evidence-control','regulatory-reports'
@@ -45,7 +45,7 @@ const ROLE_MODULES={
     'my-workspace','ai-operations','company-overview','financial-control','claims','insurance','regulatory-reports','analytics','notifications','documents','audit'
   ],
   quality_user:[
-    'my-workspace','ai-operations','company-overview','action-center','beneficiary-records','geo-operations',
+    'my-workspace','rms-overview','rms-live-assets','rms-alerts','rms-health','rms-performance','rms-map','rms-commissioning','rms-mapping','ai-operations','company-overview','action-center','beneficiary-records','geo-operations',
     'installed-assets','asset-lifecycle','service-cases','service-plans','reconciliation',
     'sla','agency-performance','compliance','insurance','pdi','regulatory-reports',
     'analytics','notifications','documents','audit','readiness','evidence-control'
@@ -56,7 +56,7 @@ const ROLE_MODULES={
     'reconciliation','analytics','notifications','documents','readiness'
   ],
   viewer:[
-    'my-workspace','company-overview','analytics','notifications','documents'
+    'my-workspace','company-overview','rms-overview','rms-live-assets','rms-health','rms-performance','rms-map','analytics','notifications','documents'
   ]
 };
 
@@ -86,6 +86,17 @@ export const companyGroups=[
     item('fleet','Fleet & Capacity',UsersRound,'driver vehicle availability workload fleet','logistics.write')
   ]},
 
+  {id:'rms',label:'RMS Monitoring',icon:RadioTower,items:[
+    item('rms-overview','Overview',RadioTower,'rms remote monitoring overview health telemetry'),
+    item('rms-live-assets','Live Assets',Activity,'rms devices live telemetry pump status'),
+    item('rms-alerts','Alerts',CircleAlert,'rms alerts faults communication'),
+    item('rms-health','Device Health',ShieldCheck,'rms connectivity offline stale provider health'),
+    item('rms-performance','Performance',BarChart3,'rms energy runtime water performance'),
+    item('rms-map','Map',MapPin,'rms gps location map'),
+    item('rms-commissioning','Commissioning',CheckCircle2,'rms commissioning first telemetry'),
+    item('rms-mapping','Mapping / Reconciliation',ArrowRightLeft,'rms mapping unmapped device reconciliation','rms.manage'),
+    item('rms-integrations','Integrations',Settings2,'rms provider integration settings health','rms.manage')
+  ]},
   {id:'asset-care',label:'Asset Care',icon:Wrench,items:[
     item('installed-assets','Installed Assets',PackageCheck,'farmer installed serial asset','service.write'),
     item('asset-lifecycle','Asset Lifecycle',Activity,'asset history replacement return','service.write'),

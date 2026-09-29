@@ -5,7 +5,7 @@ const { protect } = require('../middleware/authMiddleware');
 const ctl         = require('../controllers/fieldVerificationController');
 const { storage } = require('../config/cloudinary');
 
-const upload = multer({ storage });
+const upload = multer({ storage, limits:{fileSize:8*1024*1024,files:12} });
 const router = express.Router();
 
 // POST /api/field-verification/:id

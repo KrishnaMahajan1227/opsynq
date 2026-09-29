@@ -16,8 +16,8 @@ import './final-design-system.css';
 installAgencyAxiosResilience();
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  return token ? <><UserLocationTracker />{children}</> : <Navigate to="/" />;
+  const active = localStorage.getItem('opsynq_agency_session')==='1'||Boolean(localStorage.getItem('token'));
+  return active ? <><UserLocationTracker />{children}</> : <Navigate to="/" />;
 };
 
 const Router = import.meta.env.PROD ? HashRouter : BrowserRouter;
@@ -38,7 +38,7 @@ const App = () => {
             <Route path="/dashboard/technician" element={<ProtectedRoute><DashboardTechnician /></ProtectedRoute>} />
             <Route path="/upload" element={<ProtectedRoute><UploadExcel /></ProtectedRoute>} />
             <Route path="/field-verification" element={<ProtectedRoute><FieldVerification /></ProtectedRoute>} />
-            <Route path="*" element={<Navigate to={localStorage.getItem('token')?(localStorage.getItem('userRole')==='superadmin'?'/dashboard/superadmin':localStorage.getItem('userRole')==='admin'?'/dashboard/admin':'/dashboard/technician'):'/'} replace />} />
+            <Route path="*" element={<Navigate to={(localStorage.getItem('opsynq_agency_session')==='1'||localStorage.getItem('token'))?(localStorage.getItem('userRole')==='superadmin'?'/dashboard/superadmin':localStorage.getItem('userRole')==='admin'?'/dashboard/admin':'/dashboard/technician'):'/'} replace />} />
           </Routes>
           </Suspense>
         </div>

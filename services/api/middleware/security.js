@@ -32,7 +32,8 @@ function rateLimiter({ namespace, windowMs, max, includeIdentifier = false, mess
 }
 
 exports.requestContext = (req, res, next) => {
-  req.requestId = req.headers['x-request-id'] || crypto.randomUUID();
+  const incoming=String(req.headers['x-request-id']||'');
+  req.requestId=/^[A-Za-z0-9._:-]{1,100}$/.test(incoming)?incoming:crypto.randomUUID();
   res.setHeader('X-Request-Id', req.requestId);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -41,6 +42,10 @@ exports.requestContext = (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('X-DNS-Prefetch-Control','off');
+  res.setHeader('X-Download-Options','noopen');
+  res.setHeader('Origin-Agent-Cluster','?1');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss: ws: http://localhost:*");
   res.setHeader('Cache-Control', 'no-store');
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
@@ -52,7 +57,7 @@ exports.requestContext = (req, res, next) => {
 function containsUnsafeKey(value, depth = 0) {
   if (depth > 20 || value == null || typeof value !== 'object') return false;
   if (Array.isArray(value)) return value.some((item) => containsUnsafeKey(item, depth + 1));
-  return Object.entries(value).some(([key, child]) => key.startsWith('$') || key.includes('.') || containsUnsafeKey(child, depth + 1));
+  return Object.entries(value).some(([key, child]) => key.startsWith('$') || key.includes('.') || ['__proto__','prototype','constructor'].includes(key) || containsUnsafeKey(child, depth + 1));
 }
 
 exports.rejectUnsafeKeys = (req, res, next) => {
@@ -99,3 +104,22 @@ exports.aiRateLimit = rateLimiter({
   includeIdentifier: false,
   message: 'AI request limit reached. Please wait a minute and try again.',
 });
+
+exports.realtimeRevisionTracker=(req,res,next)=>{
+  if(!['POST','PUT','PATCH','DELETE'].includes(String(req.method||'').toUpperCase()))return next();
+  res.on('finish',()=>{
+    if(res.statusCode<200||res.statusCode>=400)return;
+    setImmediate(async()=>{
+      try{
+        const RealtimeRevision=require('../models/RealtimeRevision');
+        const keys=new Set();
+        const companyId=req.tenant?.companyId||((req.platformUser?.role==='platform_superadmin')?(req.query?.companyId||req.body?.companyId):null);
+        if(companyId)keys.add(`company:${String(companyId)}`);
+        for(const id of req.agencyScope?.companyIds||[])keys.add(`company:${String(id)}`);
+        for(const id of req.agencyScope?.agencyIds||[])keys.add(`agency:${String(id)}`);
+        await Promise.all([...keys].map(scopeKey=>RealtimeRevision.findOneAndUpdate({scopeKey},{$inc:{revision:1},$set:{updatedAt:new Date()}},{upsert:true,new:true,setDefaultsOnInsert:true})));
+      }catch(error){console.error('Realtime revision update failed:',error.message);}
+    });
+  });
+  next();
+};

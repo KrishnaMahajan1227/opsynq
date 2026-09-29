@@ -51,6 +51,7 @@ import { API_URL } from '../config.js';
 import AgencySidebar from '../components/AgencySidebar';
 import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
 import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
+import AgencyRmsPanel,{AgencyRmsSummary} from '../components/AgencyRmsPanel';
 
 // Constants for dropdowns
 const APPLICATION_STATUSES = [
@@ -1090,6 +1091,7 @@ export default function DashboardAdmin() {
             <FarmerDetailView farmer={detailFarmer} onBack={closeFarmerDetail} />
           )}
 
+          {activeTab === 'overview' && !isLoading && <AgencyRmsSummary />}
           {activeTab === 'overview' && !isLoading && (
             <div className="executive-dashboard">
               <div className="dashboard-commandbar">
@@ -1919,6 +1921,7 @@ export default function DashboardAdmin() {
           )}
 
           {activeTab === 'material-receipts' && !isLoading && (<MaterialReceiptsPanel />)}
+          {activeTab === 'rms' && !isLoading && (<AgencyRmsPanel />)}
 
           {activeTab === 'technician-summary' && !isLoading && (
             <Card className="mb-4">

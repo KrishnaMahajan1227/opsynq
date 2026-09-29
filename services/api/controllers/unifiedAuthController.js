@@ -9,6 +9,7 @@ const { capabilitiesForRole } = require('../security/platformCapabilities');
 const { validatePassword, passwordHelp } = require('../utils/passwordSecurity');
 const { sendEmail, passwordResetMessage } = require('../utils/emailService');
 const { recordSecurityEvent } = require('../utils/securityEvents');
+const { setSessionCookie, clearSessionCookie, demoBearerEnabled } = require('../utils/sessionCookies');
 
 const normalize = (value) => String(value || '').trim();
 const normalizeEmail = (value) => normalize(value).toLowerCase();
@@ -122,7 +123,8 @@ exports.login = async (req, res) => {
   await recordSecurityEvent(req, { realm, action: 'LOGIN_SUCCEEDED', identifier, userId: user._id });
 
   if (realm === 'platform') {
-    return res.json({ realm: 'platform', token: signPlatform(user), user: safePlatformUser(user), destination: 'platform' });
+    const token=signPlatform(user);setSessionCookie(res,'platform',token);
+    return res.json({ realm: 'platform', ...(demoBearerEnabled(user)?{token}:{}), demo:demoBearerEnabled(user), user: safePlatformUser(user), destination: 'platform' });
   }
 
   const code = crypto.randomBytes(32).toString('hex');
@@ -149,7 +151,8 @@ exports.exchangeAgencyHandoff = async (req, res) => {
   handoff.usedAt = new Date();
   await handoff.save();
   await recordSecurityEvent(req, { realm: 'agency', action: 'AGENCY_HANDOFF_EXCHANGED', userId: user._id });
-  return res.json({ token: signAgency(user), user: safeAgencyUser(user) });
+  const token=signAgency(user);setSessionCookie(res,'agency',token);
+  return res.json({ ...(demoBearerEnabled(user)?{token}:{}), demo:demoBearerEnabled(user), user: safeAgencyUser(user) });
 };
 
 exports.forgotPassword = async (req, res) => {
@@ -245,3 +248,5 @@ exports.resetPassword = async (req, res) => {
 
   return res.json({ message: 'Password updated successfully. All previous sessions have been invalidated. Please sign in again.' });
 };
+
+exports.logout=(req,res)=>{clearSessionCookie(res,'platform');clearSessionCookie(res,'agency');res.status(204).end();};

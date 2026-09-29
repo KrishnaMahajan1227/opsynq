@@ -26,7 +26,8 @@ const platformAiRoutes = require('./routes/platform/aiRoutes');
 const platformRegulatoryRoutes = require('./routes/platform/regulatoryRoutes');
 const platformConfigurationRoutes = require('./routes/platform/configurationRoutes');
 const unifiedAuthRoutes = require('./routes/unifiedAuthRoutes');
-const { requestContext, authRateLimit, rejectUnsafeKeys } = require('./middleware/security');
+const rmsRoutes = require('./routes/rmsRoutes');
+const { requestContext, authRateLimit, rejectUnsafeKeys, realtimeRevisionTracker, sensitiveWriteRateLimit } = require('./middleware/security');
 
 const path = require('path');
 const dotenv=require('dotenv');
@@ -50,19 +51,22 @@ const vercelOrigins = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, pr
 const allowedOrigins = [...new Set([...configuredOrigins, ...vercelOrigins])];
 const isAllowedOrigin = (origin) => !origin || allowedOrigins.includes(origin);
 app.use(cors({ origin: (origin, cb) => (isAllowedOrigin(origin) ? cb(null, true) : cb(new Error('Origin not allowed by CORS'))), credentials: true }));
+app.use((req,res,next)=>{const method=String(req.method||'GET').toUpperCase();if(['GET','HEAD','OPTIONS'].includes(method))return next();const hasSessionCookie=/\bopsynq_(?:platform|agency)_session=/.test(String(req.headers.cookie||''));if(!hasSessionCookie)return next();const origin=req.get('origin');if(!origin||!isAllowedOrigin(origin))return res.status(403).json({message:'Request origin is not trusted.'});next();});
+app.use('/api',(req,res,next)=>{const method=String(req.method||'GET').toUpperCase();if(['POST','PUT','PATCH','DELETE'].includes(method)&&!req.path.startsWith('/unified-auth/')&&!req.path.startsWith('/platform/auth/'))return sensitiveWriteRateLimit(req,res,next);next();});
 
 // Parse JSON and URL-encoded bodies
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(rejectUnsafeKeys);
+app.use(realtimeRevisionTracker);
 
 // Serve static files for uploads and demo showcase media
-app.use('/uploads', express.static(path.join(__dirname,'uploads'),{fallthrough:true,maxAge:process.env.NODE_ENV==='production'?'1h':0}));
+app.use('/uploads', require('./middleware/anySessionAuth'), express.static(path.join(__dirname,'uploads'),{fallthrough:true,maxAge:0,setHeaders:res=>res.setHeader('Cache-Control','private, no-store')}));
 app.use('/demo-media', express.static(path.join(__dirname,'demo-media'),{fallthrough:true,maxAge:process.env.NODE_ENV==='production'?'1h':'5m'}));
 
 // Log all incoming requests for debugging
 app.use((req, res, next) => {
-  if(process.env.NODE_ENV!=='test') console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  if(process.env.NODE_ENV!=='test'){const safePath=String(req.path||'').slice(0,300);console.log(`[${new Date().toISOString()}] ${req.method} ${safePath} · ${req.requestId}`);}
   next();
 });
 
@@ -76,7 +80,8 @@ app.use('/api/field-verification', fieldVerificationRoutes);
 app.use('/api/installation', installationRoutes);
 app.use('/api/technician-changes', technicianChangeRoutes);
 app.use('/api/agency-inventory', agencyInventoryRoutes);
-app.use('/api/platform/auth', authRateLimit, platformAuthRoutes);
+app.use('/api/rms', rmsRoutes);
+app.use('/api/platform/auth', platformAuthRoutes);
 app.use('/api/platform/companies', platformCompanyRoutes);
 app.use('/api/platform/operations', platformOperationsRoutes);
 app.use('/api/platform/inventory', platformInventoryRoutes);
@@ -97,7 +102,7 @@ const pkg = require('../../package.json');
 const healthPayload=(req)=>({ok:true,service:'opsynq-api',version:pkg.version||'1.0.0',requestId:req.requestId,timestamp:new Date().toISOString()});
 app.get('/api/health', (req,res)=>res.json(healthPayload(req)));
 app.get('/api/health/live',(req,res)=>res.json({...healthPayload(req),status:'live',uptimeSeconds:Math.round(process.uptime())}));
-app.get('/api/health/ready',(req,res)=>{const ready=mongoose.connection.readyState===1;res.status(ready?200:503).json({...healthPayload(req),ok:ready,status:ready?'ready':'not_ready',database:ready?'connected':'not_connected',databaseName:mongoose.connection.name||null})});
+app.get('/api/health/ready',(req,res)=>{const ready=mongoose.connection.readyState===1;res.status(ready?200:503).json({...healthPayload(req),ok:ready,status:ready?'ready':'not_ready',database:ready?'connected':'not_connected'})});
 app.get('/api/health/version',(req,res)=>res.json({service:'opsynq-api',version:pkg.version||'1.0.0'}));
 const {getRevision}=require('./utils/runtimeRevision');
 app.get('/api/runtime/revision',(req,res)=>res.set('Cache-Control','no-store').json({revision:getRevision(),version:pkg.version||'1.0.0',releaseId:process.env.RELEASE_ID||process.env.COMMIT_SHA||null}));
@@ -159,83 +164,61 @@ const server = http.createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(server, { cors: { origin: (origin, cb) => (isAllowedOrigin(origin) ? cb(null, true) : cb(new Error('Origin not allowed by CORS'))), credentials: true } });
 
-// ✅ ADD THIS LINE to import User model (adjust path if needed)
 const User = require('./models/User');
-const jwt = require('jsonwebtoken');
+const PlatformUser = require('./models/platform/PlatformUser');
+const { readSessionToken, decodeAndVerify, parseCookies } = require('./utils/sessionCookies');
+const { resolveAgencyScope } = require('./utils/agencyScope');
 
-// Authenticate every real-time connection. Location data is sensitive and must
-// never be accepted from or broadcast to an anonymous socket.
+// Real-time sessions use the same verified identity as HTTP. No socket may
+// select its own tenant/agency room or user identity.
 io.use(async (socket, next) => {
   try {
-    const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error('Authentication required'));
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('_id username mobile role isActive tokenVersion').lean();
-    if (!user || user.isActive === false) return next(new Error('User account is inactive'));
-    if (Number(decoded.tv || 0) !== Number(user.tokenVersion || 0)) return next(new Error('Session has been invalidated'));
-    socket.user = user;
-    next();
-  } catch (err) {
-    next(new Error('Invalid or expired session'));
-  }
+    const bearerToken=String(socket.handshake.auth?.token||'').trim();
+    const cookies=parseCookies(socket.request.headers?.cookie||'');
+    const candidates=[bearerToken,cookies.opsynq_agency_session,cookies.opsynq_platform_session].filter(t=>t&&t!=='null'&&t!=='undefined');
+    for(const token of candidates){
+      try{
+        const decoded=decodeAndVerify(token);
+        if(decoded.scope==='agency'){
+          const user=await User.findById(decoded.id).select('_id username email mobile role isActive tokenVersion').lean();
+          if(!user||user.isActive===false)continue;if(Number(decoded.tv||0)!==Number(user.tokenVersion||0))return next(new Error('Session has been invalidated'));
+          const scope=await resolveAgencyScope(user);
+          if(!scope.linked&&!scope.demoUnscoped)continue;
+          socket.identity={realm:'agency',user,scope};return next();
+        }
+        if(decoded.scope==='platform'){
+          const user=await PlatformUser.findById(decoded.id).select('_id name role organizationId isActive approvalStatus tokenVersion').populate('organizationId','type').lean();
+          if(!user||!user.isActive||user.approvalStatus!=='APPROVED')continue;if(Number(decoded.tv||0)!==Number(user.tokenVersion||0))return next(new Error('Session has been invalidated'));
+          socket.identity={realm:'platform',user,companyId:user.organizationId?.type==='COMPANY'?String(user.organizationId._id):null};return next();
+        }
+      }catch{}
+    }
+    return next(new Error('Invalid or expired session'));
+  } catch { next(new Error('Invalid or expired session')); }
 });
 
-// Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  if (['admin', 'superadmin'].includes(socket.user?.role)) socket.join('location-monitors');
+  const identity=socket.identity;
+  if(identity?.realm==='platform'&&identity.companyId)socket.join(`company:${identity.companyId}`);
+  if(identity?.realm==='agency'){
+    for(const companyId of identity.scope.companyIds||[])socket.join(`company:${companyId}`);
+    if(['admin','superadmin'].includes(identity.user.role))for(const agencyId of identity.scope.agencyIds||[])socket.join(`agency:${agencyId}:location-monitors`);
+  }
 
-  // Persist and broadcast the latest known location for every authenticated ERP user.
-  // The legacy `techStatus` event is still supported for older technician clients.
   const handleLocationStatus = async (data = {}) => {
     try {
-      if (!socket.user || !Number.isFinite(Number(data.latitude)) || !Number.isFinite(Number(data.longitude))) return;
-
-      const now = new Date();
-      const capturedAt = data.timestamp ? new Date(data.timestamp) : now;
-      const location = {
-        latitude: Number(data.latitude),
-        longitude: Number(data.longitude),
-        accuracy: Math.max(0, Number(data.accuracy || 0)),
-        address: typeof data.address === 'string' ? data.address.slice(0, 500) : '',
-        capturedAt: Number.isNaN(capturedAt.getTime()) ? now : capturedAt,
-        updatedAt: now,
-      };
-      // Identity comes only from the verified socket token; never trust a client supplied user id/mobile.
-      const user = await User.findByIdAndUpdate(socket.user._id, { $set: { lastLocation: location } }, { new: true })
-        .select('username mobile role lastLocation')
-        .lean();
-      if (!user) return;
-
-      const enrichedData = {
-        userId: String(user._id),
-        technicianId: user.mobile,
-        username: user.username,
-        mobile: user.mobile,
-        technicianMobile: user.mobile,
-        role: user.role,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracy: location.accuracy,
-        address: location.address,
-        timestamp: location.capturedAt.getTime(),
-      };
-      // Only Admin/Superadmin monitoring sockets receive organization-wide location data.
-      io.to('location-monitors').emit('userStatus', enrichedData);
-      if (user.role === 'field_technician') io.to('location-monitors').emit('techStatus', enrichedData);
-    } catch (err) {
-      console.error('Error persisting user location:', err);
-    }
+      if(identity?.realm!=='agency'||!Number.isFinite(Number(data.latitude))||!Number.isFinite(Number(data.longitude)))return;
+      const now=new Date(),capturedAt=data.timestamp?new Date(data.timestamp):now;
+      const location={latitude:Number(data.latitude),longitude:Number(data.longitude),accuracy:Math.min(10000,Math.max(0,Number(data.accuracy||0))),address:typeof data.address==='string'?data.address.slice(0,500):'',capturedAt:Number.isNaN(capturedAt.getTime())?now:capturedAt,updatedAt:now};
+      const user=await User.findByIdAndUpdate(identity.user._id,{$set:{lastLocation:location}},{new:true}).select('username mobile role lastLocation').lean();
+      if(!user)return;
+      const enrichedData={username:user.username,role:user.role,latitude:location.latitude,longitude:location.longitude,accuracy:location.accuracy,address:location.address,timestamp:location.capturedAt.getTime()};
+      for(const agencyId of identity.scope.agencyIds||[]){io.to(`agency:${agencyId}:location-monitors`).emit('userStatus',enrichedData);if(user.role==='field_technician')io.to(`agency:${agencyId}:location-monitors`).emit('techStatus',enrichedData);}
+    } catch (err) { console.error('Error persisting user location:', err.message); }
   };
-
-  socket.on('userStatus', handleLocationStatus);
-  socket.on('techStatus', handleLocationStatus);
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
+  socket.on('userStatus',handleLocationStatus);
+  socket.on('techStatus',handleLocationStatus);
 });
-
 
 // Connect to MongoDB and start the Node HTTP server. Vercel's current Node runtime
 // supports standard Node servers (including Socket.IO/WebSockets), so this same

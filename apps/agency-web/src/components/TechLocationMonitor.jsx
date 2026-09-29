@@ -52,7 +52,7 @@ const TechLocationMonitor = () => {
       })
       .finally(() => mounted && setLoading(false));
 
-    const socket = io(SOCKET_SERVER_URL, { transports: ['websocket', 'polling'], auth: { token: localStorage.getItem('token') } });
+    const socket = io(SOCKET_SERVER_URL, { withCredentials: true, transports: ['websocket', 'polling'], auth: { token: localStorage.getItem('token') } });
     const onStatus = async (data) => {
       if (!data?.userId && !data?.technicianId) return;
       const key = data.userId || data.technicianId;

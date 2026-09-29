@@ -279,8 +279,18 @@ exports.getBeneficiaryDetail=async(req,res)=>{
  if(!ctx)return res.status(404).json({message:'Beneficiary not found in this company.'});
  const farmerId=ctx.farmerId?._id||ctx.farmerId;
  const [assets,materialIssues,serviceCases,compliance,evidenceRequirements,evidenceSubmissions]=await Promise.all([
-  InstalledAsset.find({companyId:c._id,farmerId}).populate('itemId','sku name category installationRole').populate('technicianUserId','username mobile').sort({installedAt:-1}).lean(),
-  MaterialIssue.find({companyId:c._id,farmerId}).populate('technicianUserId','username mobile').sort({issuedAt:-1}).lean(),
+  InstalledAsset.find({companyId:c._id,farmerId})
+   .populate('itemId','sku name category installationRole unit brand manufacturer model')
+   .populate('inventorySerialId','serialNumber barcodeValue status metadata')
+   .populate('technicianUserId','username mobile')
+   .sort({installedAt:-1})
+   .lean(),
+  MaterialIssue.find({companyId:c._id,farmerId})
+   .populate('technicianUserId','username mobile')
+   .populate('items.itemId','sku name category installationRole unit')
+   .populate('items.serialIds','serialNumber barcodeValue status metadata')
+   .sort({issuedAt:-1})
+   .lean(),
   ServiceCase.find({companyId:c._id,farmerId}).sort({openedAt:-1}).lean(),
   ComplianceRecord.find({companyId:c._id,farmerId}).sort({createdAt:-1}).lean(),
   EvidenceRequirement.find({companyId:c._id,isActive:true,$or:[{programId:null},{programId:ctx.programId?._id||ctx.programId}]}).sort({stage:1,sortOrder:1}).lean(),
@@ -288,7 +298,7 @@ exports.getBeneficiaryDetail=async(req,res)=>{
  ]);
  const submissionByRequirement=new Map(evidenceSubmissions.map(x=>[String(x.requirementId?._id||x.requirementId),x]));
  const evidenceChecklist=evidenceRequirements.map(r=>({requirement:r,submission:submissionByRequirement.get(String(r._id))||null}));
- const shipments=ctx.workPackageId?await Shipment.find({companyId:c._id,workPackageId:ctx.workPackageId._id||ctx.workPackageId}).populate('agencyId','name code').populate('fromWarehouseId','name code').populate('toWarehouseId','name code').populate('items.itemId','sku name').sort({createdAt:-1}).lean():[];
+ const shipments=ctx.workPackageId?await Shipment.find({companyId:c._id,workPackageId:ctx.workPackageId._id||ctx.workPackageId}).populate('agencyId','name code').populate('fromWarehouseId','name code').populate('toWarehouseId','name code').populate('items.itemId','sku name category installationRole unit').populate('items.serialIds','serialNumber barcodeValue status').sort({createdAt:-1}).lean():[];
  const reconciliation=await materialReconciliation({companyId:c._id,farmerId});
  res.json({
   context:ctx,farmer:ctx.farmerId,assets,materialIssues,serviceCases,compliance,evidenceChecklist,evidenceSubmissions,shipments,materialReconciliation:reconciliation,

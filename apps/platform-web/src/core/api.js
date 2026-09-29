@@ -7,7 +7,7 @@ export const api=async(path,options={})=>{
  const token=localStorage.getItem(tokenKey),method=String(options.method||'GET').toUpperCase(),isForm=options.body instanceof FormData,controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000),cacheKey=`${method}:${path}`,cacheTtl=Number(options.cacheTtl??DEFAULT_CACHE_TTL);
  if(method==='GET'&&!options.noCache&&cacheTtl>0){const hit=memoryCache.get(cacheKey);if(hit&&Date.now()-hit.ts<cacheTtl){clearTimeout(timeout);return hit.data;}}
  try{
-  const res=await fetch(`${API}${path}`,{...options,method,signal:options.signal||controller.signal,headers:{...(isForm?{}:{'Content-Type':'application/json'}),...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});
+  const res=await fetch(`${API}${path}`,{...options,credentials:'include',method,signal:options.signal||controller.signal,headers:{...(isForm?{}:{'Content-Type':'application/json'}),...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});
   const body=res.status===204?{}:await res.json().catch(()=>({}));
   if(res.status===401){window.dispatchEvent(new CustomEvent('opsynq:unauthorized'));const err=new Error(body.message||'Your session has expired. Please sign in again.');err.status=401;throw err;}
   if(res.status===403){window.dispatchEvent(new CustomEvent('opsynq:forbidden',{detail:{message:body.message||'You do not have permission for this action.'}}));const err=new Error(body.message||'You do not have permission for this action.');err.status=403;throw err;}
@@ -22,7 +22,8 @@ export const api=async(path,options={})=>{
   if(e.name==='AbortError')throw new Error('Request timed out. Check your connection and try again.');throw e;
  }finally{clearTimeout(timeout)}
 };
-const scoped=(base,companyId,path)=>`${base}${path}${companyId?`${path.includes('?')?'&':'?'}companyId=${companyId}`:''}`;
+export const entityId=value=>{if(!value)return'';if(typeof value==='string'||typeof value==='number')return String(value);if(typeof value==='object'){const id=value._id??value.id??value.companyId??value.organizationId;return id&&id!==value?entityId(id):''}return''};
+const scoped=(base,companyId,path)=>{const id=entityId(companyId);return `${base}${path}${id?`${path.includes('?')?'&':'?'}companyId=${encodeURIComponent(id)}`:''}`};
 export const opPath=(companyId,path)=>scoped('/api/platform/operations',companyId,path);
 export const invPath=(companyId,path)=>scoped('/api/platform/inventory',companyId,path);
 export const logPath=(companyId,path)=>scoped('/api/platform/logistics',companyId,path);
@@ -38,3 +39,5 @@ export const regulatoryPath=(companyId,path='')=>scoped('/api/platform/regulator
 export const intelligencePath=(companyId,path='')=>scoped('/api/platform/intelligence',companyId,path);
 
 export const aiPath=(companyId,path='')=>scoped('/api/platform/ai',companyId,path);
+
+export const rmsPath=(companyId,path='')=>scoped('/api/rms',companyId,path);

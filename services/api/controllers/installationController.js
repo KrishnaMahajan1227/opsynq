@@ -2,7 +2,7 @@
 const multer = require('multer');
 const mongoose = require('mongoose');
 const { storage } = require('../config/cloudinary');
-const upload = multer({ storage });
+const upload = multer({ storage, limits:{fileSize:8*1024*1024,files:23} });
 const Farmer = require('../models/Farmer');
 const { protect } = require('../middleware/authMiddleware');
 const { getIssuedInventory, resolveIssuedScan, prepareInstallation, finalizeInstallation } = require('../utils/assetLifecycle');

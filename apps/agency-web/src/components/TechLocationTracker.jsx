@@ -22,7 +22,7 @@ const TechLocationTracker = () => {
 
     // 2. Connect the socket
     socketRef.current = io(SOCKET_SERVER_URL, {
-      transports: ["websocket", "polling"],
+      withCredentials: true, transports: ["websocket", "polling"],
       auth: { token: localStorage.getItem("token") },
     });
 

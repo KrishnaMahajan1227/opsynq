@@ -22,6 +22,7 @@ const POLICY={
   'insurance.read':withSuper(['company_owner','company_admin','operations_manager','finance_user','quality_user']),
   'pdi.read':withSuper(['company_owner','company_admin','inventory_manager','procurement_manager','quality_user','logistics_manager']),
   'regulatory.read':withSuper(['company_owner','company_admin','operations_manager','program_manager','finance_user','quality_user']),
+  'rms.read':withSuper(['company_owner','company_admin','operations_manager','program_manager','quality_user','viewer']),
 
   'operations.write':withSuper(['company_owner','company_admin','operations_manager','program_manager']),
   'inventory.write':withSuper(['company_owner','company_admin','inventory_manager']),
@@ -38,6 +39,7 @@ const POLICY={
   'insurance.write':withSuper(['company_owner','company_admin','finance_user','quality_user']),
   'pdi.write':withSuper(['company_owner','company_admin','inventory_manager','procurement_manager','quality_user']),
   'team.manage':withSuper(['company_owner','company_admin']),
+  'rms.manage':withSuper(['company_owner','company_admin','operations_manager','quality_user']),
   'platform.manage':['platform_superadmin']
 };
 

@@ -18,27 +18,16 @@ exports.uploadFiles = [
   upload.array('files', 10),
   async (req, res) => {
     try {
-      console.log('Received upload request:', {
-        files: req.files?.length,
-        folder: req.query.folder,
-        user: req.user?.id,
-        mimetypes: req.files?.map(f => f.mimetype),
-      });
 
       if (!req.files || req.files.length === 0) {
         return res.status(400).json({ message: 'No files uploaded.' });
       }
 
       const urls = req.files.map((file) => file.path);
-      console.log('Files uploaded to Cloudinary:', urls);
 
       res.json({ urls });
     } catch (err) {
-      console.error('Upload error:', {
-        message: err.message,
-        stack: err.stack,
-        folder: req.query.folder,
-      });
+      console.error('Upload error:', err.message);
       res.status(500).json({ message: `Failed to upload files: ${err.message}` });
     }
   },

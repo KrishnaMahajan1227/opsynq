@@ -1,204 +1,30 @@
-const TechnicianChangeRequest = require('../models/TechnicianChangeRequest');
-const Farmer = require('../models/Farmer');
-const AdminChangeLog = require('../models/AdminChangeLog');
-const mongoose = require('mongoose');
+const TechnicianChangeRequest=require('../models/TechnicianChangeRequest');
+const Farmer=require('../models/Farmer');
+const User=require('../models/User');
+const AdminChangeLog=require('../models/AdminChangeLog');
+const AgencyUserLink=require('../models/platform/AgencyUserLink');
+const mongoose=require('mongoose');
+const {resolveAgencyScope,canAccessFarmer}=require('../utils/agencyScope');
 
-// POST /api/technician-change/request
-exports.createChangeRequest = async (req, res) => {
-  try {
-    const { farmerId, newTechnicianUsername, reason } = req.body;
-    const user = req.user;
+async function activeScope(req,res){const scope=req.agencyScope||await resolveAgencyScope(req.user);if(!scope.linked&&!scope.demoUnscoped){res.status(403).json({message:'Active Agency link required.'});return null}return scope}
+async function farmerIds(scope){return scope.demoUnscoped?null:(scope.farmerIds||[])}
+async function technicianAllowed(scope,userId){if(scope.demoUnscoped)return true;return Boolean(await AgencyUserLink.exists({legacyUserId:userId,agencyId:{$in:scope.agencyIds},isActive:true}))}
 
-    if (!mongoose.isValidObjectId(farmerId)) {
-      return res.status(400).json({ message: 'Invalid farmer ID' });
-    }
-    if (!newTechnicianUsername || !reason) {
-      return res.status(400).json({ message: 'New technician and reason are required' });
-    }
+exports.createChangeRequest=async(req,res)=>{try{
+ const {farmerId,newTechnicianUsername,reason}=req.body,user=req.user;if(!mongoose.isValidObjectId(farmerId))return res.status(400).json({message:'Invalid farmer ID'});if(!newTechnicianUsername||!String(reason||'').trim())return res.status(400).json({message:'New technician and reason are required'});
+ const scope=await activeScope(req,res);if(!scope)return;const farmer=await Farmer.findById(farmerId);if(!farmer)return res.status(404).json({message:'Farmer not found'});if(!(await canAccessFarmer(user,farmer)))return res.status(403).json({message:'You do not have access to this beneficiary.'});
+ const newTechnician=await User.findOne({username:String(newTechnicianUsername).trim(),role:'field_technician',isActive:true});if(!newTechnician||!(await technicianAllowed(scope,newTechnician._id)))return res.status(400).json({message:'Selected technician is not active in your Agency.'});
+ if(await TechnicianChangeRequest.exists({farmerId,status:'Pending'}))return res.status(409).json({message:'A technician change request is already pending for this beneficiary.'});
+ const changeRequest=await TechnicianChangeRequest.create({farmerId,farmerDetails:{beneficiaryId:farmer.beneficiaryId,beneficiaryName:farmer.beneficiaryName,mobile:farmer.mobile,aadharNo:farmer.aadharNo},requestedBy:user._id,requestedByDetails:{username:user.username,mobile:user.mobile,role:user.role},currentTechnician:{username:farmer.surveyorName||'',mobile:farmer.surveyorMobile||''},newTechnician:{username:newTechnician.username,mobile:newTechnician.mobile},reason:String(reason).slice(0,1000),requestDate:new Date()});
+ await AdminChangeLog.create({adminId:user._id,changeType:'technician_assignment',details:{farmerId,changes:{currentTechnician:farmer.surveyorName,newTechnician:newTechnician.username},reason:String(reason).slice(0,1000)}});res.status(201).json({message:'Technician change request created successfully',changeRequest});
+}catch(err){console.error('Error in createChangeRequest:',err.message);res.status(500).json({message:'Failed to create change request'});}};
 
-    const farmer = await Farmer.findById(farmerId);
-    if (!farmer) {
-      return res.status(404).json({ message: 'Farmer not found' });
-    }
+exports.getAllChangeRequests=async(req,res)=>{try{const scope=await activeScope(req,res);if(!scope)return;const ids=await farmerIds(scope);const q=ids?{farmerId:{$in:ids}}:{};const requests=await TechnicianChangeRequest.find(q).populate('farmerId','beneficiaryName beneficiaryId').populate('requestedBy','username').populate('reviewedBy','username').sort({createdAt:-1}).lean();res.json(requests);}catch(err){console.error('Error in getAllChangeRequests:',err.message);res.status(500).json({message:'Failed to fetch change requests'});}};
+exports.getMyChangeRequests=async(req,res)=>{try{const scope=await activeScope(req,res);if(!scope)return;const ids=await farmerIds(scope);const q={requestedBy:req.user._id,...(ids?{farmerId:{$in:ids}}:{})};res.json(await TechnicianChangeRequest.find(q).populate('farmerId','beneficiaryName beneficiaryId').populate('reviewedBy','username').sort({createdAt:-1}).lean());}catch(err){res.status(500).json({message:'Failed to fetch your change requests'});}};
 
-    const newTechnician = await User.findOne({ username: newTechnicianUsername, role: 'field_technician' });
-    if (!newTechnician) {
-      return res.status(400).json({ message: 'Invalid technician selected' });
-    }
-
-    const existingRequest = await TechnicianChangeRequest.findOne({
-      farmerId,
-      status: 'Pending',
-    });
-    if (existingRequest) {
-      return res.status(400).json({ message: 'A technician change request is already pending for this farmer' });
-    }
-
-    const changeRequest = await TechnicianChangeRequest.create({
-      farmerId,
-      farmerDetails: {
-        beneficiaryId: farmer.beneficiaryId,
-        beneficiaryName: farmer.beneficiaryName,
-        mobile: farmer.mobile,
-        aadharNo: farmer.aadharNo,
-      },
-      requestedBy: user._id,
-      requestedByDetails: {
-        username: user.username,
-        mobile: user.mobile,
-        role: user.role,
-      },
-      currentTechnician: {
-        username: farmer.surveyorName || '',
-        mobile: farmer.surveyorMobile || '',
-      },
-      newTechnician: {
-        username: newTechnician.username,
-        mobile: newTechnician.mobile,
-      },
-      reason,
-      requestDate: new Date(),
-    });
-
-    // Log the action
-    await AdminChangeLog.create({
-      adminId: user._id,
-      changeType: 'technician_assignment',
-      details: {
-        farmerId,
-        changes: {
-          currentTechnician: farmer.surveyorName,
-          newTechnician: newTechnician.username,
-        },
-        reason,
-      },
-    });
-
-    res.status(201).json({ message: 'Technician change request created successfully', changeRequest });
-  } catch (err) {
-    console.error('Error in createChangeRequest:', err.message);
-    res.status(500).json({ message: 'Failed to create change request', error: err.message });
-  }
-};
-
-// GET /api/technician-change/all
-exports.getAllChangeRequests = async (req, res) => {
-  try {
-    const requests = await TechnicianChangeRequest.find()
-      .populate('farmerId', 'beneficiaryName beneficiaryId mobile')
-      .populate('requestedBy', 'username mobile')
-      .populate('reviewedBy', 'username mobile')
-      .lean();
-    res.status(200).json(requests);
-  } catch (err) {
-    console.error('Error in getAllChangeRequests:', err.message);
-    res.status(500).json({ message: 'Failed to fetch change requests', error: err.message });
-  }
-};
-
-// GET /api/technician-change/my-requests
-exports.getMyChangeRequests = async (req, res) => {
-  try {
-    const user = req.user;
-    const requests = await TechnicianChangeRequest.find({ requestedBy: user._id })
-      .populate('farmerId', 'beneficiaryName beneficiaryId mobile')
-      .populate('reviewedBy', 'username mobile')
-      .lean();
-    res.status(200).json(requests);
-  } catch (err) {
-    console.error('Error in getMyChangeRequests:', err.message);
-    res.status(500).json({ message: 'Failed to fetch your change requests', error: err.message });
-  }
-};
-
-// PUT /api/technician-change/review/:requestId
-exports.reviewChangeRequest = async (req, res) => {
-  try {
-    const requestId = req.params.requestId;
-    const { status, reviewComments } = req.body;
-    const user = req.user;
-
-    if (user.role !== 'superadmin') {
-      return res.status(403).json({ message: 'Unauthorized to review change requests' });
-    }
-    if (!['Approved', 'Rejected'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
-    }
-
-    const request = await TechnicianChangeRequest.findById(requestId);
-    if (!request) {
-      return res.status(404).json({ message: 'Change request not found' });
-    }
-    if (request.status !== 'Pending') {
-      return res.status(400).json({ message: 'Change request is not pending' });
-    }
-
-    request.status = status;
-    request.reviewedBy = user._id;
-    request.reviewedByDetails = {
-      username: user.username,
-      mobile: user.mobile,
-    };
-    request.reviewDate = new Date();
-    request.reviewComments = reviewComments || '';
-
-    if (status === 'Approved') {
-      // Apply the technician change
-      const updateData = {
-        surveyorName: request.newTechnician.username,
-        surveyorMobile: request.newTechnician.mobile,
-      };
-      if (request.newTechnician.username === request.currentTechnician.reworkAssignTechnician) {
-        updateData.reworkAssignTechnician = request.newTechnician.username;
-      }
-      await Farmer.findByIdAndUpdate(request.farmerId, { $set: updateData });
-    }
-
-    await request.save();
-
-    // Log the action
-    await AdminChangeLog.create({
-      adminId: user._id,
-      changeType: 'technician_assignment',
-      details: {
-        farmerId: request.farmerId,
-        changes: status === 'Approved' ? {
-          surveyorName: request.newTechnician.username,
-          surveyorMobile: request.newTechnician.mobile,
-        } : {},
-        reason: `${status} technician change request ${requestId}`,
-      },
-    });
-
-    res.status(200).json({ message: `Change request ${status.toLowerCase()} successfully` });
-  } catch (err) {
-    console.error('Error in reviewChangeRequest:', err.message);
-    res.status(500).json({ message: 'Failed to review change request', error: err.message });
-  }
-};
-
-// GET /api/technician-change/pending-count
-exports.getPendingRequestsCount = async (req, res) => {
-  try {
-    const count = await TechnicianChangeRequest.countDocuments({ status: 'Pending' });
-    res.status(200).json({ count });
-  } catch (err) {
-    console.error('Error in getPendingRequestsCount:', err.message);
-    res.status(500).json({ message: 'Failed to fetch pending requests count', error: err.message });
-  }
-};
-
-// GET /api/technician-change/my-pending-count
-exports.getMyPendingRequestsCount = async (req, res) => {
-  try {
-    const user = req.user;
-    const count = await TechnicianChangeRequest.countDocuments({
-      requestedBy: user._id,
-      status: 'Pending',
-    });
-    res.status(200).json({ count });
-  } catch (err) {
-    console.error('Error in getMyPendingRequestsCount:', err.message);
-    res.status(500).json({ message: 'Failed to fetch your pending requests count', error: err.message });
-  }
-};
+exports.reviewChangeRequest=async(req,res)=>{try{const {status,reviewComments}=req.body;if(!['Approved','Rejected'].includes(status))return res.status(400).json({message:'Invalid status'});const scope=await activeScope(req,res);if(!scope)return;const ids=await farmerIds(scope);const q={_id:req.params.requestId,...(ids?{farmerId:{$in:ids}}:{})};const request=await TechnicianChangeRequest.findOne(q);if(!request)return res.status(404).json({message:'Change request not found'});if(request.status!=='Pending')return res.status(409).json({message:'Change request is not pending'});
+ if(status==='Approved'){const tech=await User.findOne({username:request.newTechnician.username,role:'field_technician',isActive:true});if(!tech||!(await technicianAllowed(scope,tech._id)))return res.status(409).json({message:'Requested technician is no longer active in this Agency.'});await Farmer.updateOne({_id:request.farmerId},{$set:{surveyorName:tech.username,surveyorMobile:tech.mobile}});}
+ request.status=status;request.reviewedBy=req.user._id;request.reviewedByDetails={username:req.user.username,mobile:req.user.mobile};request.reviewDate=new Date();request.reviewComments=String(reviewComments||'').slice(0,1000);await request.save();await AdminChangeLog.create({adminId:req.user._id,changeType:'technician_assignment',details:{farmerId:request.farmerId,changes:status==='Approved'?{surveyorName:request.newTechnician.username,surveyorMobile:request.newTechnician.mobile}:{},reason:`${status} technician change request`}});res.json({message:`Change request ${status.toLowerCase()} successfully`});
+}catch(err){console.error('Error in reviewChangeRequest:',err.message);res.status(500).json({message:'Failed to review change request'});}};
+exports.getPendingRequestsCount=async(req,res)=>{try{const scope=await activeScope(req,res);if(!scope)return;const ids=await farmerIds(scope);const count=await TechnicianChangeRequest.countDocuments({status:'Pending',...(ids?{farmerId:{$in:ids}}:{})});res.json({count});}catch(err){res.status(500).json({message:'Failed to fetch pending requests count'});}};
+exports.getMyPendingRequestsCount=async(req,res)=>{try{const scope=await activeScope(req,res);if(!scope)return;const ids=await farmerIds(scope);const count=await TechnicianChangeRequest.countDocuments({requestedBy:req.user._id,status:'Pending',...(ids?{farmerId:{$in:ids}}:{})});res.json({count});}catch(err){res.status(500).json({message:'Failed to fetch pending requests count'});}};

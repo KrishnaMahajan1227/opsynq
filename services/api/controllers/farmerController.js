@@ -8,6 +8,7 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const { farmerQueryForUser, canAccessFarmer, resolveAgencyScope } = require('../utils/agencyScope');
+const { redactFarmer } = require('../utils/pii');
 
 /* Multer setup for Excel uploads using memory storage */
 const storage = multer.memoryStorage();
@@ -153,10 +154,10 @@ exports.getFarmers = async (req, res) => {
   try {
     const { query } = await farmerQueryForUser(req.user);
     const farmers = await Farmer.find(query).lean();
-    res.status(200).json(farmers);
+    res.status(200).json(farmers.map(redactFarmer));
   } catch (err) {
     console.error('Error in getFarmers:', err.message);
-    res.status(500).json({ message: 'Failed to fetch farmers', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch farmers' });
   }
 };
 
@@ -174,10 +175,10 @@ exports.getFarmerById = async (req, res) => {
     if (!(await canAccessFarmer(req.user, farmer))) {
       return res.status(403).json({ message: 'You do not have access to this beneficiary.' });
     }
-    res.status(200).json(farmer);
+    res.status(200).json(redactFarmer(farmer));
   } catch (err) {
     console.error('Error in getFarmerById:', err.message);
-    res.status(500).json({ message: 'Failed to fetch farmer', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch farmer' });
   }
 };
 
@@ -185,7 +186,8 @@ exports.getFarmerById = async (req, res) => {
 exports.updateFarmer = async (req, res) => {
   try {
     const farmerId = req.params.id;
-    const updateData = req.body;
+    const updateData = { ...req.body };
+    if(/^X{4}-X{4}-/i.test(String(updateData.aadharNo||''))) delete updateData.aadharNo;
     const user = req.user;
 
     if (!mongoose.isValidObjectId(farmerId)) {
@@ -335,7 +337,7 @@ exports.updateFarmer = async (req, res) => {
     }
   } catch (err) {
     console.error('Error in updateFarmer:', err.message);
-    res.status(500).json({ message: 'Failed to update farmer', error: err.message });
+    res.status(500).json({ message: 'Failed to update farmer' });
   }
 };
 
@@ -551,7 +553,7 @@ exports.deleteFarmer = async (req, res) => {
     res.status(200).json({ message: 'Farmer deleted successfully' });
   } catch (err) {
     console.error('Error in deleteFarmer:', err.message);
-    res.status(500).json({ message: 'Failed to delete farmer', error: err.message });
+    res.status(500).json({ message: 'Failed to delete farmer' });
   }
 };
 
@@ -735,7 +737,7 @@ exports.uploadExcel = [
       });
     } catch (err) {
       console.error('Error in uploadExcel:', err);
-      return res.status(500).json({ message: err.message || 'Server error' });
+      return res.status(500).json({ message: 'Server error' });
     }
   }
 ];
@@ -858,7 +860,7 @@ exports.uploadJsrExcel = [
 
     } catch (err) {
       console.error('Error in uploadJsrExcel:', err);
-      return res.status(500).json({ message: err.message || 'Server error' });
+      return res.status(500).json({ message: 'Server error' });
     }
   }
 ];
@@ -875,7 +877,7 @@ exports.getAuditLogs = async (req, res) => {
     res.status(200).json(logs);
   } catch (err) {
     console.error('Error in getAuditLogs:', err.message);
-    res.status(500).json({ message: 'Failed to fetch audit logs', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch audit logs' });
   }
 };
 
@@ -893,7 +895,7 @@ exports.getUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (err) {
     console.error('Error in getUsers:', err.message);
-    res.status(500).json({ message: 'Failed to fetch users', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
 };
 
@@ -922,7 +924,7 @@ exports.getChangeRequests = async (req, res) => {
     res.status(200).json(scopedRequests);
   } catch (err) {
     console.error('Error in getChangeRequests:', err.message);
-    res.status(500).json({ message: 'Failed to fetch change requests', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch change requests' });
   }
 };
 
@@ -981,7 +983,7 @@ exports.approveChangeRequest = async (req, res) => {
     res.status(200).json({ message: 'Change request approved successfully' });
   } catch (err) {
     console.error('Error in approveChangeRequest:', err.message);
-    res.status(500).json({ message: 'Failed to approve change request', error: err.message });
+    res.status(500).json({ message: 'Failed to approve change request' });
   }
 };
 
@@ -1022,7 +1024,7 @@ exports.rejectChangeRequest = async (req, res) => {
     res.status(200).json({ message: 'Change request rejected successfully' });
   } catch (err) {
     console.error('Error in rejectChangeRequest:', err.message);
-    res.status(500).json({ message: 'Failed to reject change request', error: err.message });
+    res.status(500).json({ message: 'Failed to reject change request' });
   }
 };
 
@@ -1058,7 +1060,7 @@ exports.getRequests = async (req, res) => {
     res.status(200).json(formattedRequests);
   } catch (err) {
     console.error('Error in getRequests:', err.message);
-    res.status(500).json({ message: 'Failed to fetch requests', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch requests' });
   }
 };
 
@@ -1094,7 +1096,7 @@ exports.getAllRequests = async (req, res) => {
     res.status(200).json(formattedRequests);
   } catch (err) {
     console.error('Error in getAllRequests:', err.message);
-    res.status(500).json({ message: 'Failed to fetch requests', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch requests' });
   }
 };
 // GET /api/farmers/detail-context/:id

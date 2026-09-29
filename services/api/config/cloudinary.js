@@ -21,11 +21,6 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
-    console.log('Cloudinary upload params:', {
-      fieldname: file.fieldname,
-      queryFolder: req.query.folder,
-      originalname: file.originalname,
-    });
 
     let folder = 'Opsynq/Other';
     if (req.query.folder) {
@@ -42,7 +37,7 @@ const storage = new CloudinaryStorage({
       if (validFolders.includes(req.query.folder)) {
         folder = req.query.folder;
       } else {
-        console.warn('Invalid folder specified:', req.query.folder);
+        console.warn('Rejected unsupported upload folder.');
       }
     }
 

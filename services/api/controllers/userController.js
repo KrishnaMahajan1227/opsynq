@@ -4,12 +4,14 @@ const mongoose = require('mongoose');
 const AgencyUserLink = require('../models/platform/AgencyUserLink');
 const PlatformUser = require('../models/platform/PlatformUser');
 const { resolveAgencyScope } = require('../utils/agencyScope');
+const { unscopedDemoAllowed } = require('../utils/sessionCookies');
+const RealtimeRevision=require('../models/RealtimeRevision');
 const { validatePassword } = require('../utils/passwordSecurity');
 
 
 async function scopedLegacyUserIds(actor) {
   const scope = await resolveAgencyScope(actor);
-  if (!scope.linked) return { scope, userIds: null };
+  if (!scope.linked) return { scope, userIds: unscopedDemoAllowed(actor) ? null : [] };
   const links = await AgencyUserLink.find({ agencyId: { $in: scope.agencyIds }, isActive: true }).select('legacyUserId').lean();
   return { scope, userIds: [...new Set(links.map((x) => String(x.legacyUserId)).filter(Boolean))] };
 }
@@ -60,7 +62,7 @@ exports.register = async (req, res) => {
     res.status(201).json(userObj);
   } catch (err) {
     console.error('Error in register:', err.message);
-    res.status(500).json({ message: 'Failed to register user', error: err.message });
+    res.status(500).json({ message: 'Failed to register user' });
   }
 };
 
@@ -115,7 +117,7 @@ exports.update = async (req, res) => {
     res.status(200).json(updatedUser);
   } catch (err) {
     console.error('Error in update:', err.message);
-    res.status(500).json({ message: 'Failed to update user', error: err.message });
+    res.status(500).json({ message: 'Failed to update user' });
   }
 };
 
@@ -139,7 +141,7 @@ exports.delete = async (req, res) => {
     res.status(200).json({ message: 'User deleted successfully' });
   } catch (err) {
     console.error('Error in delete:', err.message);
-    res.status(500).json({ message: 'Failed to delete user', error: err.message });
+    res.status(500).json({ message: 'Failed to delete user' });
   }
 };
 
@@ -155,7 +157,7 @@ exports.getUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (err) {
     console.error('Error in getUsers:', err.message);
-    res.status(500).json({ message: 'Failed to fetch users', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
 };
 
@@ -173,7 +175,7 @@ exports.getMyProfile = async (req, res) => {
     res.status(200).json(user);
   } catch (err) {
     console.error('Error in getMyProfile:', err.message);
-    res.status(500).json({ message: 'Failed to fetch profile', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch profile' });
   }
 };
 
@@ -190,6 +192,7 @@ exports.getTechnicians = async (req, res) => {
     res.status(200).json(technicians);
   } catch (err) {
     console.error('Error in getTechnicians:', err.message);
-    res.status(500).json({ message: 'Failed to fetch technicians', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch technicians' });
   }
 };
+exports.getRealtimeRevision=async(req,res)=>{const scope=req.agencyScope||await resolveAgencyScope(req.user);if(!scope.linked&&!scope.demoUnscoped)return res.status(403).json({message:'Active Agency link required.'});const keys=[...(scope.agencyIds||[]).map(id=>`agency:${id}`),...(scope.companyIds||[]).map(id=>`company:${id}`)];if(!keys.length)return res.json({revision:0});const rows=await RealtimeRevision.find({scopeKey:{$in:keys}}).select('revision updatedAt -_id').lean();res.json({revision:rows.reduce((n,r)=>n+Number(r.revision||0),0),updatedAt:rows.map(r=>r.updatedAt).filter(Boolean).sort().at(-1)||null});};

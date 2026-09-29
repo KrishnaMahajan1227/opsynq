@@ -1,7 +1,10 @@
 const router = require('express').Router();
 const controller = require('../../controllers/platform/authController');
 const { protectPlatform } = require('../../middleware/platform/platformAuth');
-router.post('/login', controller.login);
-router.post('/register-company', controller.registerCompany);
+const { authRateLimit } = require('../../middleware/security');
+router.post('/login', authRateLimit, controller.login);
+router.post('/register-company', authRateLimit, controller.registerCompany);
 router.get('/me', protectPlatform, controller.me);
+router.get('/revision', protectPlatform, controller.revision);
+router.post('/logout', controller.logout);
 module.exports = router;

@@ -6,6 +6,8 @@ const LegacyUser = require('../../models/User');
 const platformAudit = require('../../utils/platformAudit');
 const { capabilitiesForRole } = require('../../security/platformCapabilities');
 const { validatePassword } = require('../../utils/passwordSecurity');
+const { setSessionCookie, clearSessionCookie, demoBearerEnabled } = require('../../utils/sessionCookies');
+const RealtimeRevision=require('../../models/RealtimeRevision');
 
 const sign = (user) => jwt.sign(
   { id: user._id, role: user.role, organizationId: user.organizationId || null, scope: 'platform', tv: Number(user.tokenVersion || 0) },
@@ -46,7 +48,8 @@ exports.login = async (req, res) => {
   if (user.approvalStatus !== 'APPROVED') return res.status(403).json({ message: `Account is ${user.approvalStatus.toLowerCase()}.` });
   user.lastLoginAt = new Date();
   await user.save();
-  res.json({ token: sign(user), user: safeUser(user) });
+  const token=sign(user);setSessionCookie(res,'platform',token);
+  res.json({ ...(demoBearerEnabled(user)?{token}:{}), demo:demoBearerEnabled(user), user: safeUser(user) });
 };
 
 exports.me = async (req, res) => res.json({ user: safeUser(req.platformUser) });
@@ -82,3 +85,7 @@ exports.registerCompany = async (req, res) => {
   await platformAudit(null, { actorId: user._id, actorType: 'company_owner', organizationId: org._id, companyId: org._id, action: 'COMPANY_REGISTRATION_SUBMITTED', entityType: 'Organization', entityId: org._id, after: { name: org.name, code: org.code } });
   res.status(201).json({ message: 'Registration submitted for Platform Superadmin approval.', registrationId: org._id });
 };
+
+exports.logout=(req,res)=>{clearSessionCookie(res,'platform');res.status(204).end();};
+
+exports.revision=async(req,res)=>{let id=req.tenant?.companyId;if(req.platformUser?.role==='platform_superadmin'&&req.query.companyId){const company=await Organization.findOne({_id:req.query.companyId,type:'COMPANY',status:{$ne:'ARCHIVED'}}).select('_id').lean();if(!company)return res.status(404).json({message:'Company not found.'});id=company._id;}if(!id)return res.json({revision:0});const row=await RealtimeRevision.findOne({scopeKey:`company:${String(id)}`}).select('revision updatedAt -_id').lean();res.json({revision:Number(row?.revision||0),updatedAt:row?.updatedAt||null});};

@@ -37,6 +37,8 @@ router.get(
 );
 
 // ─── NEW: Get currently authenticated user’s profile ────────────────────────
+router.get('/revision', protect, userController.getRealtimeRevision);
+
 router.get(
   '/me',
   protect,

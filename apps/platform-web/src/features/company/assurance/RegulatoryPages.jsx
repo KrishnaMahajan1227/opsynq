@@ -10,7 +10,7 @@ const stop=e=>e.stopPropagation();
 
 async function downloadReport(companyId,type,format,filters={}){
  const token=localStorage.getItem(tokenKey);const qs=new URLSearchParams({companyId,format,...Object.fromEntries(Object.entries(filters).filter(([,v])=>v))});
- const res=await fetch(`${API}/api/platform/regulatory/reports/${type}/export?${qs}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!res.ok){const body=await res.json().catch(()=>({}));throw new Error(body.message||'Report download failed.');}
+ const res=await fetch(`${API}/api/platform/regulatory/reports/${type}/export?${qs}`,{credentials:'include',headers:token?{Authorization:`Bearer ${token}`}:{}});if(!res.ok){const body=await res.json().catch(()=>({}));throw new Error(body.message||'Report download failed.');}
  const blob=await res.blob(),cd=res.headers.get('content-disposition')||'',m=cd.match(/filename="?([^";]+)"?/i),name=m?.[1]||`${type}.${format}`;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
 

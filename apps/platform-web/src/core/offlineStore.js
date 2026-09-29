@@ -25,7 +25,7 @@ export async function flushQueuedWrites({apiBase,token}){
  let synced=0,failed=0;for(const item of await allQueued()){
   try{
    const body=restoreBody(item.body),isForm=body instanceof FormData;
-   const res=await fetch(`${apiBase}${item.path}`,{method:item.method,body,headers:{...(isForm?{}:{'Content-Type':'application/json'}),...(token?{Authorization:`Bearer ${token}`}:{}) ,...(item.headers||{})}});
+   const res=await fetch(`${apiBase}${item.path}`,{credentials:'include',method:item.method,body,headers:{...(isForm?{}:{'Content-Type':'application/json'}),...(token?{Authorization:`Bearer ${token}`}:{}) ,...(item.headers||{})}});
    if(res.status===401||res.status===403)break;
    if(res.ok){await removeQueued(item.id);synced++;continue}
    const permanent=res.status>=400&&res.status<500&&![408,409,425,429].includes(res.status);
