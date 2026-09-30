@@ -4,6 +4,7 @@ const Organization=require('../models/platform/Organization');
 const {readSessionToken,decodeAndVerify}=require('../utils/sessionCookies');
 const {resolveAgencyScope,farmerQueryForUser}=require('../utils/agencyScope');
 const Farmer=require('../models/Farmer');
+const InstalledAsset=require('../models/platform/InstalledAsset');
 const {hasCapability}=require('../security/platformCapabilities');
 
 exports.protectRms=async(req,res,next)=>{
@@ -25,7 +26,7 @@ exports.protectRms=async(req,res,next)=>{
    if(!user||user.isActive===false||Number(decoded.tv||0)!==Number(user.tokenVersion||0))continue;
    const scope=await resolveAgencyScope(user);if(!scope.linked&&!scope.demoUnscoped)return res.status(403).json({message:'Agency scope is not configured.'});
    if(!['admin','superadmin','field_technician'].includes(user.role))return res.status(403).json({message:'RMS access is not permitted for this role.'});
-   let farmerIds=scope.farmerIds||[];if(user.role==='field_technician'){const scoped=await farmerQueryForUser(user);farmerIds=(await Farmer.find(scoped.query).select('_id').lean()).map(x=>String(x._id));}
+   let farmerIds=scope.farmerIds||[];if(user.role==='field_technician'){const scoped=await farmerQueryForUser(user);const [legacyAssigned,installedAssigned]=await Promise.all([Farmer.find(scoped.query).select('_id').lean(),InstalledAsset.find({companyId:{$in:scope.companyIds||[]},agencyId:{$in:scope.agencyIds||[]},technicianUserId:user._id,status:'ACTIVE'}).select('farmerId').lean()]);farmerIds=[...new Set([...legacyAssigned.map(x=>String(x._id)),...installedAssigned.map(x=>String(x.farmerId)).filter(Boolean)])];}
    req.rmsAuth={realm,user,companyIds:scope.companyIds||[],agencyIds:scope.agencyIds||[],farmerIds,canManage:false};
    return next();
   }catch{}

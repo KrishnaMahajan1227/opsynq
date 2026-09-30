@@ -13,11 +13,13 @@ import {
   FaChevronRight,
   FaSlidersH,
   FaTimes,
+  FaWifi,
 } from 'react-icons/fa';
 import axios from 'axios';
 import FieldVerification from './FieldVerification';
 import InstallationCompletionModal from '../components/InstallationCompletionModal';
 import OrderConfirmationModal from '../components/OrderConfirmationModal';
+import AgencyRmsPanel from '../components/AgencyRmsPanel';
 import './dashboard-technician.css';
 import { MAHARASHTRA_DIVISIONS } from '../constants/maharashtraGeo';
 import { API_URL } from '../config';
@@ -162,7 +164,7 @@ export default function DashboardTechnician() {
     return ap - bp;
   }), [sortBy]);
 
-  const filteredCurrent = useMemo(() => sortTasks(applyFilters(tabLists[activeTab])), [sortTasks, applyFilters, tabLists, activeTab]);
+  const filteredCurrent = useMemo(() => sortTasks(applyFilters(tabLists[activeTab] || [])), [sortTasks, applyFilters, tabLists, activeTab]);
   const totalPages = Math.max(1, Math.ceil(filteredCurrent.length / pageSize));
   const pagedCurrent = filteredCurrent.slice((page - 1) * pageSize, page * pageSize);
   const rangeStart = filteredCurrent.length ? (page - 1) * pageSize + 1 : 0;
@@ -266,8 +268,14 @@ export default function DashboardTechnician() {
             </button>
           );
         })}
+        <button className={activeTab === 'rms' ? 'is-active' : ''} onClick={() => { setActiveTab('rms'); setPage(1); }}>
+          <FaWifi />
+          <span>RMS</span>
+          <b>Live</b>
+        </button>
       </nav>
 
+      {activeTab === 'rms' ? <AgencyRmsPanel /> : <>
       <section className="td-commandbar">
         <div className="td-search-wrap">
           <FaSearch />
@@ -369,6 +377,7 @@ export default function DashboardTechnician() {
           </div>
         )}
       </section>
+      </>}
 
       {showVerify && <FieldVerification farmerId={selectedId} onVerificationComplete={onVerifyDone} />}
       {showInstall && <InstallationCompletionModal show handleClose={() => setShowInstall(false)} farmer={tasks.find(t => t._id === selectedId)} onInstallationComplete={onInstallDone} />}
