@@ -60,6 +60,7 @@ import AgencySidebar from '../components/AgencySidebar';
 import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
 import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
 import AgencyRmsPanel,{AgencyRmsSummary} from '../components/AgencyRmsPanel';
+import AgencyReportsPanel from '../components/AgencyReportsPanel';
 
 // Register ChartJS components
 ChartJS.register(ArcElement, ChartTooltip, Legend);
@@ -1135,7 +1136,7 @@ export default function DashboardSuperAdmin() {
           )}
 
           {/* ─── OVERVIEW TAB ─────────────────────────────────────────────────── */}
-          {activeTab === 'overview' && !isLoading && <AgencyRmsSummary />}
+          {activeTab === 'overview' && !isLoading && <AgencyRmsSummary onOpen={()=>setActiveTab('rms')} />}
           {activeTab === 'overview' && !isLoading && (
             <div className="executive-dashboard">
               <div className="dashboard-commandbar">
@@ -2019,6 +2020,7 @@ export default function DashboardSuperAdmin() {
           {/* ─── TECHNICIAN SUMMARY TAB ─────────────────────────────────────── */}
           {activeTab === 'material-receipts' && !isLoading && (<MaterialReceiptsPanel />)}
           {activeTab === 'rms' && !isLoading && (<AgencyRmsPanel />)}
+          {activeTab === 'reports' && !isLoading && (<AgencyReportsPanel />)}
 
           {activeTab === 'technician-summary' && !isLoading && (
             <Card className="mb-4">

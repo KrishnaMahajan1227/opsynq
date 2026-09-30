@@ -4,6 +4,7 @@ const InstalledAsset=require('../models/platform/InstalledAsset');
 const AssetLifecycleEvent=require('../models/platform/AssetLifecycleEvent');
 const MaterialIssue=require('../models/platform/MaterialIssue');
 const StockMovement=require('../models/platform/StockMovement');
+const {parseScanPayload}=require('./inventoryTrace');
 
 const roleFor=(item={})=>{if(item.installationRole&&item.installationRole!=='NONE')return item.installationRole;const s=`${item.category||''} ${item.name||''} ${item.sku||''}`.toLowerCase();if(s.includes('pump'))return'PUMP';if(s.includes('motor'))return'MOTOR';if(s.includes('controller')||s.includes('inverter'))return'CONTROLLER';if(s.includes('panel')||s.includes('module'))return'PANEL';return'OTHER'};
 const err=(message,status=409)=>{const e=new Error(message);e.statusCode=status;return e};
@@ -36,7 +37,7 @@ async function prepareInstallation({farmerId,technicianUserId,pump,motor,control
 
 
 async function resolveIssuedScan({farmerId,technicianUserId,code}){
- const value=String(code||'').trim();if(!value)throw err('Serial/barcode is required.',400);if(value.length>180)throw err('Serial/barcode is too long.',400);
+ const parsed=parseScanPayload(code),value=String(parsed.code||'').trim();if(!value)throw err('Serial/barcode is required.',400);if(value.length>180)throw err('Serial/barcode is too long.',400);
  const inv=await getIssuedInventory({farmerId,technicianUserId});if(!inv.linked)throw err('This beneficiary is not linked to company inventory.',409);
  const lower=value.toLowerCase();const d=inv.serials.find(x=>String(x.serialNumber||'').toLowerCase()===lower||String(x.barcodeValue||'').toLowerCase()===lower);
  if(!d)throw err('This serial/barcode is not in your issued material for this beneficiary/work package.',409);

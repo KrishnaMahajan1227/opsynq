@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FaChartPie, FaDatabase, FaTools, FaCheckCircle, FaExclamationTriangle,
   FaUsers, FaUserCog, FaFileAlt, FaUpload, FaSignOutAlt, FaChevronDown,
-  FaChevronRight, FaChevronLeft, FaBars, FaLayerGroup, FaTruckLoading, FaBroadcastTower
+  FaChevronRight, FaChevronLeft, FaBars, FaLayerGroup, FaTruckLoading, FaBroadcastTower, FaFileExcel
 } from 'react-icons/fa';
 
 const operationalSections = [
@@ -27,6 +27,10 @@ const operationalSections = [
   {
     id: 'monitoring', label: 'Monitoring',
     items: [{ key: 'rms', label: 'RMS Monitoring', icon: <FaBroadcastTower /> }],
+  },
+  {
+    id: 'reporting', label: 'Reporting',
+    items: [{ key: 'reports', label: 'Reports & Audit', icon: <FaFileExcel /> }],
   },
   {
     id: 'team', label: 'Team',

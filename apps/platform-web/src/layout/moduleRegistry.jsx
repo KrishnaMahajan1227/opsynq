@@ -113,7 +113,7 @@ export const companyGroups=[
     item('compliance','Quality & Compliance',ShieldCheck,'inspection compliance claim ready quality','assurance.write'),
     item('approval-center','Approval Center',CheckCircle2,'approval exception waiver','approvals.decide'),
     item('evidence-control','Evidence Control',ClipboardCheck,'survey installation final inspection evidence checklist photos documents'),
-    item('regulatory-reports','Regulatory Reports',FileText,'jcr office installer asset imei district agency synopsis regulatory export')
+    item('regulatory-reports','Reports & Compliance',FileText,'daily weekly monthly yearly reports audit gst eway jcr installer asset imei agency regulatory export')
   ]},
   {id:'administration',label:'Administration',icon:UserCog,items:[
     item('bulk-center','Bulk & Exports',UploadCloud,'bulk import export csv excel','approvals.decide'),

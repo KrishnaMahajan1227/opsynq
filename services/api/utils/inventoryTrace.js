@@ -25,17 +25,35 @@ function sanitizeAttributes(input,depth=0){
  }
  return out;
 }
+function parseGs1(value){
+ const out={};let code='';
+ const human=value.match(/^\((\d{2,4})\)/)?value:'';
+ if(human){
+  const rx=/\((\d{2,4})\)([^()]*)/g;let m;
+  while((m=rx.exec(value))){const ai=m[1],v=text(m[2]);if(!v)continue;if(ai==='01')out.gtin=v;else if(ai==='10')out.batchNo=v;else if(ai==='17')out.expiryYYMMDD=v;else if(ai==='21'){out.serialNumber=v;code=v}else out[`gs1_${ai}`]=v;}
+  return{code:code||out.gtin||value,attributes:out};
+ }
+ const compact=value.replace(/^\]C1/,'');
+ if(/^01\d{14}/.test(compact)){
+  out.gtin=compact.slice(2,16);let rest=compact.slice(16),m=rest.match(/(?:^|\x1d)21([^\x1d]+)/);if(m){out.serialNumber=m[1];code=m[1]}m=rest.match(/(?:^|\x1d)10([^\x1d]+)/);if(m)out.batchNo=m[1];m=rest.match(/(?:^|\x1d)17(\d{6})/);if(m)out.expiryYYMMDD=m[1];return{code:code||out.gtin,attributes:out};
+ }
+ return null;
+}
 function parseScanPayload(raw){
  if(raw&&typeof raw==='object'&&!Array.isArray(raw)){
-  const code=text(raw.serialNumber||raw.barcodeValue||raw.serial||raw.barcode||raw.code||raw.value);
-  const attributes=sanitizeAttributes(Object.fromEntries(Object.entries(raw).filter(([k])=>!['serialNumber','barcodeValue','serial','barcode','code','value'].includes(k))));
-  return{code,attributes};
+  const candidate=text(raw.serialNumber||raw.barcodeValue||raw.serial||raw.barcode||raw.code||raw.value||raw.gtin||raw.GTIN),nested=candidate?parseScanPayload(candidate):{code:'',attributes:{}};
+  const identity={};if(raw.serialNumber||raw.serial)identity.serialNumber=text(raw.serialNumber||raw.serial);if(raw.barcodeValue||raw.barcode)identity.barcodeValue=text(raw.barcodeValue||raw.barcode);
+  const attributes=sanitizeAttributes({...nested.attributes,...identity,...Object.fromEntries(Object.entries(raw).filter(([k])=>!['serialNumber','barcodeValue','serial','barcode','code','value'].includes(k)))});
+  return{code:nested.code||candidate,attributes};
  }
  const value=text(raw);if(!value)return{code:'',attributes:{}};
  if(value.startsWith('{')){try{return parseScanPayload(JSON.parse(value))}catch{}}
- const parts=value.split('|').map(x=>x.trim()).filter(Boolean);if(parts.length>1){const attributes={};for(const part of parts.slice(1)){const i=part.indexOf('=');if(i>0)attributes[cleanKey(part.slice(0,i))]=sanitizeValue(part.slice(i+1))}return{code:parts[0],attributes:sanitizeAttributes(attributes)}}
+ try{const u=new URL(value);const params=Object.fromEntries(u.searchParams.entries());if(Object.keys(params).length){const parsed=parseScanPayload(params);if(parsed.code)return parsed;}}catch{}
+ const gs1=parseGs1(value);if(gs1)return{code:gs1.code,attributes:sanitizeAttributes(gs1.attributes)};
+ const parts=value.split(/[|;]/).map(x=>x.trim()).filter(Boolean);if(parts.length>1){const attributes={};for(const part of parts.slice(1)){const i=part.indexOf('=');if(i>0)attributes[cleanKey(part.slice(0,i))]=sanitizeValue(part.slice(i+1))}return{code:parts[0],attributes:sanitizeAttributes(attributes)}}
  return{code:value,attributes:{}};
 }
+
 async function materialReconciliation({companyId,farmerId,agencyId}){
  const ctx=await BeneficiaryContext.findOne({companyId,farmerId}).populate('agencyId','name code').populate('workPackageId','code name').lean();
  if(!ctx)return null;if(agencyId&&String(ctx.agencyId?._id||ctx.agencyId)!==String(agencyId))return null;

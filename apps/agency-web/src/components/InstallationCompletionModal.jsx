@@ -75,6 +75,9 @@ export default function InstallationCompletionModal({
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
+  const [scanCameraOpen, setScanCameraOpen] = useState(false);
+  const [scanCameraError, setScanCameraError] = useState('');
+  const scanVideoRef = useRef(null);
   const [additionalItems, setAdditionalItems] = useState([]);
 
   const inventoryRole = item => {
@@ -114,9 +117,8 @@ export default function InstallationCompletionModal({
 
   const useIssuedSerial = item => addIssuedItem({ ...item, role: inventoryRole(item) });
 
-  const scanIssuedMaterial = async e => {
-    e?.preventDefault?.();
-    const code = scanCode.trim();
+  const submitScanValue = async raw => {
+    const code = String(raw ?? scanCode).trim();
     if (!code || !farmer?._id || scanLoading) return;
     setError(''); setScanMessage(''); setScanLoading(true);
     try {
@@ -128,6 +130,35 @@ export default function InstallationCompletionModal({
       setError(err.response?.data?.message || 'Scanned material could not be validated.');
     } finally { setScanLoading(false); }
   };
+
+  useEffect(() => {
+    if (!scanCameraOpen) return;
+    let stream; let stopped = false; let frame;
+    const start = async () => {
+      try {
+        setScanCameraError('');
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is not available on this device/browser.');
+        if (!('BarcodeDetector' in window)) throw new Error('Camera barcode decoding is not supported here. Use the phone keyboard or a Bluetooth/USB scanner.');
+        const detector = new window.BarcodeDetector({ formats: ['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','data_matrix'] });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        if (scanVideoRef.current) { scanVideoRef.current.srcObject = stream; await scanVideoRef.current.play(); }
+        const tick = async () => {
+          if (stopped) return;
+          try {
+            const found = await detector.detect(scanVideoRef.current);
+            const raw = found?.[0]?.rawValue;
+            if (raw) { stopped = true; setScanCameraOpen(false); setScanCode(raw); await submitScanValue(raw); return; }
+          } catch {}
+          frame = requestAnimationFrame(tick);
+        };
+        tick();
+      } catch (e) { setScanCameraError(e.message); setScanCameraOpen(false); }
+    };
+    start();
+    return () => { stopped = true; if (frame) cancelAnimationFrame(frame); stream?.getTracks().forEach(t => t.stop()); };
+  }, [scanCameraOpen]);
+
+  const scanIssuedMaterial = async e => { e?.preventDefault?.(); await submitScanValue(); };
 
   // Prefill complaint date with the technician's current local date.
   useEffect(() => {
@@ -547,12 +578,16 @@ export default function InstallationCompletionModal({
                           <Form.Control
                             value={scanCode}
                             onChange={e => setScanCode(e.target.value)}
-                            placeholder="Scan serial / barcode"
+                            placeholder="Scan serial / barcode / QR"
                             autoComplete="off"
+                            enterKeyHint="done"
                             aria-label="Scan serial or barcode for beneficiary installation"
                           />
                           <Button type="submit" disabled={!scanCode.trim() || scanLoading}>{scanLoading ? 'Checking…' : 'Add item'}</Button>
+                          <Button type="button" variant="outline-secondary" className="scan-camera-button" onClick={() => setScanCameraOpen(v => !v)}><Camera size={16} /> {scanCameraOpen ? 'Stop camera' : 'Scan with camera'}</Button>
                         </Form>
+                        {scanCameraOpen && <div className="installer-camera-scan"><video ref={scanVideoRef} playsInline muted /><span>Point the rear camera at the barcode or QR code. It will validate automatically.</span></div>}
+                        {scanCameraError && <div className="scan-camera-error" role="status">{scanCameraError}</div>}
                         {scanMessage && <div className="scan-success" role="status"><Check size={15} /> {scanMessage}</div>}
                         <div className="beneficiary-selection-summary" aria-label="Material selected for this beneficiary">
                           <span><small>Pump</small><strong>{pumpNoUnique ? '1' : '0'}</strong></span>

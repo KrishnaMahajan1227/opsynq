@@ -4,12 +4,18 @@ const farmerController = require('../controllers/farmerController');
 const uploadController = require('../controllers/upload');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
+const agencyReportController = require('../controllers/agencyReportController');
 
 // File Upload Routes
 router.post('/upload', protect, uploadController.uploadFiles);
 router.get('/template/:type', protect, authorizeRoles('admin', 'superadmin'), farmerController.downloadExcelTemplate);
 router.post('/uploadExcel', protect, authorizeRoles('admin', 'superadmin'), farmerController.uploadExcel);
 router.post('/uploadJsrExcel', protect, authorizeRoles('admin', 'superadmin'), farmerController.uploadJsrExcel);
+
+// Agency-scoped reporting
+router.get('/reports', protect, authorizeRoles('admin', 'superadmin'), agencyReportController.catalog);
+router.get('/reports/:type/preview', protect, authorizeRoles('admin', 'superadmin'), agencyReportController.preview);
+router.get('/reports/:type/export', protect, authorizeRoles('admin', 'superadmin'), agencyReportController.export);
 
 // Audit and User Data Routes
 router.get('/audit-logs', protect, authorizeRoles('admin', 'superadmin'), farmerController.getAuditLogs);

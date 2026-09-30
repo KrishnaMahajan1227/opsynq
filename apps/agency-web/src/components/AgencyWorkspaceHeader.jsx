@@ -9,6 +9,8 @@ const META={
  completed:['Completed Installs','Completed and closed beneficiary installations.'],
  complaints:['Complaints & Rework','Track exceptions, complaints and corrective field work.'],
  'material-receipts':['Inbound Material','Confirm company dispatch receipts, shortages and damaged material.'],
+ reports:['Reports & Audit','Daily to annual agency-scoped operational, RMS, material and audit reports.'],
+ rms:['RMS Monitoring','Live remote monitoring, alerts and device performance for assigned beneficiaries.'],
  'technician-summary':['Technician Performance','Team workload, completion and field accountability.'],
  users:['User Management','Manage agency users, roles and recovery access.'],
  requests:['Admin Requests','Review controlled administrative requests.'],
