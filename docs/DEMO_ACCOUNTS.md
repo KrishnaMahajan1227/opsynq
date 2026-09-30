@@ -63,7 +63,7 @@ All seeded demo accounts use the same default password unless you override it wi
 
 - 2 demo companies
 - 3 demo agencies
-- 11 seeded beneficiaries / farmer records
+- 24 seeded beneficiaries / farmer records
 - 3 work packages
 - 3 shipments
 - installed asset records

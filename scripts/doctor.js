@@ -2,28 +2,17 @@ const fs=require('fs');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
 const checks=[
-  ['Backend env','services/api/.env'],
-  ['Backend env example','services/api/.env.example'],
-  ['Platform env','apps/platform-web/.env'],
-  ['Platform env example','apps/platform-web/.env.example'],
-  ['Agency env','apps/agency-web/.env'],
-  ['Agency env example','apps/agency-web/.env.example'],
-  ['Root node_modules','node_modules'],
-  ['Vite binary','node_modules/vite/bin/vite.js'],
-  ['Rollup Windows binary','node_modules/@rollup/rollup-win32-x64-msvc/package.json'],
+  ['Backend env','services/api/.env'],['Backend env example','services/api/.env.example'],['Platform env','apps/platform-web/.env'],['Platform env example','apps/platform-web/.env.example'],['Agency env','apps/agency-web/.env'],['Agency env example','apps/agency-web/.env.example'],['Root node_modules','node_modules'],['Vite binary','node_modules/vite/bin/vite.js'],
 ];
 console.log('\nOpsynq local setup doctor\n');
 let warnings=0;
-for(const [label,rel] of checks){const ok=fs.existsSync(path.join(root,rel));console.log(`${ok?'✓':'!'} ${label.padEnd(28)} ${rel}`);if(!ok && !rel.endsWith('.env.example')) warnings++;}
-const envPath=path.join(root,'services/api/.env');
-if(fs.existsSync(envPath)){
- const txt=fs.readFileSync(envPath,'utf8');
- for(const key of ['MONGO_URI','JWT_SECRET']){const m=txt.match(new RegExp(`^${key}=(.+)$`,'m'));const ok=m&&m[1]&&!m[1].includes('<')&&!m[1].includes('replace-with');console.log(`${ok?'✓':'!'} ${key.padEnd(28)} ${ok?'configured':'missing / placeholder'}`);if(!ok)warnings++;}
-}
-console.log('\nNext checks:');
-console.log('  npm run db:test       # verify Atlas independently of Compass');
-console.log('  npm run backend       # complete API/backend');
-console.log('  npm run frontend      # Platform + Agency UIs together');
-console.log('  npm run verify:local  # verify all three runtimes');
-console.log(`\n${warnings?'Resolve the warnings above before starting all services.':'Local dependency/config checks look ready.'}\n`);
-process.exitCode=warnings?1:0;
+const nodeMajor=Number(process.versions.node.split('.')[0]);const nodeOk=nodeMajor===24;console.log(`${nodeOk?'✓':'!'} ${'Node runtime'.padEnd(28)} ${process.version} ${nodeOk?'(supported)':'(Node 24.x required)'}`);if(!nodeOk)warnings++;
+for(const[label,rel]of checks){const ok=fs.existsSync(path.join(root,rel));console.log(`${ok?'✓':'!'} ${label.padEnd(28)} ${rel}`);if(!ok&&!rel.endsWith('.env.example'))warnings++;}
+function envMap(rel){const file=path.join(root,rel);if(!fs.existsSync(file))return{};const out={};for(const line of fs.readFileSync(file,'utf8').split(/\r?\n/)){if(!line||/^\s*#/.test(line)||!line.includes('='))continue;const i=line.indexOf('=');out[line.slice(0,i).trim()]=line.slice(i+1).trim()}return out}
+const api=envMap('services/api/.env'),platform=envMap('apps/platform-web/.env');
+for(const key of ['MONGO_URI','JWT_SECRET']){const v=api[key]||'';const ok=v&&!v.includes('<')&&!v.includes('replace-with');console.log(`${ok?'✓':'!'} ${key.padEnd(28)} ${ok?'configured':'missing / placeholder'}`);if(!ok)warnings++;}
+const aiConfigured=Boolean(api.GEMINI_API_KEY||api.AI_PROVIDER_API_KEY);console.log(`${aiConfigured?'✓':'!'} ${'Server AI credential'.padEnd(28)} ${aiConfigured?'configured in API env':'missing from services/api/.env'}`);if(!aiConfigured)warnings++;
+const leaked=Boolean(platform.GEMINI_API_KEY||platform.AI_PROVIDER_API_KEY);console.log(`${!leaked?'✓':'!'} ${'Frontend AI secret'.padEnd(28)} ${leaked?'REMOVE: server secret found in frontend env':'not exposed'}`);if(leaked)warnings++;
+const mediaDir=path.join(root,'services/api/demo-media');const media=fs.existsSync(mediaDir)?fs.readdirSync(mediaDir).filter(x=>/\.(png|jpe?g|webp)$/i.test(x)).length:0;const mediaOk=media>=6;console.log(`${mediaOk?'✓':'!'} ${'Demo field media'.padEnd(28)} ${media} images`);if(!mediaOk)warnings++;
+console.log('\nNext checks:');console.log('  npm run db:test        # verify MongoDB');console.log('  npm run build:all      # build Platform + Agency');console.log('  npm run backend        # API');console.log('  npm run frontend       # Platform + Agency UIs');console.log('  npm run verify:local   # runtimes');console.log('  npm run demo:verify    # all demo roles + scopes + RMS/reports + AI');
+console.log(`\n${warnings?'Resolve the warnings above before client demo.':'Local dependency/config checks look ready for client demo.'}\n`);process.exitCode=warnings?1:0;

@@ -509,6 +509,11 @@ async function clearDemoData(companyIds) {
     const demoInstallPhotos=['installation-progress-01.png','installation-progress-02.jpg','installation-progress-03.jpg','completed-installation-01.png','completed-installation-02.jpg','completed-installation-03.jpg'];
     const demoServicePhotos=['service-visit-01.png','service-visit-02.jpg','service-visit-03.jpg'];
     const demoCoordinates={Nagpur:[21.1458,79.0882],Nashik:[19.9975,73.7898],Pune:[18.5204,73.8567]};
+    const demoFieldTeamByPackage={
+      'WP-NAG-001':{surveyorName:'Nagpur Field Ops Survey Team',surveyorMobile:'9200000002',technician:'nagpur.tech01',admin:'nagpur.admin'},
+      'WP-NAS-001':{surveyorName:'Nashik Rural Survey Team',surveyorMobile:'9300000002',technician:'nashik.tech01',admin:'nashik.admin'},
+      'WP-PUN-001':{surveyorName:'Pune Energy Survey Team',surveyorMobile:'9400000002',technician:'pune.tech01',admin:'pune.admin'},
+    };
     const farmers = [];
     for (let i = 0; i < farmersPayload.length; i += 1) {
       const [beneficiaryId, beneficiaryName, mobile, district, taluka, village, wp, agency, company, program, workOrder, applicationStatus, inspectionStatus, issue] = farmersPayload[i];
@@ -517,6 +522,7 @@ async function clearDemoData(companyIds) {
       const servicePhoto=media(demoServicePhotos[i%demoServicePhotos.length]);
       const hasSurvey=inspectionStatus!=='Pending',hasInstalled=['Installation Completed','Complaint Raised','Closed'].includes(applicationStatus);
       const baseGeo=demoCoordinates[district]||[20.5,78.9],latitude=Number((baseGeo[0]+((i%5)-2)*0.018).toFixed(6)),longitude=Number((baseGeo[1]+((i%4)-1.5)*0.021).toFixed(6));
+      const fieldTeam=demoFieldTeamByPackage[wp.code]||demoFieldTeamByPackage['WP-NAG-001'];
       const farmer = await Farmer.create({
         beneficiaryId,
         beneficiaryName,
@@ -544,8 +550,8 @@ async function clearDemoData(companyIds) {
         controllerTypeWithOrWithout: 'With Controller',
         assignedVendorCompanyName: company.name,
         vendorAssignmentDate: daysAgo(55 - i),
-        surveyorName: wp.code === 'WP-NAG-001' ? 'Prashant Wankhede' : 'Sachin Mahajan',
-        surveyorMobile: wp.code === 'WP-NAG-001' ? '9200000002' : '9300000002',
+        surveyorName: fieldTeam.surveyorName,
+        surveyorMobile: fieldTeam.surveyorMobile,
         sourceType: 'Borewell',
         landHoldingAcre: `${3 + (i % 4)}`,
         landOwnershipType: 'Self Owned',
@@ -554,7 +560,7 @@ async function clearDemoData(companyIds) {
         jsrDeviationYesNo: inspectionStatus==='Pending'?'':inspectionStatus==='In Progress'?'VENDOR INFORMATION RECEIVED':'JSR SUBMITTED',
         deviationRemarks: issue&&inspectionStatus!=='Completed'?issue:'',
         surveyDate: hasSurvey?daysAgo(Math.max(2,50-i)):null,
-        jsrTechnician: wp.code === 'WP-NAG-001' ? 'nagpur.tech01' : 'nashik.tech01',
+        jsrTechnician: fieldTeam.technician,
         materialOnSiteOrWarehouse: ['Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed', 'Dispatch Completed'].includes(applicationStatus) ? 'On Site' : 'Warehouse',
         warehouseInwardDate: daysAgo(30 - i),
         vehicleNo: district === 'Nagpur' ? 'MH31AB1234' : district === 'Nashik' ? 'MH15ZX4578' : 'MH12PQ9012',
@@ -573,7 +579,7 @@ async function clearDemoData(companyIds) {
         deliveryChallanNo: `DC-${beneficiaryId}`,
         installationDate: ['Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(10 + i) : null,
         installationCompletionDate: ['Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(8 + i) : null,
-        installedByTechnicianName: wp.code === 'WP-NAG-001' ? 'nagpur.tech01' : wp.code === 'WP-NAS-001' ? 'nashik.tech01' : 'pune.tech01',
+        installedByTechnicianName: fieldTeam.technician,
         commissioningDate: ['Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(7 + i) : null,
         installedPhotoUpload: hasInstalled?installPhoto:'',
         panels: ['PNL-DEMO-001', 'PNL-DEMO-002', 'PNL-DEMO-003'],
@@ -599,14 +605,14 @@ async function clearDemoData(companyIds) {
         finalsurveyorsignatureUrl: hasInstalled?surveyPhoto:'',
         excelFileName: `${district.toLowerCase()}-demo-import.xlsx`,
         excelUploadDate: daysAgo(58 - i),
-        orderReceivedByTechnician: wp.code === 'WP-PUN-001' ? 'pune.tech01' : 'nagpur.tech01',
+        orderReceivedByTechnician: fieldTeam.technician,
         orderReceivedConfirmationYesNo: ['Ordered', 'Dispatch Completed', 'Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? 'Yes' : 'No',
         orderReceivedDate: ['Ordered', 'Dispatch Completed', 'Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(18 - i) : null,
         orderReceivedRemarks: 'Demo seeded order acknowledgement',
         orderReceivedYesNo: ['Ordered', 'Dispatch Completed', 'Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? 'Yes' : 'No',
         materialReceivedDate: ['Dispatch Completed', 'Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(14 - i) : null,
         remarks: issue||'Demo beneficiary record seeded for workflow presentation.',
-        confirmedBy: wp.code === 'WP-NAG-001' ? 'nagpur.admin' : wp.code === 'WP-NAS-001' ? 'nashik.admin' : 'pune.admin',
+        confirmedBy: fieldTeam.admin,
         confirmationDate: daysAgo(12 - i),
         lrPhotoUrls: ['Dispatch Completed','Ready for Installation','Installation Completed','Complaint Raised','Closed'].includes(applicationStatus)?[installPhoto]:[],
       });

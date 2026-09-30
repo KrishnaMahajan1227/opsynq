@@ -8,6 +8,7 @@ const server=read('services/api/server.js');
 const policy=read('services/api/security/platformCapabilities.js');
 const regulatoryRoutes=read('services/api/routes/platform/regulatoryRoutes.js');
 const regulatoryController=read('services/api/controllers/platform/regulatoryController.js');
+const reportingService=read('services/api/utils/reportingService.js');
 const registry=read('apps/platform-web/src/layout/moduleRegistry.jsx');
 const workspace=read('apps/platform-web/src/features/company/CompanyWorkspace.jsx');
 const seed=read('services/api/seed/demoData.js');
@@ -19,7 +20,7 @@ must(fs.existsSync(path.join(root,'services/api/models/platform/InsurancePolicy.
 must(fs.existsSync(path.join(root,'services/api/models/platform/PDIRecord.js')),'PDIRecord model present');
 for(const cap of ['insurance.read','insurance.write','pdi.read','pdi.write','regulatory.read'])must(policy.includes(`'${cap}'`),`${cap} centralized capability present`);
 for(const route of ['/insurance/upload','/insurance','/pdi/upload','/pdi','/reports'])must(regulatoryRoutes.includes(route),`regulatory route ${route} present`);
-for(const report of ['district-agency-synopsis','asset-imei-mapping','jcr-office','jcr-installer'])must(regulatoryController.includes(`'${report}'`),`${report} report implemented`);
+for(const report of ['district-agency-synopsis','asset-imei-mapping','jcr-office','jcr-installer'])must(reportingService.includes(`'${report}'`),`${report} report implemented in centralized reporting service`);
 must(regulatoryController.includes("bookType:'xlsx'")&&regulatoryController.includes('sheet_to_csv'),'CSV and XLSX exports implemented');
 must(regulatoryController.includes('InsurancePolicy')&&regulatoryController.includes('PDIRecord'),'insurance and PDI controllers use persistent models');
 must(registry.includes("item('insurance'")&&registry.includes("item('pdi'")&&registry.includes("item('regulatory-reports'"),'Phase 26 modules registered in role-aware navigation');

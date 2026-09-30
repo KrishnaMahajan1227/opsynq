@@ -2,7 +2,7 @@ const fs=require('fs');
 const assert=(c,m)=>{if(!c){console.error('FAIL:',m);process.exitCode=1}else console.log('PASS:',m)};
 const ops=fs.readFileSync('apps/platform-web/src/features/company/operations/OperationsPages.jsx','utf8');
 const agency=ops.slice(ops.indexOf('function AgencyDirectory'),ops.indexOf('export function ResourcePage'));
-assert(!agency.includes('selectedIds'),'AgencyDirectory does not reference beneficiary bulk selectedIds state');
+assert(agency.includes('[selectedIds,setSelectedIds]')&&agency.includes('/agencies/bulk')&&agency.includes('togglePage'),'AgencyDirectory bulk selection is locally scoped to agency records');
 assert(fs.existsSync('apps/platform-web/src/features/company/intelligence/AIOperationsPage.jsx'),'AI Operations page exists');
 const reg=fs.readFileSync('apps/platform-web/src/layout/moduleRegistry.jsx','utf8');
 for(const x of ['ai-operations','Supply Chain Control','Procurement & GRN','Warehouse Stock','Dispatch Tracking','Fleet & Capacity'])assert(reg.includes(x),`Navigation exposes ${x}`);

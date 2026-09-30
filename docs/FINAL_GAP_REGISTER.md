@@ -3,8 +3,7 @@
 ## Intentionally deferred product capabilities
 
 1. **Farmer / Beneficiary self-service portal** — explicitly deferred by product direction. Current beneficiary workflows remain Company/Agency/Technician operated.
-2. **Self-service forgot/reset-password flow** — Company Admin can reset managed Company accounts, but public self-service recovery with OTP/email delivery is not yet implemented.
-3. **External notification delivery channels** — in-app notifications are implemented. SMS, WhatsApp, transactional email and provider delivery receipts require selecting/configuring external providers.
+2. **External notification delivery channels** — in-app notifications and secure password-recovery workflow are implemented. SMS, WhatsApp, transactional email provider delivery and delivery receipts still require selecting/configuring external providers.
 
 ## Accounting boundary
 
@@ -16,7 +15,8 @@ Phase 33 adds operational finance control: procurement commitments, received pro
 2. **Managed backup/restore policy** — database snapshot/export support exists; automated cloud backup schedules and restore drills must be configured in the production infrastructure account.
 3. **Observability provider** — health/readiness endpoints and application logs exist; external APM/log aggregation/alerting provider configuration is deployment-specific.
 4. **Offline synchronization conflict policy** — queued writes replay automatically. Complex two-user concurrent-edit conflict resolution remains a future collaboration enhancement.
-5. **decision service production controls** — decision service integration is server-side and fails safely to deterministic replenishment. Production should set budget/quota monitoring and rotate API keys through a secret manager.
+5. **AI production controls** — Gemini integration is server-side. Production should set quota/budget monitoring, allow outbound API access and rotate API keys through a secret manager.
+6. **Vendor-specific live RMS connector** — provider-neutral RMS ingestion, simulator, mapping, telemetry, alerts and scoped dashboards exist. A real client RMS still requires its documented REST/MQTT/Webhook adapter plus credentials and payload mapping.
 
 ## Product hardening still recommended
 
@@ -25,6 +25,8 @@ Phase 33 adds operational finance control: procurement commitments, received pro
 3. Central workflow transition/stage-gating engine driven by required evidence.
 4. Dedicated 360-degree record workspaces for Beneficiary, Work Package, Shipment, Asset, Service Case and Claim.
 5. MFA/SSO and short-lived access-token + refresh-session hardening for enterprise deployments.
+6. Client-specific import rehearsal with the actual customer files before production migration.
+7. Automated browser/device E2E for camera scanning, geolocation and the full Agency Technician journey on the exact demo devices.
 
 ## Validation limits of a source release
 

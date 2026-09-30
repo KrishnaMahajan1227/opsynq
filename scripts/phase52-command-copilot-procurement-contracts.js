@@ -14,7 +14,7 @@ must(dashboard.includes('execution-bars-chart')&&!dashboard.includes('aria-label
 must(!dashboard.includes('dashboard-action-center'),'Dashboard avoids duplicated Action Center panel');
 must(registry.includes("item('action-center','Action Center'")&&registry.includes('hiddenCompanyModules'),'Action Center remains routable without sidebar duplication');
 must(shell.includes('function NotificationBell')&&shell.includes('notification-bell'),'Notification bell remains mounted');
-must(shell.includes('function CompanyAiCopilot')&&shell.includes('opsynq.ai.copilot')&&shell.includes('Recent conversation'),'Persistent contextual AI Copilot present');
+must(shell.includes('function CompanyAiCopilot')&&shell.includes('opsynq.ai.copilot')&&shell.includes('/api/platform/ai/brief')&&shell.includes('sessionStorage.setItem(key'),'Persistent contextual AI Copilot present');
 must(!service.includes('New service case')&&!service.includes('Add service plan'),'Service/Warranty create controls are hidden');
 must(inventory.includes('Add item')&&inventory.includes('Final PO amount')&&inventory.includes('f.lines.map'),'PO create supports multiple calculated lines');
 must(inv.includes('Each item can appear only once in a purchase order')&&inv.includes('Tax percent must be between 0 and 100'),'PO backend validates multi-line pricing inputs');
