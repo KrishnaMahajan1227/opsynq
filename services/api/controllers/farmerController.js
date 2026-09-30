@@ -701,12 +701,15 @@ exports.uploadExcel = [
         return res.json({
           status: 'duplicatesFound',
           message: 'Duplicates found. Awaiting decisions.',
-          duplicates: duplicates.map(d => ({
+          duplicates: duplicates.map(d => { const fields=['beneficiaryName','aadharNo','mobile','alternateMobileNumber','scheme','village','taluka','district','pumpHP','surveyorName','surveyorMobile']; return {
             beneficiaryId: d.incoming.beneficiaryId,
             beneficiaryName: d.incoming.beneficiaryName,
             aadharNo: d.incoming.aadharNo,
-            mobile: d.incoming.mobile
-          }))
+            mobile: d.incoming.mobile,
+            existing: Object.fromEntries(fields.map(k=>[k,d.existing?.[k]??''])),
+            incoming: Object.fromEntries(fields.map(k=>[k,d.incoming?.[k]??''])),
+            differences: fields.filter(k=>String(d.existing?.[k]??'')!==String(d.incoming?.[k]??'')).map(k=>({field:k,existing:d.existing?.[k]??'',incoming:d.incoming?.[k]??''}))
+          }})
         });
       }
 

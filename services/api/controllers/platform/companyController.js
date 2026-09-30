@@ -13,6 +13,7 @@ const ServiceCase = require('../../models/platform/ServiceCase');
 const CommercialClaim = require('../../models/platform/CommercialClaim');
 const ComplianceRecord = require('../../models/platform/ComplianceRecord');
 const platformAudit = require('../../utils/platformAudit');
+const dataConflict = require('../../utils/dataConflict');
 
 const companyFilter = { type: 'COMPANY' };
 const allowedCompanyRoles = ['company_owner','company_admin','operations_manager','program_manager','inventory_manager','procurement_manager','finance_user','quality_user','logistics_manager','viewer'];
@@ -123,8 +124,9 @@ exports.createCompanyUser = async (req, res) => {
   if (!company) return res.status(404).json({ message: 'Active company not found.' });
   const { name, email, mobile, password, role = 'viewer' } = req.body;
   if (!name || !email || !mobile || !password || !allowedCompanyRoles.includes(role)) return res.status(400).json({ message: 'Valid name, email, mobile, password and company role are required.' });
-  const existing = await PlatformUser.findOne({ $or: [{ mobile: String(mobile).trim() }, ...(email ? [{ email: String(email).trim().toLowerCase() }] : [])] });
-  if (existing) return res.status(409).json({ message: 'Mobile/email already exists.' });
+  const normalized={name:String(name).trim(),email:email?.trim().toLowerCase(),mobile:String(mobile).trim(),role};
+  const [existing,legacyExisting] = await Promise.all([PlatformUser.findOne({ $or: [{ mobile: normalized.mobile }, ...(normalized.email ? [{ email: normalized.email }] : [])] }),LegacyUser.findOne({$or:[{mobile:normalized.mobile},...(normalized.email?[{email:normalized.email}]:[])]}).select('username email mobile role').lean()]);
+  if (existing || legacyExisting) { const current=existing||legacyExisting, sameCompany=existing&&String(existing.organizationId||'')===String(company._id); return dataConflict.send(res,{entityType:'Team member',key:normalized.email||normalized.mobile,existing:current,incoming:normalized,fields:['name','username','email','mobile','role','isActive'],allowedActions:sameCompany?['UPDATE','SKIP']:['SKIP'],message:sameCompany?'This identity already belongs to a user in this company. Review changes before updating access.':'This mobile/email is already registered to another account and cannot be reassigned here.'}); }
   const user = await PlatformUser.create({ name, email: email?.trim().toLowerCase(), mobile: String(mobile).trim(), password: await bcrypt.hash(password, 12), role, organizationId: company._id, approvalStatus: 'APPROVED', isActive: true });
   await platformAudit(req, { companyId: company._id, organizationId: company._id, action: 'COMPANY_USER_CREATED', entityType: 'PlatformUser', entityId: user._id, after: { name: user.name, role: user.role, mobile: user.mobile } });
   const safe = user.toObject(); delete safe.password;

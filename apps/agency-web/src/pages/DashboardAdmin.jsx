@@ -54,6 +54,7 @@ import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
 import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
 import AgencyRmsPanel,{AgencyRmsSummary} from '../components/AgencyRmsPanel';
 import AgencyReportsPanel from '../components/AgencyReportsPanel';
+import { confirmAction } from '../utils/confirmAction';
 
 // Constants for dropdowns
 const APPLICATION_STATUSES = [
@@ -1567,8 +1568,9 @@ export default function DashboardAdmin() {
                               variant="outline-danger"
                               size="sm"
                               onClick={async () => {
-                                const reason = prompt('Please provide a reason for deletion:');
-                                if (reason && reason.trim()) {
+                                const decision = await confirmAction({title:'Delete beneficiary?',message:'The beneficiary will be deleted only if protected operational history does not block the action.',confirmLabel:'Delete beneficiary',tone:'danger',requireReason:true,reasonLabel:'Deletion reason'});
+                                if (decision.confirmed) {
+                                  const reason = decision.reason;
                                   try {
                                     await axios.delete(`${API_URL}/api/farmers/${farmer._id}`, {
                                       ...auth,

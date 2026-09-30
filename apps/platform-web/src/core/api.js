@@ -13,7 +13,7 @@ async function request(path,options,context){
   const body=res.status===204?{}:await res.json().catch(()=>({}));
   if(res.status===401){window.dispatchEvent(new CustomEvent('opsynq:unauthorized'));const err=new Error(body.message||'Your session has expired. Please sign in again.');err.status=401;throw err;}
   if(res.status===403){window.dispatchEvent(new CustomEvent('opsynq:forbidden',{detail:{message:body.message||'You do not have permission for this action.'}}));const err=new Error(body.message||'You do not have permission for this action.');err.status=403;throw err;}
-  if(!res.ok){const err=new Error(body.message||`Request failed (${res.status}).`);err.status=res.status;throw err;}
+  if(!res.ok){const err=new Error(body.message||`Request failed (${res.status}).`);err.status=res.status;err.data=body;throw err;}
   if(method==='GET'){
    if(cacheTtl>0)memoryCache.set(cacheKey,{ts:Date.now(),data:body});
    cacheResponse(cacheKey,body);

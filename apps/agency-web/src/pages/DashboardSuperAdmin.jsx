@@ -62,6 +62,8 @@ import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
 import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
 import AgencyRmsPanel,{AgencyRmsSummary} from '../components/AgencyRmsPanel';
 import AgencyReportsPanel from '../components/AgencyReportsPanel';
+import { confirmAction } from '../utils/confirmAction';
+import AgencyConflictResolutionModal from '../components/AgencyConflictResolutionModal';
 
 // Register ChartJS components
 ChartJS.register(ArcElement, ChartTooltip, Legend);
@@ -224,6 +226,7 @@ export default function DashboardSuperAdmin() {
 
   // User Management states
   const [showUserModal, setShowUserModal] = useState(false);
+  const [userConflict, setUserConflict] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [userForm, setUserForm] = useState({
     username: '',
@@ -455,15 +458,14 @@ export default function DashboardSuperAdmin() {
       await fetchUsers();
     } catch (error) {
       console.error('User save failed:', error);
-      const msg = error.response?.data?.message || 'User save failed';
-      setToast({ show: true, variant: 'danger', message: msg });
+      const conflict=error.response?.data?.conflict;if(conflict?.kind==='DUPLICATE_RECORD'){setUserConflict(conflict);}else{const msg = error.response?.data?.message || 'User save failed';setToast({ show: true, variant: 'danger', message: msg });}
     } finally {
       setUserLoading(false);
     }
   };
 
   const deleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    const decision = await confirmAction({title:'Delete user?',message:'This user will lose access immediately. The action remains auditable.',confirmLabel:'Delete user',tone:'danger'}); if (!decision.confirmed) return;
     try {
       await axios.delete(`${API_URL}/api/users/${userId}`, auth);
       setToast({ show: true, variant: 'success', message: 'User deleted successfully' });
@@ -1629,12 +1631,9 @@ export default function DashboardSuperAdmin() {
                               variant="outline-danger"
                               size="sm"
                               onClick={async () => {
-                                const reason = window.prompt('Please provide a reason for deletion:');
-                                if (!reason?.trim()) {
-                                  setToast({ show: true, variant: 'warning', message: 'Deletion cancelled: Reason required' });
-                                  return;
-                                }
-                                if (!window.confirm('Delete this beneficiary record? This action is audited.')) return;
+                                const decision = await confirmAction({title:'Delete beneficiary?',message:'The beneficiary will be deleted only if protected operational history does not block the action.',confirmLabel:'Delete beneficiary',tone:'danger',requireReason:true,reasonLabel:'Deletion reason'});
+                                if (!decision.confirmed) return;
+                                const reason = decision.reason;
                                 try {
                                   await axios.delete(`${API_URL}/api/farmers/${f._id}`, { ...auth, data: { reason: reason.trim() } });
                                   await refreshAll();
@@ -2268,7 +2267,9 @@ export default function DashboardSuperAdmin() {
                 </div>
                 <div className="filter-drawer__footer"><Button variant="outline-secondary" className="me-2" onClick={()=>{setOpsDistrictFilter('');setOpsSurveyorFilter('');setOpsStatusFilter('')}}>Reset</Button><Button variant="primary" onClick={()=>setOpsFiltersOpen('')}>View results</Button></div>
               </aside>
-            </>
+            
+      <AgencyConflictResolutionModal conflict={userConflict} busy={userLoading} onClose={()=>setUserConflict(null)} onSkip={()=>{setUserConflict(null);setShowUserModal(false)}} onUpdate={async()=>{if(!userConflict?.existingId)return;setUserLoading(true);try{await axios.put(`${API_URL}/api/users/update/${userConflict.existingId}`,userForm,auth);setUserConflict(null);setShowUserModal(false);setToast({show:true,variant:'success',message:'Existing Agency user updated successfully'});await fetchUsers()}catch(error){setToast({show:true,variant:'danger',message:error.response?.data?.message||'User update failed'})}finally{setUserLoading(false)}}}/>
+</>
           )}
 
           {/* ─── MODALS ───────────────────────────────────────────────────────── */}

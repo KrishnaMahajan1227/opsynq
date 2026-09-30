@@ -7,6 +7,7 @@ const { resolveAgencyScope } = require('../utils/agencyScope');
 const { unscopedDemoAllowed } = require('../utils/sessionCookies');
 const RealtimeRevision=require('../models/RealtimeRevision');
 const { validatePassword } = require('../utils/passwordSecurity');
+const dataConflict = require('../utils/dataConflict');
 
 
 async function scopedLegacyUserIds(actor) {
@@ -33,9 +34,10 @@ exports.register = async (req, res) => {
     const exist = await User.findOne({
       $or: [{ username }, { mobile }, ...(email ? [{ email: String(email).trim().toLowerCase() }] : [])],
     }).lean();
-    const platformIdentity = await PlatformUser.findOne({ $or: [{ mobile }, { email: String(email).trim().toLowerCase() }] }).select('_id').lean();
+    const platformIdentity = await PlatformUser.findOne({ $or: [{ mobile }, { email: String(email).trim().toLowerCase() }] }).select('_id name email mobile role organizationId').lean();
     if (exist || platformIdentity) {
-      return res.status(409).json({ message: 'Username, email or mobile already exists' });
+      let manageable=false;if(exist){try{manageable=await assertManageableUser(req.user,exist._id)}catch{manageable=false}}
+      return dataConflict.send(res,{entityType:'Agency user',key:String(email||mobile||username),existing:exist||platformIdentity,incoming:{username,email:String(email||'').trim().toLowerCase(),mobile,role},fields:['username','name','email','mobile','role'],allowedActions:exist&&manageable?['UPDATE','SKIP']:['SKIP'],message:exist&&manageable?'This user already exists in your Agency scope. Review changes before updating the existing account.':'This username/mobile/email is already registered outside your manageable Agency scope.'});
     }
 
     const passwordCheck = validatePassword(password);
