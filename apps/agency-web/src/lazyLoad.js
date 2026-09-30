@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 
-const CHUNK_ERROR = /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk .* failed|error loading dynamically imported module/i;
+const CHUNK_ERROR = /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk .* failed|error loading dynamically imported module|Unable to preload CSS|preload CSS|Unable to preload/i;
 const RELOAD_PARAM = '__opsynq_deploy';
 const PREFIX = 'opsynq.agency.chunk-reload';
 
@@ -55,4 +55,13 @@ export function installVitePreloadRecovery() {
     event.preventDefault?.();
     recoverFromChunkFailure('vite-preload');
   });
+  window.addEventListener('unhandledrejection', event => {
+    if (!isChunkLoadError(event?.reason)) return;
+    event.preventDefault?.();
+    recoverFromChunkFailure('asset-preload');
+  });
+  window.addEventListener('error', event => {
+    if (!isChunkLoadError(event?.error || event?.message)) return;
+    recoverFromChunkFailure('asset-error');
+  }, true);
 }

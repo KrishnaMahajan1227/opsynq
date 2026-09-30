@@ -14,6 +14,7 @@ import {
   FaSlidersH,
   FaTimes,
   FaWifi,
+  FaSignOutAlt,
 } from 'react-icons/fa';
 import axios from 'axios';
 import FieldVerification from './FieldVerification';
@@ -184,6 +185,14 @@ export default function DashboardTechnician() {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
+
+  const handleLogout = () => {
+    fetch('/api/unified-auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    localStorage.clear();
+    const platformBase = import.meta.env.VITE_PLATFORM_APP_URL || (import.meta.env.PROD ? window.location.origin : `${window.location.protocol}//${window.location.hostname || 'localhost'}:5173`);
+    window.location.assign(`${platformBase}/?login=1`);
+  };
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await fetchTasks();
@@ -251,17 +260,26 @@ export default function DashboardTechnician() {
 
   return (
     <Container fluid className="td-root">
+      <div className="td-appbar">
+        <div className="td-brand">
+          <span className="td-brand-mark" aria-hidden="true">O</span>
+          <div><strong>Opsynq</strong><small>Field Operations</small></div>
+        </div>
+        <div className="td-appbar-actions">
+          <span className="td-technician-identity"><strong>{technicianUsername || 'Technician'}</strong>{surveyorMobile && <small>{surveyorMobile}</small>}</span>
+          <button className="td-appbar-button" onClick={handleRefresh} disabled={isRefreshing} aria-label="Refresh assigned work" title="Refresh"><FaSyncAlt className={isRefreshing ? 'td-spin' : ''} /></button>
+          <button className="td-appbar-button" onClick={handleLogout} aria-label="Sign out" title="Sign out"><FaSignOutAlt /></button>
+        </div>
+      </div>
+
       {usernameError && <Alert variant="danger" className="td-alert-error">{usernameError}</Alert>}
 
       <header className="td-header">
         <div>
-          <span className="td-eyebrow">Field operations</span>
+          <span className="td-eyebrow">Assigned field work</span>
           <h1>My work</h1>
-          <p>{technicianUsername || 'Loading profile'}{surveyorMobile ? ` · ${surveyorMobile}` : ''}</p>
+          <p>Verify sites, complete installations, resolve issues and monitor assigned assets.</p>
         </div>
-        <Button className="td-icon-button" onClick={handleRefresh} disabled={isRefreshing} aria-label="Refresh assigned work" title="Refresh">
-          <FaSyncAlt className={isRefreshing ? 'td-spin' : ''} />
-        </Button>
       </header>
 
       <nav className="td-queue-tabs" aria-label="Work queues">

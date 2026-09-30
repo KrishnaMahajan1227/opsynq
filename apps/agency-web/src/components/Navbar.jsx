@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaBell } from 'react-icons/fa';
-import logo from '../assets/logo-opsynq.png';
 import './Navbar.css';
 
 const NavbarComponent = () => {
@@ -13,7 +12,7 @@ const NavbarComponent = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const isBackofficeDashboard = token && ['admin', 'superadmin'].includes(role) && (location.pathname.startsWith('/dashboard/') || location.pathname === '/upload');
+  const isBackofficeDashboard = token && (location.pathname.startsWith('/dashboard/') || location.pathname === '/upload');
 
   // Determine the “home” link based on role
   const homePath =
@@ -46,7 +45,7 @@ const NavbarComponent = () => {
       <div className="container-fluid px-3">
         {/* logo */}
         <Link className="navbar-brand" to={homePath}>
-          <img src={logo} alt="Opsynq logo" className="navbar-logo" height="32" />
+          <span className="navbar-brand-mark" aria-hidden="true">O</span>
           <span className="navbar-brand-text d-none d-sm-flex">
             <span className="navbar-title">Opsynq Field Operations</span>
             <span className="navbar-subtitle">Agency & Technician Workspace</span>
