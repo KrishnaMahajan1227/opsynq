@@ -4,73 +4,9 @@ import { API_URL } from '../config';
 import './Register.css';
 
 const Register = () => {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('admin');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/users/register`, { username, email, mobile, password, role }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      alert('User registered successfully');
-      setUsername('');
-      setEmail('');
-      setMobile('');
-      setPassword('');
-    } catch (err) {
-      console.error(err);
-      alert('Registration failed');
-    }
-  };
-
-  return (
-    <div className="register-wrapper">
-      <div className="register-card">
-        <div className="register-card-header">
-          <span className="eyebrow">Team Access</span>
-          <h3>Register New User</h3>
-          <p>Add an admin or field technician to Opsynq Agency Operations</p>
-        </div>
-
-        <div className="register-card-body">
-          <form onSubmit={handleSubmit}>
-            <div className="mb-3">
-              <label className="form-label">Username</label>
-              <input type="text" className="form-control" placeholder="Enter username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Email</label>
-              <input type="email" className="form-control" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              <div className="form-text">Used for secure password recovery.</div>
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Mobile Number</label>
-              <input type="text" className="form-control" placeholder="Enter mobile number" value={mobile} onChange={(e) => setMobile(e.target.value)} required />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Password</label>
-              <input type="password" minLength={12} maxLength={128} className="form-control" placeholder="12+ characters" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </div>
-            <div className="mb-4">
-              <label className="form-label">Role</label>
-              <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)}>
-                <option value="admin">Admin</option>
-                <option value="field_technician">Field Technician</option>
-              </select>
-            </div>
-            <div className="d-grid">
-              <button type="submit" className="register-btn">Register</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
+  const [username,setUsername]=useState(''); const [email,setEmail]=useState(''); const [mobile,setMobile]=useState(''); const [password,setPassword]=useState(''); const [role,setRole]=useState('admin');
+  const [status,setStatus]=useState(null); const [saving,setSaving]=useState(false);
+  const handleSubmit=async e=>{e.preventDefault();setSaving(true);setStatus(null);try{const token=localStorage.getItem('token');await axios.post(`${API_URL}/api/users/register`,{username,email,mobile,password,role},{headers:{Authorization:`Bearer ${token}`}});setStatus({type:'success',text:'User registered successfully.'});setUsername('');setEmail('');setMobile('');setPassword('');}catch(err){setStatus({type:'error',text:err?.response?.data?.message||'Registration failed. Review the details and try again.'});}finally{setSaving(false)}};
+  return <div className="register-wrapper"><div className="register-card"><div className="register-card-header"><span className="eyebrow">Team Access</span><h3>Register New User</h3><p>Add an admin or field technician to Opsynq Agency Operations.</p></div><div className="register-card-body">{status&&<div role="status" className={`register-status is-${status.type}`}>{status.text}</div>}<form onSubmit={handleSubmit}><div className="mb-3"><label className="form-label">Username</label><input className="form-control" value={username} onChange={e=>setUsername(e.target.value)} required autoComplete="username"/></div><div className="mb-3"><label className="form-label">Email</label><input type="email" className="form-control" value={email} onChange={e=>setEmail(e.target.value)} required/><div className="form-text">Used for secure password recovery.</div></div><div className="mb-3"><label className="form-label">Mobile Number</label><input className="form-control" inputMode="tel" value={mobile} onChange={e=>setMobile(e.target.value)} required/></div><div className="mb-3"><label className="form-label">Password</label><input type="password" minLength={12} maxLength={128} className="form-control" placeholder="12+ characters" value={password} onChange={e=>setPassword(e.target.value)} required autoComplete="new-password"/></div><div className="mb-4"><label className="form-label">Role</label><select className="form-select" value={role} onChange={e=>setRole(e.target.value)}><option value="admin">Admin</option><option value="field_technician">Field Technician</option></select></div><div className="d-grid"><button disabled={saving} type="submit" className="register-btn">{saving?'Creating user…':'Create user'}</button></div></form></div></div></div>;
 };
-
 export default Register;

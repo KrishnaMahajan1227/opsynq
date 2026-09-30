@@ -14,6 +14,7 @@ import UserLocationTracker from './components/UserLocationTracker';
 import ResilienceStatus from './components/ResilienceStatus';
 import {installAgencyAxiosResilience} from './resilientAxios';
 import './final-design-system.css';
+import './agency-enterprise-v2.css';
 installAgencyAxiosResilience();
 
 const ProtectedRoute = ({ children }) => {

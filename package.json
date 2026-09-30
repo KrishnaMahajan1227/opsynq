@@ -74,7 +74,9 @@
     "demo:verify": "node scripts/verify-demo.js",
     "qa:demo-seed": "node scripts/demo-seed-contracts.js",
     "qa:scale": "node scripts/scale-readiness-contracts.js",
-    "qa:data-integrity": "node scripts/data-integrity-contracts.js"
+    "qa:data-integrity": "node scripts/data-integrity-contracts.js",
+    "ai:doctor": "node scripts/ai-doctor.js",
+    "agency:cleanup-branding": "node scripts/cleanup-agency-branding.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",

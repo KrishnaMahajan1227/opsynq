@@ -147,7 +147,15 @@ exports.brief=async(req,res)=>{
   if(!brief)return res.status(502).json({message:'Operations intelligence returned no usable response.'});
   await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_BRIEF_GENERATED',entityType:'Organization',entityId:c._id,after:{scope,page,model:ai.MODEL(),question:question.slice(0,240)}});
   res.json({scope,page,generatedAt:new Date(),brief,actions:actionsFor(page),factsAsOf:facts.generatedAt});
- }catch(error){res.status(502).json({message:'Operations intelligence request failed.',detail:String(error.message||error).slice(0,300)})}
+ }catch(error){
+  const code=error?.code||'PROVIDER_ERROR';
+  if(['INVALID_CREDENTIAL','RATE_LIMITED','PROVIDER_UNAVAILABLE','NETWORK_ERROR','TIMEOUT'].includes(code)){
+   const fallback=ai.fallbackOperationsBrief({pageLabel:String(req.body.pageLabel||page).slice(0,100),facts});
+   await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_PROVIDER_FALLBACK',entityType:'Organization',entityId:c._id,after:{scope,page,providerCode:code}});
+   return res.json({scope,page,generatedAt:new Date(),brief:fallback,actions:actionsFor(page),factsAsOf:facts.generatedAt,provider:{ready:false,code,message:code==='INVALID_CREDENTIAL'?'AI provider credential rejected; server-side key must be replaced.':'AI provider temporarily unavailable; rule-based summary shown.'}});
+  }
+  res.status(502).json({message:'Operations intelligence request failed.',code,detail:String(error.message||error).slice(0,300)});
+ }
 };
 
 exports.scan=async(req,res)=>{const c=await ensureCompany(req,res);if(!c)return;const jobs=['service_sla','claim_sla','warranty','insurance','replenishment'];const results=[];for(const job of jobs){const run=await automationEngine.executeJob(job,{companyId:c._id,trigger:'INTELLIGENCE_SCAN',requestedBy:req.platformUser._id});results.push({job,status:run.status,metrics:run.metrics||{},errors:run.errors||[]});}await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'OPERATIONS_INTELLIGENCE_SCAN',entityType:'Organization',entityId:c._id,after:{jobs:results.map(x=>({job:x.job,status:x.status}))}});res.json({completedAt:new Date(),results});};
