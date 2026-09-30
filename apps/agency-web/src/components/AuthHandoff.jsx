@@ -26,6 +26,7 @@ export default function AuthHandoff() {
         if(data.token)localStorage.setItem('token', data.token);else localStorage.removeItem('token');
         localStorage.setItem('opsynq_agency_session','1');
         localStorage.setItem('userRole', data.user.role);
+        localStorage.setItem('userId', String(data.user.id || data.user._id || ''));
         localStorage.setItem('username', data.user.username || data.user.mobile);
         localStorage.setItem('userMobile', data.user.mobile);
         if (normalizeRole(data.user.role) === 'fieldtechnician') localStorage.setItem('technicianMobile', data.user.mobile);

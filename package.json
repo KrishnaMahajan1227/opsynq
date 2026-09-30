@@ -25,7 +25,7 @@
     "ready:check": "npm run doctor",
     "automation:run": "cd services/api && node scripts/runAutomation.js",
     "snapshot": "cd services/api && node scripts/exportCompanySnapshot.js",
-    "qa:source": "node scripts/source-sanity.js && node scripts/module-contracts.js && node scripts/effect-contracts.js && node scripts/permission-contracts.js && node scripts/role-navigation-contracts.js && node scripts/jsx-syntax.js && node scripts/phase24-contracts.js && node scripts/phase26-contracts.js && node scripts/phase27-contracts.js && node scripts/phase28-contracts.js && node scripts/phase29-contracts.js && node scripts/phase30-contracts.js && node scripts/phase31-contracts.js && node scripts/phase31-hotfix-contracts.js && node scripts/phase32-functional-contracts.js && node scripts/phase33-contracts.js && node scripts/phase34-security-contracts.js && node scripts/phase35-hierarchy-contracts.js && node scripts/phase36-ux-contracts.js && node scripts/phase37-scale-ux-contracts.js && node scripts/phase38-data-flow-contracts.js && node scripts/phase39-supply-chain-contracts.js && node scripts/phase40-professional-ux-contracts.js && node scripts/phase41-ai-agency-contracts.js && node scripts/phase42-ui-stability-contracts.js && node scripts/phase43-governed-intelligence-import-geo-contracts.js && node scripts/phase44-ai-visibility-supply-ux-contracts.js && node scripts/phase47-agency-finance-contracts.js && node scripts/phase49-dashboard-performance-contracts.js && node scripts/phase52-command-copilot-procurement-contracts.js && node scripts/phase53-geo-receipt-scanner-contracts.js && node scripts/demo-seed-contracts.js",
+    "qa:source": "node scripts/source-sanity.js && node scripts/module-contracts.js && node scripts/effect-contracts.js && node scripts/permission-contracts.js && node scripts/role-navigation-contracts.js && node scripts/jsx-syntax.js && node scripts/phase24-contracts.js && node scripts/phase26-contracts.js && node scripts/phase27-contracts.js && node scripts/phase28-contracts.js && node scripts/phase29-contracts.js && node scripts/phase30-contracts.js && node scripts/phase31-contracts.js && node scripts/phase31-hotfix-contracts.js && node scripts/phase32-functional-contracts.js && node scripts/phase33-contracts.js && node scripts/phase34-security-contracts.js && node scripts/phase35-hierarchy-contracts.js && node scripts/phase36-ux-contracts.js && node scripts/phase37-scale-ux-contracts.js && node scripts/phase38-data-flow-contracts.js && node scripts/phase39-supply-chain-contracts.js && node scripts/phase40-professional-ux-contracts.js && node scripts/phase41-ai-agency-contracts.js && node scripts/phase42-ui-stability-contracts.js && node scripts/phase43-governed-intelligence-import-geo-contracts.js && node scripts/phase44-ai-visibility-supply-ux-contracts.js && node scripts/phase47-agency-finance-contracts.js && node scripts/phase49-dashboard-performance-contracts.js && node scripts/phase52-command-copilot-procurement-contracts.js && node scripts/phase53-geo-receipt-scanner-contracts.js && node scripts/demo-seed-contracts.js && npm run qa:scale",
     "qa:contracts": "node scripts/module-contracts.js",
     "qa:routes": "node scripts/route-contracts.js",
     "qa:release": "npm run qa:source && npm run qa:routes && node scripts/release-gate.js",
@@ -72,7 +72,8 @@
     "env:fix-ai": "node scripts/migrate-ai-env.js",
     "demo:preflight": "npm run doctor && npm run qa:release && npm run uat:contracts",
     "demo:verify": "node scripts/verify-demo.js",
-    "qa:demo-seed": "node scripts/demo-seed-contracts.js"
+    "qa:demo-seed": "node scripts/demo-seed-contracts.js",
+    "qa:scale": "node scripts/scale-readiness-contracts.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",
@@ -81,7 +82,7 @@
     "yaml": "2.8.1"
   },
   "engines": {
-    "node": "24.x"
+    "node": ">=22.20.0 <25"
   },
   "dependencies": {
     "express": "^5.1.0"

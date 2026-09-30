@@ -2,6 +2,11 @@ const AgencyUserLink=require('../models/platform/AgencyUserLink');
 const BeneficiaryContext=require('../models/platform/BeneficiaryContext');
 const {unscopedDemoAllowed}=require('./sessionCookies');
 
+const SCOPE_TTL_MS=Math.max(5000,Number(process.env.AGENCY_SCOPE_CACHE_TTL_MS||30000));
+const scopeCache=new Map();
+const cacheKey=user=>String(user?._id||'');
+const cloneScope=scope=>({...scope,agencyIds:[...(scope.agencyIds||[])],companyIds:[...(scope.companyIds||[])],farmerIds:[...(scope.farmerIds||[])]});
+
 const technicianAssignmentFilter=(user={})=>({$or:[
  {surveyorMobile:String(user.mobile||'')},{surveyorName:String(user.username||'')},{jsrTechnician:String(user.username||'')},
  {installedByTechnicianName:String(user.username||'')},{reworkAssignTechnician:String(user.username||'')},{confirmedBy:String(user.username||'')},
@@ -9,12 +14,22 @@ const technicianAssignmentFilter=(user={})=>({$or:[
 
 async function resolveAgencyScope(user){
  if(!user?._id)return{linked:false,agencyIds:[],companyIds:[],farmerIds:[],demoUnscoped:false};
+ const key=cacheKey(user),cached=scopeCache.get(key);
+ if(cached&&Date.now()-cached.at<SCOPE_TTL_MS)return cloneScope(cached.scope);
  const links=await AgencyUserLink.find({legacyUserId:user._id,isActive:true}).select('agencyId companyId role').lean();
- if(!links.length)return{linked:false,agencyIds:[],companyIds:[],farmerIds:[],demoUnscoped:unscopedDemoAllowed(user)};
- const agencyIds=[...new Set(links.map(x=>String(x.agencyId)).filter(Boolean))];
- const contexts=await BeneficiaryContext.find({agencyId:{$in:agencyIds}}).select('farmerId agencyId companyId').lean();
- return{linked:true,agencyIds,companyIds:[...new Set(links.map(x=>String(x.companyId)).filter(Boolean))],farmerIds:[...new Set(contexts.map(x=>String(x.farmerId)).filter(Boolean))],demoUnscoped:false};
+ let scope;
+ if(!links.length)scope={linked:false,agencyIds:[],companyIds:[],farmerIds:[],demoUnscoped:unscopedDemoAllowed(user)};
+ else{
+  const agencyIds=[...new Set(links.map(x=>String(x.agencyId)).filter(Boolean))];
+  const contexts=await BeneficiaryContext.find({agencyId:{$in:agencyIds}}).select('farmerId agencyId companyId').lean();
+  scope={linked:true,agencyIds,companyIds:[...new Set(links.map(x=>String(x.companyId)).filter(Boolean))],farmerIds:[...new Set(contexts.map(x=>String(x.farmerId)).filter(Boolean))],demoUnscoped:false};
+ }
+ scopeCache.set(key,{at:Date.now(),scope});
+ if(scopeCache.size>1000){const cutoff=Date.now()-SCOPE_TTL_MS;for(const [k,v] of scopeCache){if(v.at<cutoff)scopeCache.delete(k)}}
+ return cloneScope(scope);
 }
+
+function clearAgencyScopeCache(userId){if(userId)scopeCache.delete(String(userId));else scopeCache.clear()}
 
 async function farmerQueryForUser(user){
  const scope=await resolveAgencyScope(user);
@@ -34,4 +49,4 @@ async function canAccessFarmer(user,farmer){
  const username=String(user.username||''),mobile=String(user.mobile||'');
  return [String(farmer.surveyorMobile||'')===mobile,String(farmer.surveyorName||'')===username,String(farmer.jsrTechnician||'')===username,String(farmer.installedByTechnicianName||'')===username,String(farmer.reworkAssignTechnician||'')===username,String(farmer.confirmedBy||'')===username].some(Boolean);
 }
-module.exports={resolveAgencyScope,farmerQueryForUser,canAccessFarmer,technicianAssignmentFilter};
+module.exports={resolveAgencyScope,farmerQueryForUser,canAccessFarmer,technicianAssignmentFilter,clearAgencyScopeCache};

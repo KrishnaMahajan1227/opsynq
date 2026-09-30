@@ -1,0 +1,22 @@
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const checks=[];
+const has=(file,...needles)=>{const s=read(file);return needles.every(n=>s.includes(n));};
+checks.push(['platform chunk recovery',has('apps/platform-web/src/core/lazyLoad.js','vite:preloadError','location.replace','__opsynq_deploy')]);
+checks.push(['agency chunk recovery',has('apps/agency-web/src/lazyLoad.js','vite:preloadError','location.replace','__opsynq_deploy')]);
+checks.push(['preload recovery installed in both apps',has('apps/platform-web/src/main.jsx','installVitePreloadRecovery()')&&has('apps/agency-web/src/main.jsx','installVitePreloadRecovery()')]);
+checks.push(['deployment shell cache policy',has('vercel.json','no-store, max-age=0, must-revalidate','public, max-age=31536000, immutable')]);
+checks.push(['api shell cache policy',has('services/api/server.js','Vercel-CDN-Cache-Control','no-store, max-age=0, must-revalidate')]);
+checks.push(['platform GET request coalescing',has('apps/platform-web/src/core/api.js','inflightGets','cacheTtl')]);
+checks.push(['agency GET request coalescing and cache-first support',has('apps/agency-web/src/resilientAxios.js','inflightGets','getAgencyCached','MEMORY_TTL')]);
+checks.push(['cached authenticated shell',has('apps/platform-web/src/App.jsx','opsynq_platform_user_cache','43200000')]);
+checks.push(['agency handoff persists user id',has('apps/agency-web/src/components/AuthHandoff.jsx',"localStorage.setItem('userId'" )]);
+checks.push(['mongo pool bounded',has('services/api/config/db.js','maxPoolSize','minPoolSize','serverSelectionTimeoutMS')]);
+checks.push(['agency scope cache bounded',has('services/api/utils/agencyScope.js','AGENCY_SCOPE_CACHE_TTL_MS','scopeCache','1000')]);
+checks.push(['beneficiary import concurrency bounded',has('services/api/controllers/platform/operationsController.js','BENEFICIARY_IMPORT_CONCURRENCY','Promise.all','BENEFICIARY_IMPORT_MAX_ROWS')]);
+checks.push(['legacy farmer server pagination available',has('services/api/controllers/farmerController.js',"req.query.mode === 'page'",'pageSize','total')]);
+checks.push(['large geo view bounded',has('services/api/controllers/platform/operationsController.js','mapLimit=Math.min(5000','candidateTotal','truncated:candidateTotal>contexts.length')]);
+checks.push(['node runtime matches validated demo host',has('package.json','>=22.20.0 <25')&&has('services/api/package.json','>=22.20.0 <25')]);
+let bad=0;for(const [name,ok] of checks){console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)bad++;}
+if(bad)process.exit(1);console.log(`✓ Scale/deployment readiness contracts passed (${checks.length} checks)`);

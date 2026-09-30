@@ -13,7 +13,7 @@ assert(ops.includes('opsynq.dashboard.cache'),'dashboard snapshot cache missing'
 assert(css.includes('tone-danger')&&css.includes('tone-success'),'semantic dashboard KPI tones missing');
 assert(css.includes('focus-visible')&&css.includes('.clickable-row:hover'),'interaction affordance missing');
 assert(api.includes('memoryCache')&&api.includes('DEFAULT_CACHE_TTL'),'short-lived GET cache missing');
-assert(agencyApp.includes('lazy(()=>import(')&&agencyApp.includes('Suspense'),'Agency route code splitting missing');
+assert(agencyApp.includes('lazyWithRetry(()=>import(')&&agencyApp.includes('Suspense'),'Agency resilient route code splitting missing');
 assert(companyWorkspace.includes('lazyNamed')&&companyWorkspace.includes('Suspense'),'Company module code splitting missing');
 assert(controller.includes('$facet')&&controller.includes('BeneficiaryContext.aggregate'),'dashboard aggregation optimization missing');
 console.log('✓ Phase 49 dashboard, interaction and performance contracts passed');

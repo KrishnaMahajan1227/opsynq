@@ -23,6 +23,7 @@ import AgencyRmsPanel from '../components/AgencyRmsPanel';
 import './dashboard-technician.css';
 import { MAHARASHTRA_DIVISIONS } from '../constants/maharashtraGeo';
 import { API_URL } from '../config';
+import { getAgencyCached } from '../resilientAxios';
 
 const TAB_META = {
   verification: { label: 'Verification', short: 'Verify', icon: FaClipboardCheck },
@@ -73,13 +74,17 @@ export default function DashboardTechnician() {
   }, [auth]);
 
   const fetchTasks = useCallback(async () => {
+    const url = `${API_URL}/api/farmers`;
+    let renderedCache = false;
     try {
-      const resp = await axios.get(`${API_URL}/api/farmers`, auth);
+      const cached = await getAgencyCached(url, { maxAge: 6 * 60 * 60 * 1000 });
+      if (cached?.data) { const rows = Array.isArray(cached.data) ? cached.data : cached.data.farmers || []; setTasks(rows); renderedCache = true; }
+      const resp = await axios.get(url, { ...auth, opsynqNoCache: true });
       const allTasks = Array.isArray(resp.data) ? resp.data : resp.data.farmers || [];
       setTasks(allTasks);
     } catch (err) {
       console.error(err);
-      setUsernameError(prev => prev || 'Unable to refresh assigned work. Please check your connection and try again.');
+      if (!renderedCache) setUsernameError(prev => prev || 'Unable to refresh assigned work. Please check your connection and try again.');
     }
   }, [auth]);
 
@@ -87,9 +92,12 @@ export default function DashboardTechnician() {
 
   useEffect(() => {
     if (technicianUsername) fetchTasks();
-    let intervalId;
-    if (activeTab === 'complaints' && technicianUsername) intervalId = setInterval(fetchTasks, 30000);
-    return () => intervalId && clearInterval(intervalId);
+  }, [fetchTasks, technicianUsername]);
+
+  useEffect(() => {
+    if (activeTab !== 'complaints' || !technicianUsername) return undefined;
+    const intervalId = setInterval(fetchTasks, 30000);
+    return () => clearInterval(intervalId);
   }, [fetchTasks, technicianUsername, activeTab]);
 
   const verificationTasks = useMemo(

@@ -1,3 +1,6 @@
 const mongoose=require('mongoose');
 const schema=new mongoose.Schema({companyId:{type:mongoose.Schema.Types.ObjectId,ref:'Organization',required:true,index:true},itemId:{type:mongoose.Schema.Types.ObjectId,ref:'ItemMaster',required:true},serialIds:[{type:mongoose.Schema.Types.ObjectId,ref:'InventorySerial'}],quantity:{type:Number,required:true},movementType:{type:String,enum:['RECEIPT','TRANSFER','DISPATCH','ISSUE','INSTALL','RETURN','DAMAGE','REJECT','ADJUSTMENT'],required:true},fromWarehouseId:{type:mongoose.Schema.Types.ObjectId,ref:'Warehouse'},toWarehouseId:{type:mongoose.Schema.Types.ObjectId,ref:'Warehouse'},fromOrganizationId:{type:mongoose.Schema.Types.ObjectId,ref:'Organization'},toOrganizationId:{type:mongoose.Schema.Types.ObjectId,ref:'Organization'},referenceType:String,referenceId:mongoose.Schema.Types.ObjectId,reason:String,performedBy:mongoose.Schema.Types.ObjectId,occurredAt:{type:Date,default:Date.now}},{timestamps:true});
+schema.index({companyId:1,occurredAt:-1});
+schema.index({companyId:1,itemId:1,occurredAt:-1});
+schema.index({companyId:1,toOrganizationId:1,occurredAt:-1});
 module.exports=mongoose.model('StockMovement',schema);

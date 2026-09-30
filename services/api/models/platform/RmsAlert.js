@@ -6,4 +6,6 @@ const schema=new mongoose.Schema({
 },{timestamps:true});
 schema.index({companyId:1,status:1,severity:1,createdAt:-1});
 schema.index({deviceId:1,type:1,status:1});
+schema.index({companyId:1,agencyId:1,status:1,lastDetectedAt:-1});
+schema.index({companyId:1,assignedTechnicianUserId:1,status:1,lastDetectedAt:-1});
 module.exports=mongoose.model('RmsAlert',schema);

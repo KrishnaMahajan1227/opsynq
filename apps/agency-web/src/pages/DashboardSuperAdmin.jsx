@@ -56,6 +56,7 @@ import { MAHARASHTRA_DIVISIONS } from '../constants/maharashtraGeo';
 import './dashboard-superadmin.css';
 import './AdminEnterprise.css';
 import { API_URL } from '../config';
+import { getAgencyCached } from '../resilientAxios';
 import AgencySidebar from '../components/AgencySidebar';
 import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
 import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
@@ -251,32 +252,31 @@ export default function DashboardSuperAdmin() {
 
   // ─── Data Fetching ─────────────────────────────────────────────────────────
 
+  const applyFarmerList = (list) => {
+    const rows = Array.isArray(list) ? list : list?.farmers || [];
+    setFarmers(rows);
+    const initialReworkData = {};
+    rows.forEach((f) => {
+      if (f.applicationStatus === 'Complaint Raised') initialReworkData[f._id] = {
+        reWork: f.reWork || '', issues: f.issues || '', reworkAssignTechnician: f.reworkAssignTechnician || '', reworkAssignTechnicianDate: f.reworkAssignDate || '', solutionDate: f.solutionDate || '',
+      };
+    });
+    setReworkData(initialReworkData);
+  };
+
   const fetchFarmers = async () => {
     setIsLoading(true);
+    const url = `${API_URL}/api/farmers`;
+    let renderedCache = false;
     try {
-      const response = await axios.get(`${API_URL}/api/farmers`, auth);
-      const list = Array.isArray(response.data) ? response.data : response.data.farmers || [];
-      setFarmers(list);
-
-      const initialReworkData = {};
-      list.forEach((f) => {
-        if (f.applicationStatus === 'Complaint Raised') {
-          initialReworkData[f._id] = {
-            reWork: f.reWork || '',
-            issues: f.issues || '',
-            reworkAssignTechnician: f.reworkAssignTechnician || '',
-            reworkAssignTechnicianDate: f.reworkAssignDate || '',
-            solutionDate: f.solutionDate || '',
-          };
-        }
-      });
-      setReworkData(initialReworkData);
+      const cached = await getAgencyCached(url, { maxAge: 6 * 60 * 60 * 1000 });
+      if (cached?.data) { applyFarmerList(cached.data); renderedCache = true; setIsLoading(false); }
+      const response = await axios.get(url, { ...auth, opsynqNoCache: true });
+      applyFarmerList(response.data);
     } catch (error) {
       console.error('Failed to fetch farmers:', error);
-      setToast({ show: true, variant: 'danger', message: 'Failed to fetch farmers' });
-    } finally {
-      setIsLoading(false);
-    }
+      if (!renderedCache) setToast({ show: true, variant: 'danger', message: 'Failed to fetch farmers' });
+    } finally { setIsLoading(false); }
   };
 
   const fetchUsers = async () => {
@@ -364,18 +364,16 @@ export default function DashboardSuperAdmin() {
       console.error('Initial fetch failed:', err);
       setToast({ show: true, variant: 'danger', message: 'Initial data fetch failed' });
     });
+  }, []);
 
-    let intervalId;
-    if (activeTab === 'complaints' || activeTab === 'requests') {
-      intervalId = setInterval(() => {
-        if (activeTab === 'complaints') fetchFarmers();
-        if (activeTab === 'requests') fetchRequests();
-      }, 30000);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [activeTab]);
+  useEffect(() => {
+    if (activeTab !== 'complaints' && activeTab !== 'requests') return undefined;
+    const intervalId = setInterval(() => {
+      if (activeTab === 'complaints') fetchFarmers();
+      if (activeTab === 'requests') fetchRequests();
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [activeTab, fetchRequests]);
 
   useEffect(() => {
     setSchemeFilter('');
@@ -1126,8 +1124,10 @@ export default function DashboardSuperAdmin() {
           <AgencyWorkspaceHeader activeTab={activeTab} role="superadmin" />
 
           {isLoading && (
-            <div className="text-center my-4">
-              <Spinner animation="border" />
+            <div className="agency-dashboard-skeleton" role="status" aria-live="polite">
+              <div className="agency-dashboard-skeleton__kpis"><i/><i/><i/><i/></div>
+              <div className="agency-dashboard-skeleton__grid"><i/><i/></div>
+              <span>Loading the latest scoped operations…</span>
             </div>
           )}
 

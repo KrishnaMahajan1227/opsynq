@@ -13,4 +13,6 @@ const schema=new mongoose.Schema({
 schema.index({companyId:1,programId:1,workPackageId:1,agencyId:1});
 schema.index({companyId:1,workOrderId:1,workPackageId:1});
 schema.index({companyId:1,agencyId:1,updatedAt:-1});
+schema.index({agencyId:1,farmerId:1});
+schema.index({companyId:1,farmerId:1});
 module.exports=mongoose.model('BeneficiaryContext',schema);

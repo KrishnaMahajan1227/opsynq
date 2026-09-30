@@ -17,4 +17,6 @@ const schema=new mongoose.Schema({
 },{timestamps:true});
 schema.index({companyId:1,farmerId:1,status:1});
 schema.index({companyId:1,inventorySerialId:1},{unique:true});
+schema.index({companyId:1,agencyId:1,status:1,installedAt:-1});
+schema.index({companyId:1,technicianUserId:1,status:1,installedAt:-1});
 module.exports=mongoose.model('InstalledAsset',schema);

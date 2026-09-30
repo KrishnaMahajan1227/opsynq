@@ -6,7 +6,7 @@ const checks=[
 ];
 console.log('\nOpsynq local setup doctor\n');
 let warnings=0;
-const nodeMajor=Number(process.versions.node.split('.')[0]);const nodeOk=nodeMajor===24;console.log(`${nodeOk?'✓':'!'} ${'Node runtime'.padEnd(28)} ${process.version} ${nodeOk?'(supported)':'(Node 24.x required)'}`);if(!nodeOk)warnings++;
+const parts=process.versions.node.split('.').map(Number),nodeOk=(parts[0]===22&&parts[1]>=20)||(parts[0]>=23&&parts[0]<25);console.log(`${nodeOk?'✓':'!'} ${'Node runtime'.padEnd(28)} ${process.version} ${nodeOk?'(supported)':'(Node >=22.20 and <25 required)'}`);if(!nodeOk)warnings++;
 for(const[label,rel]of checks){const ok=fs.existsSync(path.join(root,rel));console.log(`${ok?'✓':'!'} ${label.padEnd(28)} ${rel}`);if(!ok&&!rel.endsWith('.env.example'))warnings++;}
 function envMap(rel){const file=path.join(root,rel);if(!fs.existsSync(file))return{};const out={};for(const line of fs.readFileSync(file,'utf8').split(/\r?\n/)){if(!line||/^\s*#/.test(line)||!line.includes('='))continue;const i=line.indexOf('=');out[line.slice(0,i).trim()]=line.slice(i+1).trim()}return out}
 const api=envMap('services/api/.env'),platform=envMap('apps/platform-web/.env');

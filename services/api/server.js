@@ -140,7 +140,9 @@ app.use((req, res, next) => {
   const isAgency = req.path === '/agency' || req.path.startsWith('/agency/');
   const indexFile = path.join(isAgency ? agencyDist : platformDist, 'index.html');
   if (!fs.existsSync(indexFile)) return next();
-  res.set('Cache-Control', 'no-cache');
+  res.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+  res.set('CDN-Cache-Control', 'no-store');
+  res.set('Vercel-CDN-Cache-Control', 'no-store');
   return res.sendFile(indexFile);
 });
 

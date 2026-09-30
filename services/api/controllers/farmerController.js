@@ -152,8 +152,25 @@ const keepInspection = s => ['Done', 'Completed'].includes(s);
 // GET /api/farmers
 exports.getFarmers = async (req, res) => {
   try {
-    const { query } = await farmerQueryForUser(req.user);
-    const farmers = await Farmer.find(query).lean();
+    const { query: scopeQuery } = await farmerQueryForUser(req.user);
+    const filters = {};
+    const exact = [['district','district'],['division','divisionName'],['taluka','taluka'],['scheme','scheme'],['vendor','assignedVendorCompanyName'],['applicationStatus','applicationStatus'],['inspectionStatus','inspectionStatus'],['inspectionStatusFinal','inspectionStatusFinal']];
+    for (const [param, field] of exact) if (req.query[param]) filters[field] = String(req.query[param]).trim();
+    if (req.query.q) {
+      const escaped = String(req.query.q).trim().slice(0,80).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (escaped) { const rx = new RegExp(escaped, 'i'); filters.$or = [{beneficiaryId:rx},{beneficiaryName:rx},{mobile:rx},{aadharNo:rx},{village:rx},{taluka:rx},{district:rx}]; }
+    }
+    const query = Object.keys(filters).length ? {$and:[scopeQuery,filters]} : scopeQuery;
+    const paged = req.query.page !== undefined || req.query.pageSize !== undefined || req.query.mode === 'page';
+    if (paged) {
+      const page = Math.max(1, Number(req.query.page || 1)), pageSize = Math.min(200, Math.max(10, Number(req.query.pageSize || 50)));
+      const [total, farmers] = await Promise.all([
+        Farmer.countDocuments(query),
+        Farmer.find(query).sort({updatedAt:-1,_id:-1}).skip((page-1)*pageSize).limit(pageSize).lean(),
+      ]);
+      return res.status(200).json({items:farmers.map(redactFarmer),total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
+    }
+    const farmers = await Farmer.find(query).sort({updatedAt:-1,_id:-1}).lean();
     res.status(200).json(farmers.map(redactFarmer));
   } catch (err) {
     console.error('Error in getFarmers:', err.message);

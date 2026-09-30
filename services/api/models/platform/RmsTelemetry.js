@@ -6,4 +6,7 @@ const schema=new mongoose.Schema({
 },{timestamps:true});
 schema.index({providerId:1,messageKey:1},{unique:true});
 schema.index({deviceId:1,telemetryAt:-1});
+schema.index({companyId:1,telemetryAt:-1});
+schema.index({companyId:1,agencyId:1,telemetryAt:-1});
+schema.index({companyId:1,farmerId:1,telemetryAt:-1});
 module.exports=mongoose.model('RmsTelemetry',schema);

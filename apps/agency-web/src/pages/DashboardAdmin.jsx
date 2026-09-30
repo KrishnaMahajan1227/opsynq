@@ -48,6 +48,7 @@ import './DashboardAdmin.css';
 import './AdminEnterprise.css';
 
 import { API_URL } from '../config.js';
+import { getAgencyCached } from '../resilientAxios';
 import AgencySidebar from '../components/AgencySidebar';
 import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
 import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
@@ -234,42 +235,34 @@ export default function DashboardAdmin() {
   };
 
   // Data Fetching Functions
+  const applyFarmerList = useCallback((list) => {
+    const rows = Array.isArray(list) ? list : [];
+    setFarmers(rows);
+    const initialReworkData = {};
+    rows.forEach((f) => {
+      if (f.applicationStatus === 'Complaint Raised') initialReworkData[f._id] = {
+        reWork: f.reWork || '', issues: f.issues || '', reworkAssignTechnician: f.reworkAssignTechnician || '', reworkAssignDate: f.reworkAssignDate || '', solutionDate: f.solutionDate || '',
+      };
+    });
+    setReworkData(initialReworkData);
+  }, []);
+
   const fetchFarmers = useCallback(async () => {
     setIsLoading(true);
+    const url = `${API_URL}/api/farmers`;
+    let renderedCache = false;
     try {
       if (!token) throw new Error('Authentication token is missing. Please log in again.');
-      const response = await axios.get(`${API_URL}/api/farmers`, auth);
-      const list = Array.isArray(response.data) ? response.data : [];
-      setFarmers(list);
-
-      // Initialize rework data for complaints
-      const initialReworkData = {};
-      list.forEach((f) => {
-        if (f.applicationStatus === 'Complaint Raised') {
-          initialReworkData[f._id] = {
-            reWork: f.reWork || '',
-            issues: f.issues || '',
-            reworkAssignTechnician: f.reworkAssignTechnician || '',
-            reworkAssignDate: f.reworkAssignDate || '',
-            solutionDate: f.solutionDate || '',
-          };
-        }
-      });
-      setReworkData(initialReworkData);
+      const cached = await getAgencyCached(url, { maxAge: 6 * 60 * 60 * 1000 });
+      if (cached?.data) { applyFarmerList(cached.data); renderedCache = true; setIsLoading(false); }
+      const response = await axios.get(url, { ...auth, opsynqNoCache: true });
+      applyFarmerList(response.data);
     } catch (error) {
       console.error('Failed to fetch farmers:', error);
-      setToast({
-        show: true,
-        variant: 'danger',
-        message: `Failed to fetch farmers: ${error.message}`,
-      });
-      if (error.message.includes('Authentication token')) {
-        window.location.href = import.meta.env.PROD ? '/?login=1' : '/';
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token]);
+      if (!renderedCache) setToast({ show: true, variant: 'danger', message: `Failed to fetch farmers: ${error.message}` });
+      if (error.message.includes('Authentication token')) window.location.href = import.meta.env.PROD ? '/?login=1' : '/';
+    } finally { setIsLoading(false); }
+  }, [token, applyFarmerList]);
 
   const fetchTechnicians = useCallback(async () => {
     try {
@@ -314,45 +307,25 @@ export default function DashboardAdmin() {
     }
   }, [token, userId]);
 
-  // Initial Data Fetch and Tab-Specific Refresh
+  // Load once. Tab changes must not refetch the full beneficiary portfolio.
   useEffect(() => {
     if (!token || !userId || !role) {
-      setToast({
-        show: true,
-        variant: 'danger',
-        message: 'Please log in to access the dashboard.',
-      });
+      setToast({ show: true, variant: 'danger', message: 'Please log in to access the dashboard.' });
       window.location.href = import.meta.env.PROD ? '/?login=1' : '/';
       return;
     }
+    Promise.all([fetchFarmers(), fetchTechnicians(), fetchChangeRequests()]).catch((err) => {
+      setToast({ show: true, variant: 'danger', message: `Initial data fetch failed: ${err.message}` });
+    });
+  }, [fetchFarmers, fetchTechnicians, fetchChangeRequests, token, userId, role]);
 
-    const fetchInitialData = async () => {
-      try {
-        await Promise.all([fetchFarmers(), fetchTechnicians(), fetchChangeRequests()]);
-      } catch (err) {
-        setToast({
-          show: true,
-          variant: 'danger',
-          message: `Initial data fetch failed: ${err.message}`,
-        });
-      }
-    };
-    fetchInitialData();
-
-    let intervalId;
-    if (activeTab === 'complaints') {
-      intervalId = setInterval(() => {
-        Promise.all([fetchFarmers(), fetchChangeRequests()]).catch((err) => {
-          setToast({
-            show: true,
-            variant: 'danger',
-            message: `Auto-refresh failed: ${err.message}`,
-          });
-        });
-      }, 30000);
-    }
-    return () => intervalId && clearInterval(intervalId);
-  }, [activeTab, fetchFarmers, fetchTechnicians, fetchChangeRequests, token, userId, role]);
+  useEffect(() => {
+    if (activeTab !== 'complaints') return undefined;
+    const intervalId = setInterval(() => {
+      Promise.all([fetchFarmers(), fetchChangeRequests()]).catch(() => {});
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [activeTab, fetchFarmers, fetchChangeRequests]);
 
   useEffect(() => {
     setSchemeFilter('');
@@ -1083,8 +1056,10 @@ export default function DashboardAdmin() {
           <AgencyWorkspaceHeader activeTab={activeTab} role="admin" />
 
           {isLoading && (
-            <div className="text-center my-4">
-              <Spinner animation="border" />
+            <div className="agency-dashboard-skeleton" role="status" aria-live="polite">
+              <div className="agency-dashboard-skeleton__kpis"><i/><i/><i/><i/></div>
+              <div className="agency-dashboard-skeleton__grid"><i/><i/></div>
+              <span>Loading the latest scoped operations…</span>
             </div>
           )}
 
