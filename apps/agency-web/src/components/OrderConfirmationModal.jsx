@@ -82,6 +82,8 @@ export default function OrderConfirmationModal({
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [scanCode, setScanCode] = useState('');
   const [panelScanCode, setPanelScanCode] = useState('');
+  const [manualBulkCodes, setManualBulkCodes] = useState('');
+  const [manualPanelCodes, setManualPanelCodes] = useState('');
   const [scanMode, setScanMode] = useState('ANY');
   const [scanLoading, setScanLoading] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
@@ -186,6 +188,15 @@ export default function OrderConfirmationModal({
     loadIssued();
     return () => { active = false; };
   }, [show, farmer?._id]);
+
+  const splitManualCodes = (value) => [...new Set(String(value || '').split(/[\n,;\t]+/).map((x) => x.trim()).filter(Boolean))];
+
+  const submitManualBatch = async (value, { expectedRole = '' } = {}) => {
+    const codes = splitManualCodes(value);
+    if (!codes.length) return;
+    for (const code of codes) await submitScan(code, { expectedRole });
+    if (expectedRole === 'PANEL') setManualPanelCodes(''); else setManualBulkCodes('');
+  };
 
   const submitScan = async (rawValue, { expectedRole = '' } = {}) => {
     const code = String(rawValue ?? scanCode).trim();
@@ -515,6 +526,14 @@ export default function OrderConfirmationModal({
                   </Button>
                 </div>
                 {scanCameraOpen && scanMode === 'ANY' && <div className="order-camera-scan"><video ref={scanVideoRef} playsInline muted /><small>Point the rear camera at the barcode or QR. Capture is automatic.</small></div>}
+                <div className="order-manual-entry">
+                  <Form.Label>Manual fallback / paste multiple serials</Form.Label>
+                  <div className="order-manual-entry__row">
+                    <Form.Control as="textarea" rows={2} value={manualBulkCodes} onChange={(e) => setManualBulkCodes(e.target.value)} placeholder="Type or paste serial/barcode values — one per line, comma or tab separated" />
+                    <Button type="button" variant="outline-primary" disabled={!manualBulkCodes.trim() || scanLoading} onClick={() => submitManualBatch(manualBulkCodes)}>Validate & add</Button>
+                  </div>
+                  <small>Use this when camera/handheld scanning is unavailable. Every entered code goes through the same beneficiary, Agency and technician inventory validation.</small>
+                </div>
                 {scanCameraError && <Alert variant="warning" className="mt-2 mb-0">{scanCameraError}</Alert>}
                 {scanMessage && <Alert variant="success" className="mt-2 mb-0">{scanMessage}</Alert>}
                 {!!issuedInventory.items?.length && <div className="order-issued-list">
@@ -612,6 +631,13 @@ export default function OrderConfirmationModal({
                   <Button type="button" variant="outline-secondary" onClick={() => { setScanMode('PANEL'); setScanCameraOpen((v) => !v); }}>{scanCameraOpen && scanMode === 'PANEL' ? 'Stop camera' : 'Camera scan'}</Button>
                 </div>
                 {scanCameraOpen && scanMode === 'PANEL' && <div className="order-camera-scan"><video ref={scanVideoRef} playsInline muted /><small>Point the rear camera at one solar-panel barcode/QR. Verified panels are added automatically.</small></div>}
+                <div className="order-manual-entry order-manual-entry--panels">
+                  <Form.Label>Manual panel serials / bulk paste</Form.Label>
+                  <div className="order-manual-entry__row">
+                    <Form.Control as="textarea" rows={2} value={manualPanelCodes} onChange={(e) => setManualPanelCodes(e.target.value)} placeholder="PANEL-001\nPANEL-002\nPANEL-003" />
+                    <Button type="button" variant="outline-primary" disabled={!manualPanelCodes.trim() || scanLoading} onClick={() => submitManualBatch(manualPanelCodes, { expectedRole: 'PANEL' })}>Validate panels</Button>
+                  </div>
+                </div>
                 <div className="order-panel-list">
                   {formData.panels.map((panel, idx) => (
                     <div key={idx} className="order-panel-row">

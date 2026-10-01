@@ -81,6 +81,8 @@ export default function InstallationCompletionModal({
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [scanCode, setScanCode] = useState('');
   const [panelScanCode, setPanelScanCode] = useState('');
+  const [manualBulkCodes, setManualBulkCodes] = useState('');
+  const [manualPanelCodes, setManualPanelCodes] = useState('');
   const [scanMode, setScanMode] = useState('ANY');
   const [scanLoading, setScanLoading] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
@@ -137,6 +139,15 @@ export default function InstallationCompletionModal({
   };
 
   const useIssuedSerial = item => addIssuedItem({ ...item, role: inventoryRole(item) });
+
+  const splitManualCodes = (value) => [...new Set(String(value || '').split(/[\n,;\t]+/).map((x) => x.trim()).filter(Boolean))];
+
+  const submitManualBatch = async (value, { expectedRole = '' } = {}) => {
+    const codes = splitManualCodes(value);
+    if (!codes.length) return;
+    for (const code of codes) await submitScanValue(code, { expectedRole });
+    if (expectedRole === 'PANEL') setManualPanelCodes(''); else setManualBulkCodes('');
+  };
 
   const submitScanValue = async (raw, { expectedRole = '' } = {}) => {
     const code = String(raw ?? scanCode).trim();
@@ -709,6 +720,14 @@ export default function InstallationCompletionModal({
                           <Button type="button" variant="outline-secondary" className="scan-camera-button" onClick={() => { setScanMode('ANY'); setScanCameraOpen(v => !v); }}><Camera size={16} /> {scanCameraOpen && scanMode === 'ANY' ? 'Stop camera' : 'Scan with camera'}</Button>
                         </div>
                         {scanCameraOpen && scanMode === 'ANY' && <div className="installer-camera-scan"><video ref={scanVideoRef} playsInline muted /><span>Point the rear camera at the barcode or QR code. It will validate automatically.</span></div>}
+                        <div className="installer-manual-entry">
+                          <Form.Label>Manual fallback / paste multiple serials</Form.Label>
+                          <div className="installer-manual-entry__row">
+                            <Form.Control as="textarea" rows={2} value={manualBulkCodes} onChange={e => setManualBulkCodes(e.target.value)} placeholder="Type or paste serial/barcode values — one per line, comma or tab separated" />
+                            <Button type="button" variant="outline-primary" disabled={!manualBulkCodes.trim() || scanLoading} onClick={() => submitManualBatch(manualBulkCodes)}>Validate & add</Button>
+                          </div>
+                          <small>Manual entries use the same issued-inventory and beneficiary receipt validation as a physical scan.</small>
+                        </div>
                         {scanCameraError && <div className="scan-camera-error" role="status">{scanCameraError}</div>}
                         {scanMessage && <div className="scan-success" role="status"><Check size={15} /> {scanMessage}</div>}
                         {Object.keys(scanDetails).length > 0 && <div className="scan-detail-grid" aria-label="Last scanned asset details">{Object.entries(scanDetails).filter(([,v])=>v!==''&&v!=null).slice(0,8).map(([k,v])=><span key={k}><small>{formatFieldName(k)}</small><strong>{String(v)}</strong></span>)}</div>}
@@ -840,6 +859,14 @@ export default function InstallationCompletionModal({
                     <Button type="button" variant="outline-secondary" className="scan-camera-button" onClick={() => { setScanMode('PANEL'); setScanCameraOpen(v => !v); }}><Camera size={16} /> {scanCameraOpen && scanMode === 'PANEL' ? 'Stop camera' : 'Camera scan'}</Button>
                   </div>
                   {scanCameraOpen && scanMode === 'PANEL' && <div className="installer-camera-scan panel-camera-scan"><video ref={scanVideoRef} playsInline muted /><span>Scan one solar panel at a time. A verified panel is added to the next available panel slot automatically.</span></div>}
+                  <div className="installer-manual-entry installer-manual-entry--panels">
+                    <Form.Label>Manual solar-panel serials / bulk paste</Form.Label>
+                    <div className="installer-manual-entry__row">
+                      <Form.Control as="textarea" rows={2} value={manualPanelCodes} onChange={e => setManualPanelCodes(e.target.value)} placeholder={'PANEL-001\nPANEL-002\nPANEL-003'} />
+                      <Button type="button" variant="outline-primary" disabled={!manualPanelCodes.trim() || scanLoading} onClick={() => submitManualBatch(manualPanelCodes, { expectedRole: 'PANEL' })}>Validate panels</Button>
+                    </div>
+                    <small>If the camera/scanner is unavailable, type or paste panel serials here. Each code is validated against the confirmed beneficiary material receipt.</small>
+                  </div>
                   {panelsArray.map((panel, index) => (
                     <div key={index} className="panel-row">
                       <div className="form-group" style={{ flex: 1 }}>
