@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const { farmerQueryForUser, canAccessFarmer, resolveAgencyScope } = require('../utils/agencyScope');
 const { redactFarmer } = require('../utils/pii');
+const { validateApplicationTransition, contextForFarmer, publishAgencyProgress, syncComplaintServiceCase } = require('../utils/agencyLifecycle');
 
 /* Multer setup for Excel uploads using memory storage */
 const storage = multer.memoryStorage();
@@ -240,6 +241,11 @@ exports.updateFarmer = async (req, res) => {
       return res.status(403).json({ message: 'You do not have access to this beneficiary.' });
     }
 
+    if (updateData.applicationStatus) {
+      const transitionError = validateApplicationTransition(farmer, updateData.applicationStatus);
+      if (transitionError) return res.status(409).json({ message: transitionError, code: 'INVALID_LIFECYCLE_TRANSITION' });
+    }
+
     // Identify technician-related fields
     const technicianFields = ['surveyorName', 'surveyorMobile', 'reworkAssignTechnician'];
     const hasTechnicianChanges = Object.keys(updateData).some((key) => technicianFields.includes(key));
@@ -334,8 +340,9 @@ exports.updateFarmer = async (req, res) => {
       });
 
       // Apply non-technician changes if any
+      let updatedFarmer = null;
       if (Object.keys(nonTechnicianChanges).length > 0) {
-        const updatedFarmer = await Farmer.findByIdAndUpdate(
+        updatedFarmer = await Farmer.findByIdAndUpdate(
           farmerId,
           { $set: nonTechnicianChanges },
           { new: true, runValidators: true }
@@ -351,6 +358,8 @@ exports.updateFarmer = async (req, res) => {
         changeType: 'technician_assignment',
         details: changeDetails,
       });
+      const ctx = await contextForFarmer(farmerId);
+      await publishAgencyProgress({ req, farmer: updatedFarmer || farmer, context: ctx, action: 'AGENCY_TECHNICIAN_CHANGE_REQUESTED', title: `Agency assignment change requested · ${farmer.beneficiaryId || farmer.beneficiaryName || 'Beneficiary'}`, message: `${user.username || 'Agency admin'} requested a technician assignment change.`, type: 'ACTION', after: changeDetails.changes });
 
       return res.status(200).json({
         message: 'Technician change request submitted for approval',
@@ -370,6 +379,14 @@ exports.updateFarmer = async (req, res) => {
         changeType: hasTechnicianChanges ? 'technician_assignment' : 'direct_update',
         details: changeDetails,
       });
+      const ctx = await contextForFarmer(farmerId);
+      if (updateData.applicationStatus && updateData.applicationStatus !== farmer.applicationStatus) {
+        await publishAgencyProgress({ req, farmer: updatedFarmer, context: ctx, action: 'AGENCY_LIFECYCLE_UPDATED', title: `Agency progress · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`, message: `${farmer.applicationStatus || 'Pending'} → ${updatedFarmer.applicationStatus} by ${user.username || 'Agency user'}.`, type: ['Complaint Raised'].includes(updatedFarmer.applicationStatus) ? 'WARNING' : ['Installation Completed','Closed'].includes(updatedFarmer.applicationStatus) ? 'SUCCESS' : 'INFO', after: { from: farmer.applicationStatus, to: updatedFarmer.applicationStatus } });
+      } else if (updateData.jsrDeviationYesNo && updateData.jsrDeviationYesNo !== farmer.jsrDeviationYesNo) {
+        await publishAgencyProgress({ req, farmer: updatedFarmer, context: ctx, action: 'AGENCY_JSR_UPDATED', title: `Survey review updated · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`, message: `JSR status changed to ${updatedFarmer.jsrDeviationYesNo}.`, type: updatedFarmer.jsrDeviationYesNo === 'JSR OUTCOME REJECTED' ? 'WARNING' : 'INFO', after: { jsrDeviationYesNo: updatedFarmer.jsrDeviationYesNo } });
+      }
+      if (updatedFarmer.applicationStatus === 'Complaint Raised') await syncComplaintServiceCase({ req, farmer: updatedFarmer, context: ctx });
+      if (updatedFarmer.complaintStatus === 'Resolved' || (farmer.applicationStatus === 'Complaint Raised' && updatedFarmer.solutionDate)) await syncComplaintServiceCase({ req, farmer: updatedFarmer, context: ctx, resolved: true });
 
       res.status(200).json(updatedFarmer);
     }
@@ -599,8 +616,10 @@ exports.assignTechnician = asyncHandler(async (req, res) => {
   if (fields.mobileField) update[fields.mobileField] = String(technician.mobile || '');
   if (assignmentType === 'INSTALLATION') { update.installationAssignedAt = new Date(); update.installationAssignedBy = req.user._id; }
   if (assignmentType === 'REWORK') update.reworkAssignDate = new Date();
-  await Farmer.findByIdAndUpdate(farmerId, { $set: update }, { runValidators: true });
+  const updated = await Farmer.findByIdAndUpdate(farmerId, { $set: update }, { new: true, runValidators: true }).lean();
   await AdminChangeLog.create({ adminId: req.user._id, changeType: 'technician_assignment', details: { farmerId, assignmentType, technicianId, technician: newTechnician, reason, changes: update } });
+  const ctx = await contextForFarmer(farmerId);
+  await publishAgencyProgress({ req, farmer: updated || farmer, context: ctx, action: 'AGENCY_TECHNICIAN_ASSIGNED', title: `${assignmentType[0]}${assignmentType.slice(1).toLowerCase()} technician assigned · ${farmer.beneficiaryId || farmer.beneficiaryName || 'Beneficiary'}`, message: `${technician.username} assigned by ${req.user.username || 'Agency superadmin'}.`, type: 'INFO', after: { assignmentType, technician: newTechnician, reason } });
   res.json({ message: `${assignmentType[0]}${assignmentType.slice(1).toLowerCase()} technician assigned successfully.`, assignmentType, technician: newTechnician, update });
 });
 

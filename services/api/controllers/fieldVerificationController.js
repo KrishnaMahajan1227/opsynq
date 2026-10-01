@@ -4,6 +4,7 @@ const { canAccessFarmer } = require('../utils/agencyScope');
 const BeneficiaryContext = require('../models/platform/BeneficiaryContext');
 const EvidenceRequirement = require('../models/platform/EvidenceRequirement');
 const EvidenceSubmission = require('../models/platform/EvidenceSubmission');
+const { publishAgencyProgress } = require('../utils/agencyLifecycle');
 
 exports.submitFieldVerification = async (req, res) => {
   try {
@@ -98,6 +99,16 @@ exports.submitFieldVerification = async (req, res) => {
           { upsert: true, new: true, setDefaultsOnInsert: true }
         );
       }
+    }
+
+    if (ctx?.companyId) {
+      await publishAgencyProgress({
+        req, farmer: updatedFarmer, context: ctx, action: 'AGENCY_SURVEY_SUBMITTED',
+        title: `Survey submitted · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`,
+        message: `${req.user?.username || 'Agency technician'} submitted field verification (${inspectionStatus || 'Pending'}).`,
+        type: inspectionStatus === 'Completed' ? 'SUCCESS' : 'INFO',
+        after: { inspectionStatus, surveyDate: updatedFarmer.surveyDate, siteLocation: updatedFarmer.siteLocation }
+      });
     }
 
     return res.json({

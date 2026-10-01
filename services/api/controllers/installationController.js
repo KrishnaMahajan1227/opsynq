@@ -7,6 +7,7 @@ const Farmer = require('../models/Farmer');
 const { protect } = require('../middleware/authMiddleware');
 const { getIssuedInventory, resolveIssuedScan, prepareInstallation, finalizeInstallation } = require('../utils/assetLifecycle');
 const { canAccessFarmer } = require('../utils/agencyScope');
+const { contextForFarmer, publishAgencyProgress, syncComplaintServiceCase } = require('../utils/agencyLifecycle');
 
 /**
  * completeInstallation
@@ -103,6 +104,11 @@ exports.completeInstallation = [
       const farmer = await Farmer.findById(farmerId);
       if (!farmer) return res.status(404).json({ message: 'Farmer not found.' });
       if (!(await canAccessFarmer(req.user, farmer))) return res.status(403).json({ message: 'You do not have access to this beneficiary.' });
+      const isRework = farmer.applicationStatus === 'Complaint Raised';
+      if (!isRework && farmer.applicationStatus !== 'Ready for Installation') {
+        return res.status(409).json({ message: 'This beneficiary is not ready for installation. Agency admin must complete survey, dispatch and material readiness first.', code: 'INSTALLATION_NOT_READY' });
+      }
+      const ctx = await contextForFarmer(farmerId);
 
       // Opsynq Phase 5: for company/work-package linked farmers, verify that
       // serialized hardware belongs to the logged-in technician before updating
@@ -123,7 +129,6 @@ exports.completeInstallation = [
       }
 
       // Determine new applicationStatus and complaintStatus
-      const isRework = farmer.applicationStatus === 'Complaint Raised';
       const applicationStatus = hasComplaint ? 'Complaint Raised' : 'Installation Completed';
       const complaintStatus = hasComplaint ? 'Open' : '';
 
@@ -159,8 +164,10 @@ exports.completeInstallation = [
         updateData.complaintRaisedByName = raisedByName;
         updateData.complaintRaisedById = raisedById;
         updateData.complaintStatus = complaintStatus;
+      } else if (isRework) {
+        // Preserve the complaint trail when rework succeeds; mark it resolved instead of deleting history.
+        updateData.complaintStatus = 'Resolved';
       } else {
-        // Clear complaint fields if no complaint
         updateData.complaintIssue = '';
         updateData.complaintRaisedDate = null;
         updateData.complaintNumber = '';
@@ -208,6 +215,13 @@ exports.completeInstallation = [
 
       // Fetch the updated document to confirm
       const updatedFarmer = await Farmer.findById(farmerId);
+      if (hasComplaint) {
+        await syncComplaintServiceCase({ req, farmer: updatedFarmer, context: ctx });
+        await publishAgencyProgress({ req, farmer: updatedFarmer, context: ctx, action: 'AGENCY_COMPLAINT_RAISED', title: `Installation issue · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`, message: `${completedByTechnician} reported a non-operating pump and opened complaint ${updatedFarmer.complaintNumber || ''}.`, type: 'WARNING', after: { applicationStatus: updatedFarmer.applicationStatus, complaintNumber: updatedFarmer.complaintNumber, complaintIssue: updatedFarmer.complaintIssue } });
+      } else {
+        if (isRework) await syncComplaintServiceCase({ req, farmer: updatedFarmer, context: ctx, resolved: true });
+        await publishAgencyProgress({ req, farmer: updatedFarmer, context: ctx, action: isRework ? 'AGENCY_REWORK_COMPLETED' : 'AGENCY_INSTALLATION_COMPLETED', title: `${isRework ? 'Rework' : 'Installation'} completed · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`, message: `${completedByTechnician} completed ${isRework ? 'rework' : 'installation'} and submitted final evidence.`, type: 'SUCCESS', after: { applicationStatus: updatedFarmer.applicationStatus, installationDoneYesNo: updatedFarmer.installationDoneYesNo, installationCompletionDate: updatedFarmer.installationCompletionDate } });
+      }
 
       // Return updated record
       return res.json({

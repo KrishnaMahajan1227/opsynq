@@ -25,6 +25,8 @@ import {
 import './InstallationCompletionModal.css';
 
 import { API_URL, resolveAssetUrl } from '../config.js';
+import { saveFieldDraft, getFieldDraft, deleteFieldDraft } from '../offlineStore';
+import { optimiseImageFile, optimiseImageFiles, totalFileBytes, formatBytes } from '../utils/imageFiles';
 
 
 export default function InstallationCompletionModal({
@@ -37,6 +39,9 @@ export default function InstallationCompletionModal({
   const [openKeys, setOpenKeys] = useState(['0', '1']);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState(null);
+  const [optimisingPhotos, setOptimisingPhotos] = useState(false);
+  const draftKey = farmer?._id ? `installation:${farmer._id}` : '';
   
   const expandAll = () => setOpenKeys(['0', '1']);
   const collapseAll = () => setOpenKeys([]);
@@ -75,6 +80,7 @@ export default function InstallationCompletionModal({
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
+  const [scanDetails, setScanDetails] = useState({});
   const [scanCameraOpen, setScanCameraOpen] = useState(false);
   const [scanCameraError, setScanCameraError] = useState('');
   const scanVideoRef = useRef(null);
@@ -95,13 +101,14 @@ export default function InstallationCompletionModal({
     const code = String(item.serialNumber || item.barcodeValue || '').trim();
     if (!code) return;
     const role = item.role || inventoryRole(item);
+    const attrs = item.scanAttributes || item.metadata?.scanAttributes || item.agencyReceiptAttributes || {};
+    setScanDetails({ code, role, item: item.itemId?.name || item.itemId?.sku || 'Serialized material', ...attrs });
     const existing = selectedCodes();
     if (existing.includes(code.toLowerCase())) { setScanMessage(`${code} is already selected for this beneficiary.`); return; }
     if (role === 'PUMP') setPumpNoUnique(code);
     else if (role === 'MOTOR') setMotorNoUnique(code);
     else if (role === 'CONTROLLER') {
       setControllerNoUnique(code);
-      const attrs = item.scanAttributes || item.metadata?.scanAttributes || {};
       if (!imeiNoUnique) setImeiNoUnique(String(attrs.imei || attrs.IMEI || attrs.imeiNo || attrs.imeiNumber || ''));
     } else if (role === 'PANEL') {
       setPanelsArray(prev => {
@@ -227,8 +234,17 @@ export default function InstallationCompletionModal({
     setOpenKeys(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
   };
 
-  const onFarmerPhotoChange = e => setFinalFarmerPhoto(e.target.files[0]);
-  const onSitePhotosChange = e => setFinalSitePhotos(Array.from(e.target.files));
+  const onFarmerPhotoChange = async e => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setOptimisingPhotos(true);
+    try { setFinalFarmerPhoto(await optimiseImageFile(file, { maxBytes: 280 * 1024, maxDimension: 1440 })); } finally { setOptimisingPhotos(false); }
+  };
+  const onSitePhotosChange = async e => {
+    const files = Array.from(e.target.files || []).slice(0, 12);
+    if (!files.length) return;
+    setOptimisingPhotos(true);
+    try { setFinalSitePhotos(await optimiseImageFiles(files, { maxBytes: 240 * 1024, maxDimension: 1440 })); } finally { setOptimisingPhotos(false); }
+  };
 
   const captureFarmerSig = () => {
     if (farmerSigRef.current.isEmpty()) {
@@ -255,6 +271,28 @@ export default function InstallationCompletionModal({
       surveyorSigRef.current.clear();
     });
   };
+
+  useEffect(() => {
+    if (!show || !draftKey) return;
+    let active = true;
+    getFieldDraft(draftKey).then(rec => {
+      const d = rec?.data; if (!active || !d) return;
+      setPumpNoUnique(d.pumpNoUnique || ''); setMotorNoUnique(d.motorNoUnique || ''); setControllerNoUnique(d.controllerNoUnique || ''); setImeiNoUnique(d.imeiNoUnique || '');
+      setPanelsArray(Array.isArray(d.panelsArray) && d.panelsArray.length ? d.panelsArray : ['']); setInstallationDoneYesNo(d.installationDoneYesNo || ''); setPumpNotOperatingYesNo(d.pumpNotOperatingYesNo || ''); setCompanyAssignedPersonName(d.companyAssignedPersonName || '');
+      setShowComplaintSection(!!d.showComplaintSection); setComplaintIssue(d.complaintIssue || ''); setComplaintRaisedDate(d.complaintRaisedDate || ''); setComplaintNumber(d.complaintNumber || '');
+      setFinalFarmerPhoto(d.finalFarmerPhoto || null); setFinalSitePhotos(Array.isArray(d.finalSitePhotos) ? d.finalSitePhotos : []); setFinalSignature(d.finalSignature || null); setFinalSurveyorSignature(d.finalSurveyorSignature || null); setAdditionalItems(Array.isArray(d.additionalItems) ? d.additionalItems : []); setDraftSavedAt(rec.updatedAt || Date.now());
+    });
+    return () => { active = false; };
+  }, [show, draftKey]);
+
+  useEffect(() => {
+    if (!show || !draftKey) return;
+    const timer = setTimeout(async () => {
+      await saveFieldDraft(draftKey, { pumpNoUnique,motorNoUnique,controllerNoUnique,imeiNoUnique,panelsArray,installationDoneYesNo,pumpNotOperatingYesNo,companyAssignedPersonName,showComplaintSection,complaintIssue,complaintRaisedDate,complaintNumber,finalFarmerPhoto,finalSitePhotos,finalSignature,finalSurveyorSignature,additionalItems,beneficiaryId:farmer?.beneficiaryId,beneficiaryName:farmer?.beneficiaryName });
+      setDraftSavedAt(Date.now());
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [show,draftKey,pumpNoUnique,motorNoUnique,controllerNoUnique,imeiNoUnique,panelsArray,installationDoneYesNo,pumpNotOperatingYesNo,companyAssignedPersonName,showComplaintSection,complaintIssue,complaintRaisedDate,complaintNumber,finalFarmerPhoto,finalSitePhotos,finalSignature,finalSurveyorSignature,additionalItems,farmer?.beneficiaryId,farmer?.beneficiaryName]);
 
   // Reset form state
   const resetForm = () => {
@@ -283,6 +321,7 @@ export default function InstallationCompletionModal({
     setIssuedInventory({ linked: false, items: [] });
     setScanCode('');
     setScanMessage('');
+    setScanDetails({});
     setAdditionalItems([]);
   };
 
@@ -397,10 +436,19 @@ export default function InstallationCompletionModal({
             'Content-Type': 'multipart/form-data',
             Authorization: `Bearer ${token}`,
           },
+          opsynqDraftKey: draftKey,
         }
       );
 
       console.log('Backend response:', res.data);
+      if (res?.data?.queued || res?.status === 202) {
+        setError('');
+        onInstallationComplete?.({ ...farmer, offlineQueued: true });
+        handleClose();
+        return;
+      }
+      await deleteFieldDraft(draftKey);
+      setDraftSavedAt(null);
       onInstallationComplete(res.data.updatedFarmer);
       resetForm();
       handleClose();
@@ -429,9 +477,10 @@ export default function InstallationCompletionModal({
       scrollable
     >
       <Modal.Header closeButton>
-        <Modal.Title>
-          Installation Completion Form: {farmer?.beneficiaryName}
-        </Modal.Title>
+        <div>
+          <Modal.Title>Installation Completion · {farmer?.beneficiaryName}</Modal.Title>
+          <div className="installation-draft-state">{navigator.onLine ? 'Online' : 'Offline'} · {draftSavedAt ? `Draft saved ${new Date(draftSavedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}` : 'Draft protection active'}</div>
+        </div>
         <div className="header-controls">
           <Button 
             variant="outline-secondary" 
@@ -461,6 +510,7 @@ export default function InstallationCompletionModal({
             <div>{error}</div>
           </div>
         )}
+        {(finalFarmerPhoto || finalSitePhotos.length > 0) && <div className="installation-upload-summary">Evidence ready · {1 + finalSitePhotos.length} photo{finalSitePhotos.length ? 's' : ''} · {formatBytes(totalFileBytes([finalFarmerPhoto, ...finalSitePhotos].filter(Boolean)))}{optimisingPhotos ? ' · Optimising…' : ''}</div>}
         
         <Accordion activeKey={openKeys} alwaysOpen>
           <Accordion.Item eventKey="0">
@@ -590,7 +640,7 @@ export default function InstallationCompletionModal({
                           <strong><ScanLine size={17} /> Scan material for this beneficiary</strong>
                           <span>Use a barcode/QR handheld scanner or type the serial/barcode and press Enter. Nothing is installed until final submission.</span>
                         </div>
-                        <Form onSubmit={scanIssuedMaterial} className="beneficiary-scan-form">
+                        <div className="beneficiary-scan-form">
                           <Form.Control
                             value={scanCode}
                             onChange={e => setScanCode(e.target.value)}
@@ -599,12 +649,13 @@ export default function InstallationCompletionModal({
                             enterKeyHint="done"
                             aria-label="Scan serial or barcode for beneficiary installation"
                           />
-                          <Button type="submit" disabled={!scanCode.trim() || scanLoading}>{scanLoading ? 'Checking…' : 'Add item'}</Button>
+                          <Button type="button" onClick={scanIssuedMaterial} disabled={!scanCode.trim() || scanLoading}>{scanLoading ? 'Checking…' : 'Add item'}</Button>
                           <Button type="button" variant="outline-secondary" className="scan-camera-button" onClick={() => setScanCameraOpen(v => !v)}><Camera size={16} /> {scanCameraOpen ? 'Stop camera' : 'Scan with camera'}</Button>
-                        </Form>
+                        </div>
                         {scanCameraOpen && <div className="installer-camera-scan"><video ref={scanVideoRef} playsInline muted /><span>Point the rear camera at the barcode or QR code. It will validate automatically.</span></div>}
                         {scanCameraError && <div className="scan-camera-error" role="status">{scanCameraError}</div>}
                         {scanMessage && <div className="scan-success" role="status"><Check size={15} /> {scanMessage}</div>}
+                        {Object.keys(scanDetails).length > 0 && <div className="scan-detail-grid" aria-label="Last scanned asset details">{Object.entries(scanDetails).filter(([,v])=>v!==''&&v!=null).slice(0,8).map(([k,v])=><span key={k}><small>{formatFieldName(k)}</small><strong>{String(v)}</strong></span>)}</div>}
                         <div className="beneficiary-selection-summary" aria-label="Material selected for this beneficiary">
                           <span><small>Pump</small><strong>{pumpNoUnique ? '1' : '0'}</strong></span>
                           <span><small>Motor</small><strong>{motorNoUnique ? '1' : '0'}</strong></span>

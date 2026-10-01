@@ -78,7 +78,8 @@
     "ai:doctor": "node scripts/ai-doctor.js",
     "agency:cleanup-branding": "node scripts/cleanup-agency-branding.js",
     "qa:agency-final": "node scripts/agency-final-contracts.js",
-    "qa:map-refresh": "node scripts/agency-map-refresh-regression.js"
+    "qa:map-refresh": "node scripts/agency-map-refresh-regression.js",
+    "qa:agency-production-flow": "node scripts/agency-production-flow-contracts.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",

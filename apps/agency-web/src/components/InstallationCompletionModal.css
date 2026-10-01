@@ -647,3 +647,21 @@
 
 /* Mobile-first installation scanner */
 .installation-modal .beneficiary-scan-form{grid-template-columns:minmax(0,1fr) auto auto}.installation-modal .scan-camera-button{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;background:#fff!important;color:#36574a!important;border-color:#cbd8d2!important}.installation-modal .installer-camera-scan{display:grid;gap:.45rem;padding:.6rem;border:1px solid #d8e1dd;border-radius:10px;background:#111a16}.installation-modal .installer-camera-scan video{width:100%;max-height:340px;object-fit:cover;border-radius:8px;background:#0c120f}.installation-modal .installer-camera-scan span{color:#dbe5e0;font-size:.74rem;line-height:1.4}.installation-modal .scan-camera-error{padding:.55rem .65rem;border:1px solid #ead4c9;border-radius:8px;background:#fff7f2;color:#86452f;font-size:.76rem}@media(max-width:720px){.installation-modal .beneficiary-scan-form{grid-template-columns:1fr}.installation-modal .beneficiary-scan-form .btn{width:100%;min-height:46px}.installation-modal .beneficiary-scan-form .form-control{font-size:16px;min-height:48px}.installation-modal .installer-camera-scan{margin-left:-.25rem;margin-right:-.25rem}.installation-modal .installer-camera-scan video{max-height:52vh}}
+
+/* Final field-safe state and scan metadata */
+.installation-modal .installation-draft-state{margin-top:3px;color:#b9cbc2;font-size:.7rem;font-weight:600;letter-spacing:.01em}
+.installation-modal .installation-upload-summary{margin:0 0 12px;padding:8px 10px;border:1px solid #d7e2dc;border-radius:8px;background:#f5f9f7;color:#3e5d50;font-size:.74rem;font-weight:650}
+.installation-modal .scan-detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;padding:8px;border:1px solid #dce5e0;background:#f8faf9;border-radius:8px}
+.installation-modal .scan-detail-grid span{min-width:0;display:flex;flex-direction:column;gap:2px;padding:6px 7px;background:#fff;border:1px solid #e6ece8;border-radius:7px}
+.installation-modal .scan-detail-grid small{font-size:.61rem;text-transform:uppercase;letter-spacing:.05em;color:#7a8780;font-weight:750}
+.installation-modal .scan-detail-grid strong{font-size:.74rem;color:#20372d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:600px){.installation-modal .scan-detail-grid{grid-template-columns:1fr 1fr}.installation-modal .installation-draft-state{font-size:.66rem}}
+
+/* Final field-safe state and scan metadata */
+.installation-modal .installation-draft-state{margin-top:3px;color:#b9cbc2;font-size:.7rem;font-weight:600;letter-spacing:.01em}
+.installation-modal .installation-upload-summary{margin:0 0 12px;padding:8px 10px;border:1px solid #d7e2dc;border-radius:8px;background:#f5f9f7;color:#3e5d50;font-size:.74rem;font-weight:650}
+.installation-modal .scan-detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;padding:8px;border:1px solid #dce5e0;background:#f8faf9;border-radius:8px}
+.installation-modal .scan-detail-grid span{min-width:0;display:flex;flex-direction:column;gap:2px;padding:6px 7px;background:#fff;border:1px solid #e6ece8;border-radius:7px}
+.installation-modal .scan-detail-grid small{font-size:.61rem;text-transform:uppercase;letter-spacing:.05em;color:#7a8780;font-weight:750}
+.installation-modal .scan-detail-grid strong{font-size:.74rem;color:#20372d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:600px){.installation-modal .scan-detail-grid{grid-template-columns:1fr 1fr}.installation-modal .installation-draft-state{font-size:.66rem}}
