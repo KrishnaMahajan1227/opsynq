@@ -172,10 +172,12 @@ const UploadExcel = () => {
         toast.info('Duplicate records found. Review them before continuing.');
         return;
       }
-      toast.success(data.message || 'Farmer file processed successfully.');
+      const importSummary = `${data.inserted || 0} created · ${data.updated || 0} updated · ${data.skipped || 0} skipped · ${data.failed || 0} failed`;
+      (data.skipped || data.failed ? toast.warn : toast.success)(`Beneficiary import complete: ${importSummary}${data.extraColumnsPreserved ? ' · extra columns preserved' : ''}.`);
       reset('regular');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Upload failed. Please try again.');
+      const detail = err.response?.data;
+      toast.error(detail?.message || 'Upload failed. Please try again.');
     } finally {
       setLoading(false);
       setLoadingType('');
@@ -207,7 +209,8 @@ const UploadExcel = () => {
       const formData = new FormData();
       formData.append('excel', jsrFile);
       const { data } = await callApi(formData, 'uploadJsrExcel');
-      toast.success(`JSR updated for ${data.updated} farmers.`);
+      const jsrAttention = Number(data.failed || 0) + Number(data.invalidRecords?.length || 0);
+      (jsrAttention ? toast.warn : toast.success)(`JSR import complete: ${data.updated || 0} updated · ${data.skipped || 0} duplicate row(s) skipped · ${jsrAttention} need attention.`);
       if (data.failedRecords.length || data.invalidRecords.length) {
         setJsrResultModal({
           show: true,
@@ -284,7 +287,7 @@ const UploadExcel = () => {
             <span><FaInfoCircle /> Review feedback after processing</span>
           </div>
 
-          <div className="upload-template-line"><div><strong>Use the approved template</strong><span>Extra beneficiary columns are preserved as Custom Fields.</span></div><Button type="button" className="upload-secondary-btn" onClick={() => downloadTemplate(type)} disabled={loading}>Download template</Button></div>
+          <div className="upload-template-line"><div><strong>Use the approved template</strong><span>Two SAMPLE rows show the format and are ignored automatically. Fill rows marked IMPORT; extra columns can be preserved as Custom Fields.</span></div><Button type="button" className="upload-secondary-btn" onClick={() => downloadTemplate(type)} disabled={loading}>Download template</Button></div>
 
           <div className="upload-actions">
             <Button type="submit" className="upload-primary-btn" disabled={loading || !fileValue}>
@@ -322,7 +325,7 @@ const UploadExcel = () => {
           </header>
 
           <section className="upload-guidance-strip">
-            <div><span>1</span><strong>Select workbook</strong><small>Choose the correct import type.</small></div>
+            <div><span>1</span><strong>Download & fill template</strong><small>Keep SAMPLE rows for reference; only IMPORT rows are processed.</small></div>
             <div><span>2</span><strong>Validate & process</strong><small>Format and size checks happen first.</small></div>
             <div><span>3</span><strong>Review outcome</strong><small>Resolve duplicates or failed rows if needed.</small></div>
           </section>
@@ -387,10 +390,10 @@ const UploadExcel = () => {
             <div className="result-table-wrap">
               <div className="result-table-head"><strong>Records requiring attention</strong><span>{jsrResultModal.failedRecords.length + jsrResultModal.invalidRecords.length} rows</span></div>
               <Table responsive hover size="sm" className="result-table">
-                <thead><tr><th>#</th><th>Beneficiary ID</th><th>Name</th><th>Mobile</th><th>Aadhar No</th><th>Reason</th></tr></thead>
+                <thead><tr><th>Excel row</th><th>Beneficiary ID</th><th>Name</th><th>Mobile</th><th>Aadhar No</th><th>Reason</th></tr></thead>
                 <tbody>
                   {[...jsrResultModal.failedRecords, ...jsrResultModal.invalidRecords].map((rec, idx) => (
-                    <tr key={idx}><td>{idx + 1}</td><td>{rec.beneficiaryId || '—'}</td><td>{rec.beneficiaryName || '—'}</td><td>{rec.mobile || '—'}</td><td>{rec.aadharNo || '—'}</td><td>{rec.reason || 'Validation failed'}</td></tr>
+                    <tr key={idx}><td>{rec.row || '—'}</td><td>{rec.beneficiaryId || '—'}</td><td>{rec.beneficiaryName || '—'}</td><td>{rec.mobile || '—'}</td><td>{rec.aadharNo || '—'}</td><td>{rec.reason || 'Validation failed'}</td></tr>
                   ))}
                 </tbody>
               </Table>

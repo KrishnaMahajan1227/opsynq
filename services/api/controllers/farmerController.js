@@ -10,6 +10,7 @@ const asyncHandler = require('express-async-handler');
 const { farmerQueryForUser, canAccessFarmer, resolveAgencyScope } = require('../utils/agencyScope');
 const { redactFarmer } = require('../utils/pii');
 const { validateApplicationTransition, contextForFarmer, publishAgencyProgress, syncComplaintServiceCase } = require('../utils/agencyLifecycle');
+const { cleanImportRows, rowNumber, sheetHeaders, extraFields, workbookBuffer } = require('../utils/excelImport');
 
 /* Multer setup for Excel uploads using memory storage */
 const storage = multer.memoryStorage();
@@ -694,10 +695,12 @@ exports.deleteFarmer = async (req, res) => {
 exports.downloadExcelTemplate=async(req,res)=>{
   const type=String(req.params.type||'beneficiary').toLowerCase();
   const columns=type==='jsr'?['Beneficiary ID','Beneficiary Name','Mobile','Aadhar No','JSR Status']:Object.keys(mapping);
-  const sample=Object.fromEntries(columns.map(k=>[k,k==='Beneficiary ID'?'APP-0001':k==='Beneficiary Name'?'Sample Beneficiary':k==='Mobile'?'9876543210':k==='JSR Status'?'JSR SUBMITTED':'']));
-  const ws=xlsx.utils.json_to_sheet([sample],{header:columns});const wb=xlsx.utils.book_new();xlsx.utils.book_append_sheet(wb,ws,type==='jsr'?'JSR Update':'Beneficiaries');
-  const help=xlsx.utils.aoa_to_sheet([['Instructions'],['Do not rename required standard headers. Extra columns are reviewed before import and can be preserved as Custom Fields.'],[type==='jsr'?'Required: Beneficiary ID, Beneficiary Name, Mobile, Aadhar No, JSR Status':'Required: Beneficiary ID. Surveyor Name/Mobile, Installation Technician and Rework Assign Technician can be used to carry work ownership into the Agency workflow.'],['Assignment rule'],['Technician usernames must belong to an active technician in the current Agency scope; invalid technician values are not assigned.']]);xlsx.utils.book_append_sheet(wb,help,'Instructions');
-  const buf=xlsx.write(wb,{type:'buffer',bookType:'xlsx'});res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition',`attachment; filename="opsynq-agency-${type}-template.xlsx"`);res.send(buf);
+  const samples=type==='jsr'?[{'Beneficiary ID':'SAMPLE-BEN-001','Beneficiary Name':'Ramesh Patil','Mobile':'9876501001','Aadhar No':'111122223333','JSR Status':'JSR SUBMITTED'},{'Beneficiary ID':'SAMPLE-BEN-002','Beneficiary Name':'Sunita Wankhede','Mobile':'9876501002','Aadhar No':'222233334444','JSR Status':'JSR OUTCOME ACCEPTED'}]:[{'Beneficiary ID':'SAMPLE-BEN-001','Beneficiary Name':'Ramesh Patil','Mobile':'9876501001','Aadhar No':'111122223333','Scheme':'MSEDCL PM KUSUM T 1','VILLAGE':'Katol','TALUKA':'Katol','DISTRICT':'Nagpur','Pump HP':'5','Inspection Status':'Pending','Application Status':'Pending','Material Received Confirmation (Yes/No)':'No'},{'Beneficiary ID':'SAMPLE-BEN-002','Beneficiary Name':'Sunita Wankhede','Mobile':'9876501002','Aadhar No':'222233334444','Scheme':'MSEDCL PM KUSUM T 1','VILLAGE':'Narkhed','TALUKA':'Narkhed','DISTRICT':'Nagpur','Pump HP':'7.5','Inspection Status':'Pending','Application Status':'Pending','Material Received Confirmation (Yes/No)':'No'}];
+  const yesNo=['Yes','No'];
+  const validations=type==='jsr'?{'JSR Status':['JSR OUTCOME ACCEPTED','JSR OUTCOME REJECTED','JSR SUBMITTED','JSR IN DISCREPANCY','VENDOR INFORMATION RECEIVED']}:{'Scheme':['MSEDCL Atal Solar Krushi Pump Yojana','MEDA Atal Phase 1','MEDA Atal Phase 2','MSEDCL MSKPY T 1','MSEDCL MSKPY T 2','MSEDCL MSKPY T 3','MSEDCL MSKPY T 4','MEDA PM KUSUM Phase 1','MEDA PM KUSUM Phase 2','MEDA PM KUSUM Phase 3','MEDA PM KUSUM Phase 4','MEDA PM KUSUM Phase 5','MSEDCL PM KUSUM T 1','MSEDCL PM KUSUM T 2','MSEDCL MTSKPY T1','MEDA MTSKPY T1'],'Inspection Status':['Pending','In Progress','Completed'],'Application Status':['Pending','Pending Installation','Move to Installation','Ordered','Dispatch Completed','Ready for Installation','Installation Completed','Complaint Raised','Closed'],'JSR Deviation (Yes/No)':yesNo,'Material Received Confirmation (Yes/No)':yesNo,'Installation Done (Yes/No)':yesNo,'Pump Not Operating (Yes/No)':yesNo,'Bill Submitted to Vendor Company Yes/No':yesNo,'Full set/ Partial Set':['Full Set','Partial Set'],'Complaint Status':['Open','In Progress','Resolved','Closed'],'Pump HP':['3','5','7.5','10']};
+  if(type!=='jsr'){const techs=await scopedTechniciansForUser(req.user);const names=techs.map(t=>String(t.username||'').trim()).filter(Boolean).sort();const mobiles=techs.map(t=>String(t.mobile||'').trim()).filter(Boolean).sort();if(names.length){validations['Surveyor Name']=names;validations['Installation Technician']=names;validations['Rework Assign Technician']=names;}if(mobiles.length){validations['Surveyor Mobile']=mobiles;validations['Installation Technician Mobile']=mobiles;}}
+  const buf=workbookBuffer({sheetName:type==='jsr'?'JSR Update':'Beneficiaries',columns,samples,validations,instructions:[[type==='jsr'?'Required':'Required',type==='jsr'?'Beneficiary ID, Beneficiary Name, Mobile, Aadhar No and JSR Status are mandatory.':'Beneficiary ID is mandatory. Standard beneficiary and assignment fields map automatically.'],['Assignments','Surveyor / Installation / Rework usernames must belong to an active technician in the signed-in Agency scope. Invalid assignments are ignored and reported through the import result.'],['Extra columns','Additional columns are reviewed before import. Choose Include as Custom Fields to preserve them on the beneficiary.']]});
+  res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition',`attachment; filename="opsynq-agency-${type}-template.xlsx"`);res.send(buf);
 };
 
 /* POST /uploadExcel */
@@ -709,7 +712,21 @@ exports.uploadExcel = [
 
       const wb = xlsx.read(req.file.buffer, { type: 'buffer' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
-      const raw = xlsx.utils.sheet_to_json(sheet).filter(r => r['Beneficiary ID']);
+      const parsedRows = cleanImportRows(sheet);
+      if (!parsedRows.length) return res.status(400).json({ message: 'No import rows found. Fill an IMPORT row in the downloaded template; SAMPLE rows are ignored automatically.' });
+      const missingRequired = parsedRows.filter((row) => !String(row['Beneficiary ID'] || '').trim() || !String(row['Beneficiary Name'] || '').trim());
+      if (missingRequired.length) {
+        const rows = missingRequired.slice(0, 10).map((row, i) => rowNumber(row, i + 2));
+        return res.status(400).json({ message: `${missingRequired.length} row(s) are missing Beneficiary ID or Beneficiary Name. Correct Excel row(s): ${rows.join(', ')}${missingRequired.length > rows.length ? '…' : ''}. No records were written.`, errors: missingRequired.slice(0, 50).map((row, i) => ({ row: rowNumber(row, i + 2), message: 'Beneficiary ID and Beneficiary Name are required.' })) });
+      }
+      const seenBeneficiaryIds = new Set();
+      const duplicateRows = [];
+      const raw = [];
+      for (const row of parsedRows) {
+        const key = String(row['Beneficiary ID'] || '').trim().toLowerCase();
+        if (seenBeneficiaryIds.has(key)) { duplicateRows.push({ row: rowNumber(row), beneficiaryId: row['Beneficiary ID'], message: 'Duplicate Beneficiary ID repeated inside the same Excel file; later row skipped.' }); continue; }
+        seenBeneficiaryIds.add(key); raw.push(row);
+      }
       const allHeaders = [...new Set(raw.flatMap((row) => Object.keys(row || {})))];
       const knownHeadersForImport = new Set([...Object.keys(mapping), ...Array.from({ length: 20 }, (_, i) => `Panel${i + 1}`)]);
       const customHeaders = allHeaders.filter((header) => !knownHeadersForImport.has(header));
@@ -780,7 +797,7 @@ exports.uploadExcel = [
         }
 
         const knownHeaders=new Set([...Object.keys(mapping),...Array.from({length:20},(_,i)=>`Panel${i+1}`)]);
-        obj.customFields=customFieldDecision === 'ignore' ? {} : Object.fromEntries(Object.entries(r).filter(([k,v])=>!knownHeaders.has(k)&&v!==undefined&&v!==null&&String(v).trim()!=='').map(([k,v])=>[k,v]));
+        obj.customFields=customFieldDecision === 'ignore' ? {} : extraFields(r,knownHeaders);
         obj.excelFileName = req.file.originalname;
         obj.excelUploadDate = new Date();
 
@@ -825,17 +842,22 @@ exports.uploadExcel = [
         return obj;
       });
 
+      const candidateIds = [...new Set(transformed.map((row) => String(row.beneficiaryId || '').trim()).filter(Boolean))];
+      const existingFarmers = candidateIds.length ? await Farmer.find({ beneficiaryId: { $in: candidateIds } }) : [];
+      const existingByBeneficiaryId = new Map(existingFarmers.map((farmer) => [String(farmer.beneficiaryId || '').trim().toLowerCase(), farmer]));
+      const agencyScope = await resolveAgencyScope(req.user);
+      const allowedFarmerIds = new Set((agencyScope.farmerIds || []).map(String));
+      const outsideScope = [];
       const duplicates = [], fresh = [];
       for (const row of transformed) {
-        const exists = await Farmer.findOne({
-          beneficiaryId: row.beneficiaryId,
-          aadharNo: row.aadharNo,
-          mobile: row.mobile
-        });
-        exists
-          ? duplicates.push({ existing: exists, incoming: row })
-          : fresh.push(row);
+        const key = String(row.beneficiaryId || '').trim().toLowerCase();
+        const exists = existingByBeneficiaryId.get(key);
+        if (!exists) { fresh.push(row); continue; }
+        const allowed = agencyScope.demoUnscoped || (agencyScope.linked && allowedFarmerIds.has(String(exists._id)));
+        if (!allowed) { outsideScope.push(row.beneficiaryId); continue; }
+        duplicates.push({ existing: exists, incoming: row });
       }
+      if (outsideScope.length) return res.status(409).json({ message: `${outsideScope.length} Beneficiary ID(s) already exist outside your Agency scope. Nothing was written. Use the Company → Work Package assignment flow before importing them into this Agency.`, errors: outsideScope.slice(0, 50).map((beneficiaryId) => ({ beneficiaryId, message: 'Existing beneficiary is outside the signed-in Agency scope.' })) });
 
       let decisions = req.body.decisions && JSON.parse(req.body.decisions);
       if (!decisions && duplicates.length) {
@@ -862,6 +884,7 @@ exports.uploadExcel = [
         for (const { existing, incoming } of duplicates) {
           if (decisions[incoming.beneficiaryId] !== 'update') continue;
           const merged = { ...existing.toObject(), ...incoming, customFields: { ...(existing.customFields || {}), ...(incoming.customFields || {}) } };
+          delete merged._id; delete merged.__v;
           if (keepInspection(existing.inspectionStatus)) {
             merged.inspectionStatus = existing.inspectionStatus;
             merged.applicationStatus = existing.applicationStatus;
@@ -892,12 +915,17 @@ exports.uploadExcel = [
         await Farmer.bulkWrite(ops);
       }
 
+      const updated = decisions ? duplicates.filter(({ incoming }) => decisions[incoming.beneficiaryId] === 'update').length : 0;
+      const skipped = (duplicates.length - updated) + duplicateRows.length;
       return res.json({
         message: 'Excel processed successfully.',
+        total: parsedRows.length,
         inserted: fresh.length,
-        skipped: duplicates.length - (decisions
-          ? Object.values(decisions).filter(v => v === 'update').length
-          : 0)
+        updated,
+        skipped,
+        failed: 0,
+        errors: duplicateRows,
+        extraColumnsPreserved: customFieldDecision !== 'ignore'
       });
     } catch (err) {
       console.error('Error in uploadExcel:', err);
@@ -915,10 +943,11 @@ exports.uploadJsrExcel = [
 
       const wb = xlsx.read(req.file.buffer, { type: 'buffer' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
-      const raw = xlsx.utils.sheet_to_json(sheet).filter(r => r['Beneficiary ID']);
+      const raw = cleanImportRows(sheet);
 
       const requiredColumns = ['Beneficiary ID', 'Beneficiary Name', 'Mobile', 'Aadhar No', 'JSR Status'];
-      const headers = Object.keys(raw[0] || {});
+      const jsrKnownHeaders = new Set(requiredColumns);
+      const headers = sheetHeaders(sheet);
       const missingColumns = requiredColumns.filter(col => !headers.includes(col));
       if (missingColumns.length > 0) {
         return res.status(400).json({
@@ -936,6 +965,7 @@ exports.uploadJsrExcel = [
 
       const validRecords = [];
       const invalidRecords = [];
+      const seenBeneficiaryIds = new Set();
 
       for (const row of raw) {
         const beneficiaryId = row['Beneficiary ID']?.toString().trim();
@@ -943,6 +973,7 @@ exports.uploadJsrExcel = [
         const mobile = row['Mobile']?.toString().trim();
         const aadharNo = row['Aadhar No']?.toString().trim();
         const jsrStatus = row['JSR Status']?.toString().trim().toUpperCase();
+        const excelRow = rowNumber(row);
 
         if (!beneficiaryId || !beneficiaryName || !mobile || !aadharNo || !jsrStatus) {
           invalidRecords.push({
@@ -951,10 +982,18 @@ exports.uploadJsrExcel = [
             mobile: mobile || 'N/A',
             aadharNo: aadharNo || 'N/A',
             jsrStatus: jsrStatus || 'N/A',
+            row: excelRow,
             reason: 'Missing required fields'
           });
           continue;
         }
+
+        const dedupeKey = beneficiaryId.toLowerCase();
+        if (seenBeneficiaryIds.has(dedupeKey)) {
+          invalidRecords.push({ beneficiaryId, beneficiaryName, mobile, aadharNo, jsrStatus, row: excelRow, reason: 'Duplicate Beneficiary ID repeated inside the same JSR file; later row skipped.' });
+          continue;
+        }
+        seenBeneficiaryIds.add(dedupeKey);
 
         if (!validStatuses.includes(jsrStatus)) {
           invalidRecords.push({
@@ -963,6 +1002,7 @@ exports.uploadJsrExcel = [
             mobile,
             aadharNo,
             jsrStatus,
+            row: excelRow,
             reason: 'Invalid JSR Status'
           });
           continue;
@@ -973,7 +1013,9 @@ exports.uploadJsrExcel = [
           beneficiaryName,
           mobile,
           aadharNo,
-          jsrDeviationYesNo: jsrStatus  // Save status in existing field
+          jsrDeviationYesNo: jsrStatus,
+          row: excelRow,
+          customFields: extraFields(row, jsrKnownHeaders)
         });
       }
 
@@ -997,14 +1039,11 @@ exports.uploadJsrExcel = [
             continue;
           }
 
-          await Farmer.updateOne(
-            { _id: farmer._id },
-            {
-              $set: {
-                jsrDeviationYesNo: record.jsrDeviationYesNo  // Update existing field with status
-              }
-            }
-          );
+          farmer.jsrDeviationYesNo = record.jsrDeviationYesNo;
+          farmer.customFields = { ...(farmer.customFields || {}), ...(record.customFields || {}) };
+          farmer.excelFileName = req.file.originalname;
+          farmer.excelUploadDate = new Date();
+          await farmer.save();
           updatedFarmers.push(record);
         } else {
           failedUpdates.push({
@@ -1016,10 +1055,13 @@ exports.uploadJsrExcel = [
 
       return res.json({
         message: 'JSR Excel processed successfully.',
+        total: raw.length,
         updated: updatedFarmers.length,
         failed: failedUpdates.length,
+        skipped: invalidRecords.filter((x) => String(x.reason || '').startsWith('Duplicate Beneficiary ID')).length,
         failedRecords: failedUpdates,
-        invalidRecords
+        invalidRecords,
+        extraColumnsPreserved: raw.some((row) => Object.keys(extraFields(row, jsrKnownHeaders)).length > 0)
       });
 
     } catch (err) {
