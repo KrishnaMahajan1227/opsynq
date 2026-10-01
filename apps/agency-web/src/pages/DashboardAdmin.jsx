@@ -333,6 +333,12 @@ export default function DashboardAdmin() {
   }, [fetchFarmers, fetchTechnicians, fetchChangeRequests, token, userId, role]);
 
   useEffect(() => {
+    const onDataRefresh = () => { Promise.all([fetchFarmers(), fetchTechnicians(), fetchChangeRequests()]).catch(() => {}); };
+    window.addEventListener('opsynq:data-refresh', onDataRefresh);
+    return () => window.removeEventListener('opsynq:data-refresh', onDataRefresh);
+  }, [fetchFarmers, fetchTechnicians, fetchChangeRequests]);
+
+  useEffect(() => {
     if (activeTab !== 'complaints') return undefined;
     const intervalId = setInterval(() => {
       Promise.all([fetchFarmers(), fetchChangeRequests()]).catch(() => {});

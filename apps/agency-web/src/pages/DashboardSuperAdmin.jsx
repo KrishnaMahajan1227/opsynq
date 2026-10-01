@@ -381,6 +381,12 @@ export default function DashboardSuperAdmin() {
   }, []);
 
   useEffect(() => {
+    const onDataRefresh = () => { Promise.all([fetchFarmers(), fetchUsers(), fetchRequests()]).catch(() => {}); };
+    window.addEventListener('opsynq:data-refresh', onDataRefresh);
+    return () => window.removeEventListener('opsynq:data-refresh', onDataRefresh);
+  }, [fetchFarmers, fetchUsers, fetchRequests]);
+
+  useEffect(() => {
     if (activeTab !== 'complaints' && activeTab !== 'requests') return undefined;
     const intervalId = setInterval(() => {
       if (activeTab === 'complaints') fetchFarmers();

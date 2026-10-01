@@ -1,0 +1,17 @@
+const fs=require('fs');
+const assert=(ok,msg)=>{if(!ok){console.error(`FAIL ${msg}`);process.exitCode=1}else console.log(`PASS ${msg}`)};
+const read=p=>fs.readFileSync(p,'utf8');
+const agency=read('apps/agency-web/src/components/ResilienceStatus.jsx');
+const platform=read('apps/platform-web/src/core/resilience.jsx');
+const amap=read('apps/agency-web/src/components/TechLocationMap.jsx');
+const cmap=read('apps/platform-web/src/features/company/geo/GeoOperationsPage.jsx');
+assert(!agency.includes("safeReload('tenant-data-update')"),'Agency tenant updates do not hard reload');
+assert(!agency.includes("safeReload('offline-sync')"),'Agency offline sync does not hard reload');
+assert(!platform.includes("safeReload('tenant-data-update')"),'Company tenant updates do not hard reload');
+assert(!platform.includes("safeReload('offline-sync')"),'Company offline sync does not hard reload');
+assert(agency.includes("opsynq:data-refresh")&&platform.includes("opsynq:data-refresh"),'background refresh event is emitted');
+assert(!amap.includes('tile.openstreetmap.org')&&!cmap.includes('tile.openstreetmap.org'),'blocked OSM volunteer tile endpoint removed');
+assert(amap.includes('server.arcgisonline.com')&&amap.includes('basemaps.cartocdn.com'),'Agency map has primary and fallback providers');
+assert(cmap.includes('server.arcgisonline.com')&&cmap.includes('basemaps.cartocdn.com'),'Company Geo map has primary and fallback providers');
+assert(cmap.includes("addEventListener('opsynq:data-refresh'"),'Company Geo silently refreshes live data');
+if(process.exitCode)process.exit(process.exitCode);

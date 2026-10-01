@@ -77,7 +77,8 @@
     "qa:data-integrity": "node scripts/data-integrity-contracts.js",
     "ai:doctor": "node scripts/ai-doctor.js",
     "agency:cleanup-branding": "node scripts/cleanup-agency-branding.js",
-    "qa:agency-final": "node scripts/agency-final-contracts.js"
+    "qa:agency-final": "node scripts/agency-final-contracts.js",
+    "qa:map-refresh": "node scripts/agency-map-refresh-regression.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",

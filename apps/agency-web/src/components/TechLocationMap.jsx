@@ -7,6 +7,18 @@ import { API_URL, SOCKET_REALTIME_ENABLED, SOCKET_SERVER_URL } from '../config';
 
 const defaultCenter = [19.7515, 75.7139];
 const POLL_MS = 30000;
+const MAP_TILES = [
+  { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCAN, Esri Japan, METI, Esri China (Hong Kong), NOSTRA, &copy; OpenStreetMap contributors' },
+  { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+];
+
+const ResilientTileLayer = () => {
+  const [index, setIndex] = useState(0);
+  const [errors, setErrors] = useState(0);
+  useEffect(() => setErrors(0), [index]);
+  const provider = MAP_TILES[index];
+  return <TileLayer key={provider.url} attribution={provider.attribution} url={provider.url} maxZoom={19} eventHandlers={{ tileerror: () => setErrors((count) => { const next = count + 1; if (next >= 3 && index < MAP_TILES.length - 1) setIndex(index + 1); return next; }) }} />;
+};
 
 const isValidCoordinate = (lat, lng) => {
   const latitude = Number(lat);
@@ -106,7 +118,7 @@ const TechLocationMap = () => {
       </div>
       <div className="location-map-canvas" aria-label="User location map">
         <MapContainer center={defaultCenter} zoom={6} scrollWheelZoom={false} style={{ width: '100%', height: '100%' }} attributionControl>
-          <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <ResilientTileLayer />
           <FitLocationBounds locations={list} />
           {list.map((loc) => (
             <CircleMarker key={loc.userId || loc.technicianId} center={[Number(loc.latitude), Number(loc.longitude)]} radius={8} pathOptions={{ color: '#315f50', fillColor: '#315f50', fillOpacity: 0.86, weight: 2 }}>

@@ -95,6 +95,12 @@ export default function DashboardTechnician() {
   }, [fetchTasks, technicianUsername]);
 
   useEffect(() => {
+    const onDataRefresh = () => { if (technicianUsername) fetchTasks(); };
+    window.addEventListener('opsynq:data-refresh', onDataRefresh);
+    return () => window.removeEventListener('opsynq:data-refresh', onDataRefresh);
+  }, [fetchTasks, technicianUsername]);
+
+  useEffect(() => {
     if (activeTab !== 'complaints' || !technicianUsername) return undefined;
     const intervalId = setInterval(fetchTasks, 30000);
     return () => clearInterval(intervalId);
