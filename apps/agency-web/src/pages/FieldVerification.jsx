@@ -435,7 +435,7 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
                     {farmer.sitePhotosUrls?.map((u, i) => (
                       <Col xs={12} sm={6} md={4} key={i} className="mb-3">
                         <Card className="fv-img-card">
-                          <Card.Img src={u} alt={`Survey Photo ${i + 1}`} />
+                          <Card.Img src={resolveAssetUrl(u)} alt={`Survey Photo ${i + 1}`} loading="lazy" />
                           <Card.Footer>Survey Photo {i + 1}</Card.Footer>
                         </Card>
                       </Col>
@@ -443,7 +443,7 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
                     {farmer.signatureUrl && (
                       <Col xs={12} sm={6} md={4} className="mb-3">
                         <Card className="fv-img-card">
-                          <Card.Img src={farmer.signatureUrl} alt="Farmer Signature" />
+                          <Card.Img src={resolveAssetUrl(farmer.signatureUrl)} alt="Farmer Signature" loading="lazy" />
                           <Card.Footer>Farmer Signature</Card.Footer>
                         </Card>
                       </Col>

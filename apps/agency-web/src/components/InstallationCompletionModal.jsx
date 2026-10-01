@@ -78,6 +78,8 @@ export default function InstallationCompletionModal({
   const [issuedInventory, setIssuedInventory] = useState({ linked: false, items: [] });
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [scanCode, setScanCode] = useState('');
+  const [panelScanCode, setPanelScanCode] = useState('');
+  const [scanMode, setScanMode] = useState('ANY');
   const [scanLoading, setScanLoading] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
   const [scanDetails, setScanDetails] = useState({});
@@ -97,14 +99,18 @@ export default function InstallationCompletionModal({
 
   const selectedCodes = () => [pumpNoUnique, motorNoUnique, controllerNoUnique, ...panelsArray, ...additionalItems.map(x => x.code)].map(x => String(x || '').trim().toLowerCase()).filter(Boolean);
 
-  const addIssuedItem = item => {
+  const addIssuedItem = (item, { expectedRole = '' } = {}) => {
     const code = String(item.serialNumber || item.barcodeValue || '').trim();
-    if (!code) return;
+    if (!code) return false;
     const role = item.role || inventoryRole(item);
+    if (expectedRole && role !== expectedRole) {
+      setError(`Scanned item is ${role.toLowerCase()}, not a ${expectedRole.toLowerCase()}. Scan the correct serialized asset.`);
+      return false;
+    }
     const attrs = item.scanAttributes || item.metadata?.scanAttributes || item.agencyReceiptAttributes || {};
     setScanDetails({ code, role, item: item.itemId?.name || item.itemId?.sku || 'Serialized material', ...attrs });
     const existing = selectedCodes();
-    if (existing.includes(code.toLowerCase())) { setScanMessage(`${code} is already selected for this beneficiary.`); return; }
+    if (existing.includes(code.toLowerCase())) { setScanMessage(`${code} is already selected for this beneficiary.`); return false; }
     if (role === 'PUMP') setPumpNoUnique(code);
     else if (role === 'MOTOR') setMotorNoUnique(code);
     else if (role === 'CONTROLLER') {
@@ -119,20 +125,24 @@ export default function InstallationCompletionModal({
     } else {
       setAdditionalItems(prev => [...prev, { code, name: item.itemId?.name || item.itemId?.sku || 'Additional serialized item', role: 'OTHER' }]);
     }
-    setScanMessage(`${code} added to this beneficiary's installation.`);
+    setScanMessage(`${role === 'PANEL' ? 'Solar panel' : role.charAt(0) + role.slice(1).toLowerCase()} ${code} verified and added.`);
+    return true;
   };
 
   const useIssuedSerial = item => addIssuedItem({ ...item, role: inventoryRole(item) });
 
-  const submitScanValue = async raw => {
+  const submitScanValue = async (raw, { expectedRole = '' } = {}) => {
     const code = String(raw ?? scanCode).trim();
     if (!code || !farmer?._id || scanLoading) return;
     setError(''); setScanMessage(''); setScanLoading(true);
     try {
       const token = localStorage.getItem('token');
       const res = await axios.post(`${API_URL}/api/installation/scan-issued-material/${farmer._id}`, { code }, { headers: { Authorization: `Bearer ${token}` } });
-      addIssuedItem(res.data?.item || {});
-      setScanCode('');
+      const added = addIssuedItem(res.data?.item || {}, { expectedRole });
+      if (added) {
+        if (expectedRole === 'PANEL') setPanelScanCode('');
+        else setScanCode('');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Scanned material could not be validated.');
     } finally { setScanLoading(false); }
@@ -154,7 +164,7 @@ export default function InstallationCompletionModal({
           try {
             const found = await detector.detect(scanVideoRef.current);
             const raw = found?.[0]?.rawValue;
-            if (raw) { stopped = true; setScanCameraOpen(false); setScanCode(raw); await submitScanValue(raw); return; }
+            if (raw) { stopped = true; setScanCameraOpen(false); if (scanMode === 'PANEL') setPanelScanCode(raw); else setScanCode(raw); await submitScanValue(raw, { expectedRole: scanMode === 'PANEL' ? 'PANEL' : '' }); return; }
           } catch {}
           frame = requestAnimationFrame(tick);
         };
@@ -163,7 +173,7 @@ export default function InstallationCompletionModal({
     };
     start();
     return () => { stopped = true; if (frame) cancelAnimationFrame(frame); stream?.getTracks().forEach(t => t.stop()); };
-  }, [scanCameraOpen]);
+  }, [scanCameraOpen, scanMode]);
 
   const scanIssuedMaterial = async e => { e?.preventDefault?.(); await submitScanValue(); };
 
@@ -320,6 +330,8 @@ export default function InstallationCompletionModal({
     setIsSubmitting(false);
     setIssuedInventory({ linked: false, items: [] });
     setScanCode('');
+    setPanelScanCode('');
+    setScanMode('ANY');
     setScanMessage('');
     setScanDetails({});
     setAdditionalItems([]);
@@ -644,15 +656,16 @@ export default function InstallationCompletionModal({
                           <Form.Control
                             value={scanCode}
                             onChange={e => setScanCode(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); scanIssuedMaterial(e); } }}
                             placeholder="Scan serial / barcode / QR"
                             autoComplete="off"
                             enterKeyHint="done"
                             aria-label="Scan serial or barcode for beneficiary installation"
                           />
                           <Button type="button" onClick={scanIssuedMaterial} disabled={!scanCode.trim() || scanLoading}>{scanLoading ? 'Checking…' : 'Add item'}</Button>
-                          <Button type="button" variant="outline-secondary" className="scan-camera-button" onClick={() => setScanCameraOpen(v => !v)}><Camera size={16} /> {scanCameraOpen ? 'Stop camera' : 'Scan with camera'}</Button>
+                          <Button type="button" variant="outline-secondary" className="scan-camera-button" onClick={() => { setScanMode('ANY'); setScanCameraOpen(v => !v); }}><Camera size={16} /> {scanCameraOpen && scanMode === 'ANY' ? 'Stop camera' : 'Scan with camera'}</Button>
                         </div>
-                        {scanCameraOpen && <div className="installer-camera-scan"><video ref={scanVideoRef} playsInline muted /><span>Point the rear camera at the barcode or QR code. It will validate automatically.</span></div>}
+                        {scanCameraOpen && scanMode === 'ANY' && <div className="installer-camera-scan"><video ref={scanVideoRef} playsInline muted /><span>Point the rear camera at the barcode or QR code. It will validate automatically.</span></div>}
                         {scanCameraError && <div className="scan-camera-error" role="status">{scanCameraError}</div>}
                         {scanMessage && <div className="scan-success" role="status"><Check size={15} /> {scanMessage}</div>}
                         {Object.keys(scanDetails).length > 0 && <div className="scan-detail-grid" aria-label="Last scanned asset details">{Object.entries(scanDetails).filter(([,v])=>v!==''&&v!=null).slice(0,8).map(([k,v])=><span key={k}><small>{formatFieldName(k)}</small><strong>{String(v)}</strong></span>)}</div>}
@@ -692,7 +705,10 @@ export default function InstallationCompletionModal({
                         ))}
                       </div>
                     ) : !inventoryLoading ? (
-                      <div className="inventory-empty-state">No serialized material is currently issued to this technician for the mapped farmer/work package.</div>
+                      <div className="inventory-empty-state">
+                        <strong>No governed serialized material is currently issued to this technician.</strong>
+                        <span>{selectedCodes().length ? 'Existing serial values are shown from the beneficiary record, but they are not treated as inventory-confirmed until the Agency issues/scans the material.' : 'Agency material issue must be completed before serialized hardware can be verified and installed.'}</span>
+                      </div>
                     ) : null}
                   </div>
                 )}
@@ -761,8 +777,28 @@ export default function InstallationCompletionModal({
                 </div>
 
                 {/* Panel Serial Numbers */}
-                <div className="form-section">
-                  <h6>Panel Serial Numbers</h6>
+                <div className="form-section panel-serial-section">
+                  <div className="panel-section-head">
+                    <div>
+                      <h6>Solar Panel Serial Numbers</h6>
+                      <p>Scan every serialized solar panel before installation. Each scan is verified against material issued to this beneficiary/technician.</p>
+                    </div>
+                    <span className="panel-count-chip">{panelsArray.filter(x => String(x || '').trim()).length} scanned</span>
+                  </div>
+                  <div className="panel-scan-box">
+                    <Form.Control
+                      value={panelScanCode}
+                      onChange={e => setPanelScanCode(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitScanValue(panelScanCode, { expectedRole: 'PANEL' }); } }}
+                      placeholder="Scan solar panel serial / barcode / QR"
+                      autoComplete="off"
+                      enterKeyHint="done"
+                      aria-label="Scan solar panel serial"
+                    />
+                    <Button type="button" onClick={() => submitScanValue(panelScanCode, { expectedRole: 'PANEL' })} disabled={!panelScanCode.trim() || scanLoading}><ScanLine size={16} /> {scanLoading ? 'Checking…' : 'Add panel'}</Button>
+                    <Button type="button" variant="outline-secondary" className="scan-camera-button" onClick={() => { setScanMode('PANEL'); setScanCameraOpen(v => !v); }}><Camera size={16} /> {scanCameraOpen && scanMode === 'PANEL' ? 'Stop camera' : 'Camera scan'}</Button>
+                  </div>
+                  {scanCameraOpen && scanMode === 'PANEL' && <div className="installer-camera-scan panel-camera-scan"><video ref={scanVideoRef} playsInline muted /><span>Scan one solar panel at a time. A verified panel is added to the next available panel slot automatically.</span></div>}
                   {panelsArray.map((panel, index) => (
                     <div key={index} className="panel-row">
                       <div className="form-group" style={{ flex: 1 }}>

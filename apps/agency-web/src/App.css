@@ -44,3 +44,22 @@
 /* Phase 24 evidence checklist */
 .farmer-evidence-checklist{display:grid;gap:8px}.farmer-evidence-error{padding:9px 11px;border-radius:8px;background:#fff4f2;border:1px solid #f1cbc5;color:#8a3830;font-size:.75rem}.farmer-evidence-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:10px 11px;border:1px solid #e2e8e5;border-radius:9px;background:#fbfcfb}.farmer-evidence-copy{min-width:0}.farmer-evidence-copy strong,.farmer-evidence-copy span,.farmer-evidence-copy small{display:block}.farmer-evidence-copy strong{font-size:.78rem;color:#24372e}.farmer-evidence-copy span{font-size:.65rem;color:#738078;margin-top:2px;text-transform:capitalize}.farmer-evidence-copy small{font-size:.64rem;color:#8a958f;margin-top:3px}.farmer-evidence-upload{position:relative;overflow:hidden;white-space:nowrap}.farmer-evidence-upload input{position:absolute;inset:0;opacity:0;cursor:pointer}.farmer-evidence-files{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}.farmer-evidence-files a{font-size:.66rem;text-decoration:none;border:1px solid #d8e2dd;border-radius:6px;padding:5px 7px;color:#335c4b;background:#fff}@media(max-width:760px){.farmer-evidence-item{grid-template-columns:1fr auto}.farmer-evidence-upload{grid-column:1/-1;justify-self:start}}
 .farmer-evidence-file{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.farmer-geo-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border-radius:6px;border:1px solid #d7e2dc;background:#f5f8f6;color:#496157;font-size:.61rem;font-weight:600}.farmer-geo-chip svg{font-size:.65rem;color:#2e6b51}
+
+/* Final evidence presentation: photos/signatures render as media, not raw URLs. */
+.crm-app .farmer-evidence-checklist{display:grid;gap:10px}
+.crm-app .farmer-evidence-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px 12px;align-items:center;padding:13px;border:1px solid #dfe7e3;border-radius:10px;background:#fff}
+.crm-app .farmer-evidence-copy{min-width:0}
+.crm-app .farmer-evidence-copy strong{font-size:.76rem;line-height:1.35;color:#20332a}
+.crm-app .farmer-evidence-copy span{font-size:.63rem;line-height:1.4;color:#748179;margin-top:3px}
+.crm-app .farmer-evidence-upload{min-height:36px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;padding:0 10px!important;border-radius:7px!important;font-size:.68rem!important;font-weight:750!important;position:relative!important;overflow:hidden!important}
+.crm-app .farmer-evidence-upload input{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer!important}
+.crm-app .farmer-evidence-files{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px;margin-top:2px}
+.crm-app .farmer-evidence-preview{min-width:0;display:grid;grid-template-columns:76px minmax(0,1fr);min-height:76px;border:1px solid #e0e7e3;border-radius:9px;background:#f9fbfa;overflow:hidden;text-decoration:none;color:inherit;transition:border-color .15s ease,background .15s ease}
+.crm-app .farmer-evidence-preview:hover{border-color:#aac0b6;background:#fff}
+.crm-app .farmer-evidence-preview img{width:76px;height:76px;display:block;object-fit:cover;background:#edf2ef}
+.crm-app .farmer-evidence-preview__icon{width:76px;height:76px;display:grid;place-items:center;background:#edf3f0;color:#416353;font-size:1.15rem}
+.crm-app .farmer-evidence-preview__body{min-width:0;padding:9px 10px;display:flex;flex-direction:column;justify-content:center;gap:3px}
+.crm-app .farmer-evidence-preview__body strong{font-size:.69rem;color:#263930;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crm-app .farmer-evidence-preview__body small{display:flex;align-items:center;gap:5px;font-size:.61rem;color:#607168}
+.crm-app .farmer-evidence-preview .farmer-geo-chip{margin-top:2px;width:max-content;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:760px){.crm-app .farmer-evidence-item{grid-template-columns:minmax(0,1fr) auto}.crm-app .farmer-evidence-upload{grid-column:1/-1;justify-self:start}.crm-app .farmer-evidence-files{grid-template-columns:1fr}}

@@ -17,6 +17,8 @@ import {
   FaBoxOpen,
   FaUpload,
   FaDatabase,
+  FaFileAlt,
+  FaExpandAlt,
 }
  from 'react-icons/fa';
 import { API_URL, resolveAssetUrl } from '../config';
@@ -72,6 +74,29 @@ const getDeviceGeo=()=>new Promise(resolve=>{if(!navigator.geolocation)return re
 
 const GeoMeta=({geo})=>{if(!geo?.latitude||!geo?.longitude)return null;return <span className="farmer-geo-chip"><FaMapMarkerAlt/> {Number(geo.latitude).toFixed(5)}, {Number(geo.longitude).toFixed(5)} · {fmtDate(geo.capturedAt)}</span>};
 
+const isImageEvidence = (file, evidenceType) => {
+  if (['PHOTO','SIGNATURE'].includes(String(evidenceType || '').toUpperCase())) return true;
+  const mime = String(file?.mimeType || '').toLowerCase();
+  const url = String(file?.url || '').split('?')[0].toLowerCase();
+  return mime.startsWith('image/') || /\.(png|jpe?g|webp|gif|avif|heic|heif)$/.test(url);
+};
+
+const EvidenceFilePreview = ({ file, index, evidenceType, geo }) => {
+  const src = resolveAssetUrl(file?.url);
+  if (!src) return null;
+  const image = isImageEvidence(file, evidenceType);
+  return (
+    <a className={`farmer-evidence-preview ${image ? 'is-image' : 'is-document'}`} href={src} target="_blank" rel="noreferrer">
+      {image ? <img src={src} alt={`${String(evidenceType || 'Evidence').toLowerCase()} ${index + 1}`} loading="lazy" /> : <span className="farmer-evidence-preview__icon"><FaFileAlt /></span>}
+      <span className="farmer-evidence-preview__body">
+        <strong>{file?.name || `${evidenceType || 'Evidence'} ${index + 1}`}</strong>
+        <small>{image ? 'Preview image' : 'Open document'} <FaExpandAlt /></small>
+        <GeoMeta geo={file?.geo || geo} />
+      </span>
+    </a>
+  );
+};
+
 const EvidenceChecklist = ({ items = [], farmerId, onUpdated }) => {
   const [busyId, setBusyId] = useState('');
   const [error, setError] = useState('');
@@ -110,7 +135,7 @@ const EvidenceChecklist = ({ items = [], farmerId, onUpdated }) => {
         <Badge bg={sub?.status === 'VERIFIED' ? 'success' : sub?.status === 'REJECTED' ? 'danger' : complete ? 'warning' : 'secondary'}>{sub?.status || 'PENDING'}</Badge>
         {['PHOTO','DOCUMENT','SIGNATURE'].includes(r.evidenceType) && <label className="farmer-evidence-upload btn btn-sm btn-outline-secondary mb-0"><FaUpload className="me-1" />{busyId===r._id?'Uploading…':sub?'Replace':'Upload'}<input type="file" accept="image/*" multiple={Number(r.minFiles||1)>1} disabled={busyId===r._id} onChange={e=>upload(entry,e.target.files)} /></label>}
         {r.evidenceType === 'BOOLEAN' && <Button size="sm" variant="outline-secondary" disabled={busyId===r._id} onClick={()=>submitValue(entry,true,[])}>{busyId===r._id?'Saving…':'Confirm'}</Button>}
-        {sub?.files?.length>0 && <div className="farmer-evidence-files">{sub.files.map((f,i)=><div className="farmer-evidence-file" key={`${f.url}-${i}`}><a href={resolveAssetUrl(f.url)} target="_blank" rel="noreferrer">Evidence {i+1}</a><GeoMeta geo={f.geo||sub.captureGeo}/></div>)}</div>}
+        {sub?.files?.length>0 && <div className="farmer-evidence-files">{sub.files.map((f,i)=><EvidenceFilePreview key={`${f.url}-${i}`} file={f} index={i} evidenceType={r.evidenceType} geo={sub.captureGeo} />)}</div>}
       </div>})}
     </div>
   </Section>;

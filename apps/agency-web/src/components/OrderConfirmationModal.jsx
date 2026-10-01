@@ -81,6 +81,8 @@ export default function OrderConfirmationModal({
   const [issuedInventory, setIssuedInventory] = useState({ linked: false, items: [] });
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [scanCode, setScanCode] = useState('');
+  const [panelScanCode, setPanelScanCode] = useState('');
+  const [scanMode, setScanMode] = useState('ANY');
   const [scanLoading, setScanLoading] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
   const [scanCameraOpen, setScanCameraOpen] = useState(false);
@@ -120,20 +122,23 @@ export default function OrderConfirmationModal({
     });
     setIssuedInventory({ linked: false, items: [] });
     setScanCode('');
+    setPanelScanCode('');
+    setScanMode('ANY');
     setScanMessage('');
     setScanCameraError('');
     setError('');
   }, [show, farmer?._id, technicianUsername]);
 
-  const applyIssuedItem = (item) => {
+  const applyIssuedItem = (item, { expectedRole = '' } = {}) => {
     const code = String(item?.serialNumber || item?.barcodeValue || '').trim();
     if (!code) return;
     const role = item?.role || materialRole(item);
+    if (expectedRole && role !== expectedRole) { setError(`Scanned item is ${role.toLowerCase()}, not a ${expectedRole.toLowerCase()}. Scan the correct serialized asset.`); return false; }
+    const currentCodes = [formData.pumpNoUnique, formData.motorNoUnique, formData.controllerNoUnique, ...(formData.panels || [])]
+      .map((x) => String(x || '').trim().toLowerCase()).filter(Boolean);
+    if (currentCodes.includes(code.toLowerCase())) { setScanMessage(`${code} is already captured for this beneficiary.`); return false; }
     const attrs = item?.scanAttributes || item?.metadata?.scanAttributes || item?.agencyReceiptAttributes || {};
     setFormData((prev) => {
-      const all = [prev.pumpNoUnique, prev.motorNoUnique, prev.controllerNoUnique, ...(prev.panels || [])]
-        .map((x) => String(x || '').trim().toLowerCase()).filter(Boolean);
-      if (all.includes(code.toLowerCase())) return prev;
       if (role === 'PUMP') return { ...prev, pumpNoUnique: code };
       if (role === 'MOTOR') return { ...prev, motorNoUnique: code };
       if (role === 'CONTROLLER') return {
@@ -150,7 +155,8 @@ export default function OrderConfirmationModal({
       }
       return prev;
     });
-    setScanMessage(`${code} verified against issued material and added.`);
+    setScanMessage(`${role === 'PANEL' ? 'Solar panel' : role.charAt(0) + role.slice(1).toLowerCase()} ${code} verified against issued material and added.`);
+    return true;
   };
 
   useEffect(() => {
@@ -175,7 +181,7 @@ export default function OrderConfirmationModal({
     return () => { active = false; };
   }, [show, farmer?._id]);
 
-  const submitScan = async (rawValue) => {
+  const submitScan = async (rawValue, { expectedRole = '' } = {}) => {
     const code = String(rawValue ?? scanCode).trim();
     if (!code || !farmer?._id || scanLoading) return;
     setScanLoading(true);
@@ -187,8 +193,11 @@ export default function OrderConfirmationModal({
         { code },
         auth
       );
-      applyIssuedItem(resp.data?.item || {});
-      setScanCode('');
+      const added = applyIssuedItem(resp.data?.item || {}, { expectedRole });
+      if (added) {
+        if (expectedRole === 'PANEL') setPanelScanCode('');
+        else setScanCode('');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Scanned material is not valid for this technician/beneficiary.');
     } finally {
@@ -215,7 +224,8 @@ export default function OrderConfirmationModal({
             if (raw) {
               stopped = true;
               setScanCameraOpen(false);
-              await submitScan(raw);
+              if (scanMode === 'PANEL') setPanelScanCode(raw); else setScanCode(raw);
+              await submitScan(raw, { expectedRole: scanMode === 'PANEL' ? 'PANEL' : '' });
               return;
             }
           } catch {}
@@ -233,7 +243,7 @@ export default function OrderConfirmationModal({
       if (frame) cancelAnimationFrame(frame);
       stream?.getTracks().forEach((track) => track.stop());
     };
-  }, [scanCameraOpen]);
+  }, [scanCameraOpen, scanMode]);
 
   // ─── Handlers for form inputs ─────────────────────────────────────────────────
   const handleChange = (e) => {
@@ -534,11 +544,11 @@ export default function OrderConfirmationModal({
                   <Button type="button" variant="outline-primary" disabled={scanLoading} onClick={() => submitScan()}>
                     {scanLoading ? 'Checking…' : 'Add scan'}
                   </Button>
-                  <Button type="button" variant="outline-secondary" onClick={() => setScanCameraOpen((v) => !v)}>
+                  <Button type="button" variant="outline-secondary" onClick={() => { setScanMode('ANY'); setScanCameraOpen((v) => !v); }}>
                     {scanCameraOpen ? 'Stop camera' : 'Camera scan'}
                   </Button>
                 </div>
-                {scanCameraOpen && <div className="order-camera-scan"><video ref={scanVideoRef} playsInline muted /><small>Point the rear camera at the barcode or QR. Capture is automatic.</small></div>}
+                {scanCameraOpen && scanMode === 'ANY' && <div className="order-camera-scan"><video ref={scanVideoRef} playsInline muted /><small>Point the rear camera at the barcode or QR. Capture is automatic.</small></div>}
                 {scanCameraError && <Alert variant="warning" className="mt-2 mb-0">{scanCameraError}</Alert>}
                 {scanMessage && <Alert variant="success" className="mt-2 mb-0">{scanMessage}</Alert>}
                 {!!issuedInventory.items?.length && <div className="order-issued-list">
@@ -613,32 +623,34 @@ export default function OrderConfirmationModal({
 
             {/* ─── Panels (dynamic list) ──────────────────────────────────────── */}
             <Col md={12}>
-              <Form.Group controlId="panels">
-                <Form.Label>Panels</Form.Label>
-                {formData.panels.map((panel, idx) => (
-                  <Row key={idx} className="mb-2 align-items-center">
-                    <Col xs={9}>
-                      <Form.Control
-                        type="text"
-                        value={panel}
-                        onChange={(e) => handlePanelChange(idx, e.target.value)}
-                        placeholder={`Panel ${idx + 1} serial number`}
-                        required
-                      />
-                    </Col>
-                    <Col xs={3}>
-                      {formData.panels.length > 1 && (
-                        <Button variant="danger" size="sm" onClick={() => removePanel(idx)}>
-                          Remove
-                        </Button>
-                      )}
-                    </Col>
-                  </Row>
-                ))}
-                <Button variant="secondary" size="sm" onClick={addPanel} className="mt-2">
-                  Add Panel
-                </Button>
-              </Form.Group>
+              <div className="order-panel-section">
+                <div className="order-panel-section__head">
+                  <div><strong>Solar panel serials</strong><small>Scan every panel at receipt. These confirmed serials carry forward to installation for a second verification.</small></div>
+                  <span>{formData.panels.filter((x) => String(x || '').trim()).length} captured</span>
+                </div>
+                <div className="order-panel-scan">
+                  <Form.Control
+                    value={panelScanCode}
+                    onChange={(e) => setPanelScanCode(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitScan(panelScanCode, { expectedRole: 'PANEL' }); } }}
+                    placeholder="Scan solar panel serial / barcode / QR"
+                    aria-label="Scan solar panel serial"
+                  />
+                  <Button type="button" variant="primary" disabled={!panelScanCode.trim() || scanLoading} onClick={() => submitScan(panelScanCode, { expectedRole: 'PANEL' })}>{scanLoading ? 'Checking…' : 'Add panel'}</Button>
+                  <Button type="button" variant="outline-secondary" onClick={() => { setScanMode('PANEL'); setScanCameraOpen((v) => !v); }}>{scanCameraOpen && scanMode === 'PANEL' ? 'Stop camera' : 'Camera scan'}</Button>
+                </div>
+                {scanCameraOpen && scanMode === 'PANEL' && <div className="order-camera-scan"><video ref={scanVideoRef} playsInline muted /><small>Point the rear camera at one solar-panel barcode/QR. Verified panels are added automatically.</small></div>}
+                <div className="order-panel-list">
+                  {formData.panels.map((panel, idx) => (
+                    <div key={idx} className="order-panel-row">
+                      <span className="order-panel-index">{idx + 1}</span>
+                      <Form.Control type="text" value={panel} onChange={(e) => handlePanelChange(idx, e.target.value)} placeholder={`Panel ${idx + 1} serial number`} required />
+                      {formData.panels.length > 1 && <Button variant="outline-danger" size="sm" onClick={() => removePanel(idx)}>Remove</Button>}
+                    </div>
+                  ))}
+                </div>
+                <Button variant="outline-secondary" size="sm" onClick={addPanel} className="order-add-panel">Add another panel</Button>
+              </div>
             </Col>
 
             {/* ─── Order Received By Technician (read‐only) ───────────────────── */}
@@ -729,17 +741,16 @@ export default function OrderConfirmationModal({
                   onChange={handleFileChange}
                 />
                 {formData.lrPhotoUrls.length > 0 && (
-                  <div className="mt-2">
-                    <strong>Uploaded LR Photos:</strong>
-                    <ul>
-                      {formData.lrPhotoUrls.map((url, idx) => (
-                        <li key={idx}>
-                          <a href={url} target="_blank" rel="noopener noreferrer">
-                            Photo {idx + 1}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="order-photo-preview-block">
+                    <strong>Uploaded LR photos</strong>
+                    <div className="order-photo-grid">
+                      {formData.lrPhotoUrls.map((url, idx) => { const src = resolveAssetUrl(url); return (
+                        <a key={`${url}-${idx}`} href={src} target="_blank" rel="noopener noreferrer" className="order-photo-card">
+                          <img src={src} alt={`LR evidence ${idx + 1}`} loading="lazy" />
+                          <span>LR photo {idx + 1}</span>
+                        </a>
+                      ); })}
+                    </div>
                   </div>
                 )}
               </Form.Group>
