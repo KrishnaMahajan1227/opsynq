@@ -590,20 +590,20 @@ const EditFarmerModal = ({ show, onHide, handleClose, farmer, onUpdate, handleSu
 
             {/* 4: Vendor Assignment */}
             <Accordion.Item eventKey="4">
-              <Accordion.Header>Vendor Assignment</Accordion.Header>
+              <Accordion.Header>Assigned Vendor / Company</Accordion.Header>
               <Accordion.Body>
                 <SectionWrapper title="">
                   <Row>
                     <Input
                       lg={6}
-                      label="Vendor / Company Name"
+                      label="Assigned Vendor / Company Name"
                       name="assignedVendorCompanyName"
                       value={formData.assignedVendorCompanyName || ''}
                       onChange={handleChange}
                     />
                     <DateInput
                       lg={6}
-                      label="Vendor Assignment Date"
+                      label="Vendor / Company Assignment Date"
                       name="vendorAssignmentDate"
                       value={formData.vendorAssignmentDate}
                       onChange={handleChange}

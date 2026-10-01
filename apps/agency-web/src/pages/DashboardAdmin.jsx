@@ -120,8 +120,16 @@ export default function DashboardAdmin() {
   const [technicians, setTechnicians] = useState([]);
   const [changeRequests, setChangeRequests] = useState([]);
   const location = useLocation();
-  const initialTab = new URLSearchParams(location.search).get('tab') || 'overview';
+  const initialTab = new URLSearchParams(location.search).get('tab') || localStorage.getItem('opsynq_agency_active_tab') || 'overview';
   const [activeTab, setActiveTab] = useState(initialTab);
+  useEffect(() => {
+    if (activeTab === 'farmer-detail') return;
+    localStorage.setItem('opsynq_agency_active_tab', activeTab);
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === activeTab) return;
+    params.set('tab', activeTab);
+    navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+  }, [activeTab, location.pathname, location.search, navigate]);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', variant: 'success' });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -1263,7 +1271,7 @@ export default function DashboardAdmin() {
                       </Col>
                       <Col xl={3} lg={4} md={6} sm={12}>
                         <Form.Group controlId="vendorFilter">
-                          <Form.Label>Vendor</Form.Label>
+                          <Form.Label>Assigned vendor / company</Form.Label>
                           <Form.Select
                             value={vendorFilter}
                             onChange={(e) => {
@@ -1271,7 +1279,7 @@ export default function DashboardAdmin() {
                               setPage(1);
                             }}
                           >
-                            <option value="">All Vendors</option>
+                            <option value="">All assigned vendors</option>
                             {uniqueVendors.map((v) => (
                               <option key={v} value={v}>
                                 {v}
@@ -1455,7 +1463,7 @@ export default function DashboardAdmin() {
                       <th>Taluka</th>
                       <th>District</th>
                       <th>Surveyor</th>
-                      <th>Vendor</th>
+                      <th>Assigned vendor / company</th>
                       <th>JSR</th>
                       <th>App Status</th>
                       <th>Insp Status</th>

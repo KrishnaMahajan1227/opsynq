@@ -139,8 +139,16 @@ export default function DashboardSuperAdmin() {
 
   // Tabs & loading
   const location = useLocation();
-  const initialTab = new URLSearchParams(location.search).get('tab') || 'overview';
+  const initialTab = new URLSearchParams(location.search).get('tab') || localStorage.getItem('opsynq_agency_active_tab') || 'overview';
   const [activeTab, setActiveTab] = useState(initialTab);
+  useEffect(() => {
+    if (activeTab === 'farmer-detail') return;
+    localStorage.setItem('opsynq_agency_active_tab', activeTab);
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === activeTab) return;
+    params.set('tab', activeTab);
+    navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+  }, [activeTab, location.pathname, location.search, navigate]);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', variant: 'success' });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -1311,7 +1319,7 @@ export default function DashboardSuperAdmin() {
                       </Col>
                       <Col xl={3} lg={4} md={6} sm={12}>
                         <Form.Group controlId="vendorFilter">
-                          <Form.Label>Vendor</Form.Label>
+                          <Form.Label>Assigned vendor / company</Form.Label>
                           <Form.Select
                             value={vendorFilter}
                             onChange={(e) => {
@@ -1319,7 +1327,7 @@ export default function DashboardSuperAdmin() {
                               setPage(1);
                             }}
                           >
-                            <option value="">All Vendors</option>
+                            <option value="">All assigned vendors</option>
                             {uniqueVendors.map((v) => (
                               <option key={v} value={v}>
                                 {v}
@@ -1476,7 +1484,7 @@ export default function DashboardSuperAdmin() {
                         <th className="id-col">ID</th>
                         <th>Name</th>
                         <th>District</th>
-                        <th>Vendor</th>
+                        <th>Assigned vendor / company</th>
                         <th>Survey</th>
                         <th>Final Inspection</th>
                         <th>Status</th>

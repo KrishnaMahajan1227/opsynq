@@ -1241,6 +1241,8 @@ exports.getFarmerDetailContext = async (req, res) => {
       .populate('workOrderId', 'number title status dueDate')
       .populate('workPackageId', 'code name status dueDate geography assignedQuantity')
       .populate('agencyId', 'name code contact address')
+      .populate('assignedByPlatformUserId', 'name email mobile role')
+      .populate({ path: 'sourceImportBatchId', select: 'sourceFileName status createdAt uploadedBy', populate: { path: 'uploadedBy', select: 'name email mobile role' } })
       .lean();
 
     // If this farmer belongs to an Opsynq mapped agency, make sure a linked agency
@@ -1278,8 +1280,16 @@ exports.getFarmerDetailContext = async (req, res) => {
 
     const submissionByReq=new Map((evidenceSubmissions||[]).map(x=>[String(x.requirementId),x]));
     const evidenceChecklist=(evidenceRequirements||[]).map(r=>({requirement:r,submission:submissionByReq.get(String(r._id))||null}));
+    const directAssigner=context?.assignedByPlatformUserId||null;
+    const importAssigner=context?.sourceImportBatchId?.uploadedBy||null;
+    const assignedBy=directAssigner||importAssigner||null;
     res.json({
-      context: context || null,
+      context: context ? {...context,assignmentAttribution:{
+        name: context.assignedByName || assignedBy?.name || assignedBy?.email || assignedBy?.mobile || '',
+        role: context.assignedByRole || assignedBy?.role || '',
+        source: directAssigner ? 'ASSIGNMENT' : importAssigner ? 'IMPORT' : 'LEGACY',
+        assignedAt: context.assignedAt || context.sourceImportBatchId?.createdAt || context.createdAt || null,
+      }} : null,
       assets,
       materialIssues: issues,
       serviceCases,

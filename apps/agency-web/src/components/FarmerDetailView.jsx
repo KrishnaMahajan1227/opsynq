@@ -269,7 +269,7 @@ export default function FarmerDetailView({ farmer, onBack }) {
         </Section>}
 
         <Section icon={<FaTools />} title="Pump, installation & commissioning">
-          <Field label="Vendor" value={farmer.assignedVendorCompanyName} wide />
+          <Field label="Assigned vendor / company" value={farmer.assignedVendorCompanyName} wide />
           <Field label="Pump type" value={farmer.pumpType} />
           <Field label="Pump HP" value={farmer.pumpHP} />
           <Field label="Controller" value={farmer.controllerTypeWithOrWithout} />
@@ -335,6 +335,10 @@ export default function FarmerDetailView({ farmer, onBack }) {
             <Field label="Work package" value={ops.workPackageId ? `${ops.workPackageId.code} · ${ops.workPackageId.name || ''}` : ''} wide />
             <Field label="Package status" value={ops.workPackageId?.status} />
             <Field label="Package due" value={fmtDate(ops.workPackageId?.dueDate)} />
+            <Field label="Assigned by" value={ops.assignmentAttribution?.name} />
+            <Field label="Assigned by role" value={ops.assignmentAttribution?.role ? String(ops.assignmentAttribution.role).replaceAll('_', ' ') : ''} />
+            <Field label="Assigned on" value={fmtDate(ops.assignmentAttribution?.assignedAt || ops.assignedAt)} />
+            <Field label="Assignment source" value={ops.assignmentAttribution?.source === 'IMPORT' ? 'Company beneficiary import' : ops.assignmentAttribution?.source === 'ASSIGNMENT' ? 'Company assignment' : 'Legacy assignment'} />
             <Field label="Source authority" value={ops.sourceAuthority} wide />
             <Field label="Validation" value={ops.validationStatus} />
           </Section>

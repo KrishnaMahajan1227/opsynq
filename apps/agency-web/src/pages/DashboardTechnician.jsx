@@ -310,7 +310,7 @@ export default function DashboardTechnician() {
           <div className="td-filter-grid">
             <label>District<Form.Select value={districtFilter} onChange={e => { setDistrictFilter(e.target.value); setPage(1); }}><option value="">All districts</option>{districtOptions.map(v => <option key={v}>{v}</option>)}</Form.Select></label>
             <label>Division<Form.Select value={divisionFilter} onChange={e => { setDivisionFilter(e.target.value); setPage(1); }}><option value="">All divisions</option>{MAHARASHTRA_DIVISIONS.map(d => d.name).filter((v,i,a) => a.indexOf(v) === i).sort().map(v => <option key={v}>{v}</option>)}</Form.Select></label>
-            <label>Vendor<Form.Select value={vendorFilter} onChange={e => { setVendorFilter(e.target.value); setPage(1); }}><option value="">All vendors</option>{vendorOptions.map(v => <option key={v}>{v}</option>)}</Form.Select></label>
+            <label>Assigned vendor / company<Form.Select value={vendorFilter} onChange={e => { setVendorFilter(e.target.value); setPage(1); }}><option value="">All assigned vendors</option>{vendorOptions.map(v => <option key={v}>{v}</option>)}</Form.Select></label>
             <label>Application status<Form.Select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}><option value="">All statuses</option>{['Pending Approval','Pending Installation','Move to Installation','Ordered','Dispatch Completed','Ready for Installation','Installation Completed','Complaint Raised','Closed'].map(v => <option key={v}>{v}</option>)}</Form.Select></label>
             <label>Survey status<Form.Select value={inspFilter} onChange={e => { setInspFilter(e.target.value); setPage(1); }}><option value="">All statuses</option>{['Pending','In Progress','Completed'].map(v => <option key={v}>{v}</option>)}</Form.Select></label>
           </div>
@@ -362,7 +362,7 @@ export default function DashboardTechnician() {
                     )}
                   </div>
                   <div className="td-secondary-info">
-                    {task.assignedVendorCompanyName && <div><span>Vendor</span><strong>{task.assignedVendorCompanyName}</strong></div>}
+                    {task.assignedVendorCompanyName && <div><span>Assigned vendor / company</span><strong>{task.assignedVendorCompanyName}</strong></div>}
                     {activeTab === 'installation' && <div><span>Assigned to</span><strong>{task.installationAssignedTechnician || task.surveyorName || technicianUsername || 'You'}</strong></div>}
                     {activeTab === 'verification' && <div><span>Survey owner</span><strong>{task.surveyorName || technicianUsername || 'You'}</strong></div>}
                     {activeTab === 'complaints' && <div><span>Rework owner</span><strong>{task.reworkAssignTechnician || technicianUsername || 'You'}</strong></div>}
