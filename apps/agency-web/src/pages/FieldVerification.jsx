@@ -13,11 +13,13 @@ import {
   OverlayTrigger,
   Tooltip,
 } from 'react-bootstrap';
-import { FaEraser, FaSignature } from 'react-icons/fa';
+import { FaEraser, FaSignature, FaCloud, FaWifi } from 'react-icons/fa';
 import SignatureCanvas from 'react-signature-canvas';
 import axios from 'axios';
 import './FieldVerification.css';
-import { API_URL } from '../config';
+import { API_URL, resolveAssetUrl } from '../config';
+import { deleteFieldDraft, getFieldDraft, saveFieldDraft } from '../offlineStore';
+import { formatBytes, optimiseImageFile, optimiseImageFiles, totalFileBytes } from '../utils/imageFiles';
 
 
 // Helper: Convert signature data-URL to File
@@ -60,8 +62,14 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
   const sigCanvas = useRef();
 
   const [toast, setToast] = useState({ show: false, message: '', variant: 'success' });
+  const [submitting, setSubmitting] = useState(false);
+  const [optimisingPhotos, setOptimisingPhotos] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState(null);
+  const skipNextDraftSave = useRef(false);
   const token = localStorage.getItem('token');
   const auth = { headers: { Authorization: `Bearer ${token}` } };
+  const draftKey = farmerId ? `field-verification:${farmerId}` : '';
 
   // Load farmer data and prefill form
   useEffect(() => {
@@ -74,15 +82,22 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
       try {
         const { data } = await axios.get(`${API_URL}/api/farmers/${farmerId}`, auth);
         setFarmer(data);
-        setSiteDepth(data.siteDepth || '');
-        setStatus(data.inspectionStatus || 'Pending');
-        setLandHoldingAcre(data.landHoldingAcre || '');
-        setLandOwnershipType(data.landOwnershipType || '');
-        setActualHeadM(data.actualHeadM || '');
-        setSourceDepthFeet(data.sourceDepthFeet || '');
-        setSurveyDate(data.surveyDate?.slice(0, 10) || new Date().toISOString().slice(0, 10));
-        const [lat, lng] = (data.siteLocation || '').split(',');
-        setLocation({ lat: lat || '', lng: lng || '' });
+        const [serverLat, serverLng] = (data.siteLocation || '').split(',');
+        const draft = await getFieldDraft(`field-verification:${farmerId}`);
+        const saved = draft?.data || {};
+        setSiteDepth(saved.siteDepth ?? data.siteDepth ?? '');
+        setStatus(saved.status ?? data.inspectionStatus ?? 'Pending');
+        setLandHoldingAcre(saved.landHoldingAcre ?? data.landHoldingAcre ?? '');
+        setLandOwnershipType(saved.landOwnershipType ?? data.landOwnershipType ?? '');
+        setActualHeadM(saved.actualHeadM ?? data.actualHeadM ?? '');
+        setSourceDepthFeet(saved.sourceDepthFeet ?? data.sourceDepthFeet ?? '');
+        setSurveyDate(saved.surveyDate ?? data.surveyDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
+        setLocation(saved.location || { lat: serverLat || '', lng: serverLng || '' });
+        setFarmerPhoto(saved.farmerPhoto || null);
+        setSitePhotos(Array.isArray(saved.sitePhotos) ? saved.sitePhotos : []);
+        setSignatureData(saved.signatureData || '');
+        if (draft?.updatedAt) setDraftSavedAt(draft.updatedAt);
+        setDraftReady(true);
       } catch (err) {
         setError(err.response?.status === 404 ? 'Farmer not found.' : 'Failed to load data.');
       } finally {
@@ -90,6 +105,24 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
       }
     })();
   }, [farmerId]);
+
+  useEffect(() => {
+    if (!draftReady || !farmer || !draftKey) return undefined;
+    if (skipNextDraftSave.current) { skipNextDraftSave.current = false; return undefined; }
+    const timer = setTimeout(async () => {
+      await saveFieldDraft(draftKey, {
+        siteDepth, status, landHoldingAcre, landOwnershipType, actualHeadM, sourceDepthFeet, surveyDate,
+        location, farmerPhoto, sitePhotos, signatureData, beneficiaryId: farmer.beneficiaryId, beneficiaryName: farmer.beneficiaryName
+      });
+      setDraftSavedAt(Date.now());
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [draftReady, farmer, draftKey, siteDepth, status, landHoldingAcre, landOwnershipType, actualHeadM, sourceDepthFeet, surveyDate, location, farmerPhoto, sitePhotos, signatureData]);
+
+  useEffect(() => {
+    if (!signatureData || !sigCanvas.current) return;
+    try { sigCanvas.current.fromDataURL(signatureData); } catch {}
+  }, [signatureData, farmer]);
 
   // Geolocation
   const fetchLocation = () => {
@@ -176,7 +209,10 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
   };
 
   // Clear form
-  const clearForm = () => {
+  const clearForm = async () => {
+    skipNextDraftSave.current = true;
+    await deleteFieldDraft(draftKey);
+    setDraftSavedAt(null);
     setSiteDepth('');
     setStatus('Pending');
     setLandHoldingAcre('');
@@ -188,6 +224,27 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
     setFarmerPhoto(null);
     setSitePhotos([]);
     clearSignature();
+  };
+
+  const handleFarmerPhoto = async (file) => {
+    if (!file) return;
+    setOptimisingPhotos(true);
+    try {
+      const optimised = await optimiseImageFile(file, { maxBytes: 300 * 1024, maxDimension: 1440 });
+      setFarmerPhoto(optimised);
+      setToast({ show: true, message: `Farmer photo ready (${formatBytes(optimised.size)}).`, variant: 'success' });
+    } finally { setOptimisingPhotos(false); }
+  };
+
+  const handleSitePhotos = async (files) => {
+    const picked = Array.from(files || []).slice(0, 10);
+    if (!picked.length) return;
+    setOptimisingPhotos(true);
+    try {
+      const optimised = await optimiseImageFiles(picked, { maxBytes: 260 * 1024, maxDimension: 1440 });
+      setSitePhotos(optimised);
+      setToast({ show: true, message: `${optimised.length} survey photo${optimised.length === 1 ? '' : 's'} ready (${formatBytes(totalFileBytes(optimised))}).`, variant: 'success' });
+    } finally { setOptimisingPhotos(false); }
   };
 
   // Validate form fields
@@ -209,18 +266,7 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
     };
   };
 
-  // Submit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const { isValid, missingFields } = validateForm();
-    if (!isValid) {
-      setToast({
-        show: true,
-        message: `Please fill in the following fields: ${missingFields.join(', ')}`,
-        variant: 'danger',
-      });
-      return;
-    }
+  const buildPayload = (photo = farmerPhoto, photos = sitePhotos) => {
     const fd = new FormData();
     fd.append('siteDepth', siteDepth);
     fd.append('status', status);
@@ -231,37 +277,70 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
     fd.append('sourceDepthFeet', sourceDepthFeet);
     fd.append('lat', location.lat);
     fd.append('lng', location.lng);
-    if (farmerPhoto) fd.append('farmerPhoto', farmerPhoto);
-    sitePhotos.forEach((f) => fd.append('sitePhotos', f));
+    if (photo) fd.append('farmerPhoto', photo);
+    photos.forEach((f) => fd.append('sitePhotos', f));
     if (signatureData) {
       const sigFile = dataURLtoFile(signatureData, 'sig.png');
-      if (sigFile) {
-        fd.append('signature', sigFile);
-      } else {
-        setToast({ show: true, message: 'Invalid signature format', variant: 'danger' });
+      if (sigFile) fd.append('signature', sigFile);
+    }
+    return fd;
+  };
+
+  const submitPayload = (fd) => axios.post(`${API_URL}/api/field-verification/${farmerId}`, fd, {
+    ...auth,
+    opsynqDraftKey: draftKey,
+  });
+
+  // Submit
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const { isValid, missingFields } = validateForm();
+    if (!isValid) {
+      setToast({ show: true, message: `Please fill in the following fields: ${missingFields.join(', ')}`, variant: 'danger' });
+      return;
+    }
+    if (optimisingPhotos || submitting) return;
+    if (!dataURLtoFile(signatureData, 'sig.png')) {
+      setToast({ show: true, message: 'Invalid signature format', variant: 'danger' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      let response;
+      try {
+        response = await submitPayload(buildPayload());
+      } catch (err) {
+        if (err.response?.status !== 413) throw err;
+        const compactPhoto = await optimiseImageFile(farmerPhoto, { maxBytes: 170 * 1024, maxDimension: 1080 });
+        const compactPhotos = await optimiseImageFiles(sitePhotos, { maxBytes: 145 * 1024, maxDimension: 1080 });
+        setFarmerPhoto(compactPhoto);
+        setSitePhotos(compactPhotos);
+        await saveFieldDraft(draftKey, { siteDepth, status, landHoldingAcre, landOwnershipType, actualHeadM, sourceDepthFeet, surveyDate, location, farmerPhoto: compactPhoto, sitePhotos: compactPhotos, signatureData, beneficiaryId: farmer.beneficiaryId, beneficiaryName: farmer.beneficiaryName });
+        response = await submitPayload(buildPayload(compactPhoto, compactPhotos));
+      }
+
+      if (response?.data?.queued || response?.status === 202) {
+        setToast({ show: true, message: 'No internet connection. Your completed verification is saved safely and queued for automatic sync.', variant: 'warning' });
+        setTimeout(() => onVerificationComplete?.(), 900);
         return;
       }
-    }
-    try {
-      await axios.post(`${API_URL}/api/field-verification/${farmerId}`, fd, {
-        ...auth,
-        headers: {
-          ...auth.headers,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      setToast({ show: true, message: 'Verification saved successfully ✔️', variant: 'success' });
+      await deleteFieldDraft(draftKey);
+      setDraftSavedAt(null);
+      setToast({ show: true, message: 'Verification submitted successfully.', variant: 'success' });
       setTimeout(() => {
         setToast((t) => ({ ...t, show: false }));
-        onVerificationComplete();
-      }, 1500);
+        onVerificationComplete?.();
+      }, 900);
     } catch (err) {
       console.error('Submission error:', err);
+      const tooLarge = err.response?.status === 413;
       setToast({
         show: true,
-        message: `Failed to save verification: ${err.response?.data?.message || 'Server error'} ❌`,
+        message: tooLarge ? 'Photos are still too large for this connection. Your draft is safe; remove unnecessary photos or try again.' : `Could not submit now. Your draft is still saved on this device. ${err.response?.data?.message || 'Please retry when the connection is stable.'}`,
         variant: 'danger',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -285,7 +364,7 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
           <Alert variant="danger">{error}</Alert>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={onVerificationComplete}>Close</Button>
+          <Button variant="secondary" onClick={onVerificationComplete} disabled={submitting}>Close</Button>
         </Modal.Footer>
       </Modal>
     );
@@ -311,7 +390,7 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
       <Modal show onHide={onVerificationComplete} centered dialogClassName="fv-modal" scrollable>
         <Form onSubmit={handleSubmit}>
           <Modal.Header closeButton className="fv-header">
-            <Modal.Title>Field Verification</Modal.Title>
+            <div><Modal.Title>Field Verification</Modal.Title><div className="fv-draft-state"><FaCloud /> {draftSavedAt ? `Draft saved ${new Date(draftSavedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Draft protection active'}</div></div>
           </Modal.Header>
           <Modal.Body className="fv-body">
             <Accordion defaultActiveKey={['0', '1', '2', '3']} alwaysOpen className="fv-accordion">
@@ -348,7 +427,7 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
                     {farmer.farmerPhotoUrl && (
                       <Col xs={12} sm={6} md={4} className="mb-3">
                         <Card className="fv-img-card">
-                          <Card.Img src={farmer.farmerPhotoUrl} alt="Farmer Photo" />
+                          <Card.Img src={resolveAssetUrl(farmer.farmerPhotoUrl)} alt="Farmer Photo" />
                           <Card.Footer>Farmer Photo</Card.Footer>
                         </Card>
                       </Col>
@@ -563,8 +642,8 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
                             type="file"
                             accept="image/*"
                             capture="user"
-                            onChange={(e) => setFarmerPhoto(e.target.files[0])}
-                            required
+                            onChange={(e) => handleFarmerPhoto(e.target.files?.[0])}
+                            disabled={optimisingPhotos}
                           />
                         </OverlayTrigger>
                       </Form.Group>
@@ -578,11 +657,15 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
                             multiple
                             accept="image/*"
                             capture="environment"
-                            onChange={(e) => setSitePhotos(Array.from(e.target.files))}
-                            required
+                            onChange={(e) => handleSitePhotos(e.target.files)}
+                            disabled={optimisingPhotos}
                           />
                         </OverlayTrigger>
                       </Form.Group>
+                    </Col>
+                    <Col xs={12} className="fv-upload-summary">
+                      <div><strong>Farmer photo</strong><span>{farmerPhoto ? `${farmerPhoto.name} · ${formatBytes(farmerPhoto.size)}` : 'Not selected'}</span></div>
+                      <div><strong>Survey photos</strong><span>{sitePhotos.length ? `${sitePhotos.length} file${sitePhotos.length === 1 ? '' : 's'} · ${formatBytes(totalFileBytes(sitePhotos))}` : 'Not selected'}</span></div>
                     </Col>
                     <Col xs={12} className="mb-3">
                       <Form.Group>
@@ -631,15 +714,15 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
               </Accordion.Item>
             </Accordion>
           </Modal.Body>
-          <Modal.Footer className="fv-footer">
-            <Button variant="outline-secondary" onClick={clearForm}>
+          <Modal.Footer className="fv-footer"><div className="fv-continuity"><FaWifi /><span>{navigator.onLine ? 'Autosaved on this device' : 'Offline · draft protected'}</span></div>
+            <Button variant="outline-secondary" onClick={clearForm} disabled={submitting || optimisingPhotos}>
               Clear Form
             </Button>
-            <Button variant="secondary" onClick={onVerificationComplete}>
+            <Button variant="secondary" onClick={onVerificationComplete} disabled={submitting}>
               Cancel
             </Button>
-            <Button variant="success" type="submit">
-              Submit Verification
+            <Button variant="success" type="submit" disabled={submitting || optimisingPhotos}>
+              {optimisingPhotos ? 'Optimising photos…' : submitting ? 'Submitting…' : navigator.onLine ? 'Submit Verification' : 'Save for Sync'}
             </Button>
           </Modal.Footer>
         </Form>

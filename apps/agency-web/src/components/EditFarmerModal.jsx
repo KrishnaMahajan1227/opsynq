@@ -12,7 +12,7 @@ import {
 import axios from 'axios';
 import './EditFarmerModal.css';
 
-import { API_URL } from '../config';
+import { API_URL, resolveAssetUrl } from '../config';
 
 // Enumerations exactly matching your Mongoose schema
 const SCHEMES = [
@@ -887,7 +887,7 @@ const EditFarmerModal = ({ show, onHide, handleClose, farmer, onUpdate, handleSu
                       {formData.installedPhotoUpload ? (
                         <div className="efm__img-container">
                           <Image
-                            src={formData.installedPhotoUpload}
+                            src={resolveAssetUrl(formData.installedPhotoUpload)}
                             className="efm__img-preview"
                             alt="Installed Photo"
                           />
@@ -1216,7 +1216,7 @@ const EditFarmerModal = ({ show, onHide, handleClose, farmer, onUpdate, handleSu
                       <div className="efm__img-container">
                         {formData.farmerPhotoUrl ? (
                           <Image
-                            src={formData.farmerPhotoUrl}
+                            src={resolveAssetUrl(formData.farmerPhotoUrl)}
                             className="efm__img-preview"
                             alt="Farmer"
                           />
@@ -1240,7 +1240,7 @@ const EditFarmerModal = ({ show, onHide, handleClose, farmer, onUpdate, handleSu
                       <div className="efm__img-container">
                         {formData.signatureUrl ? (
                           <Image
-                            src={formData.signatureUrl}
+                            src={resolveAssetUrl(formData.signatureUrl)}
                             className="efm__img-preview"
                             alt="Signature"
                           />
@@ -1267,7 +1267,7 @@ const EditFarmerModal = ({ show, onHide, handleClose, farmer, onUpdate, handleSu
                             <div className="efm__img-container">
                               {url ? (
                                 <Image
-                                  src={url}
+                                  src={resolveAssetUrl(url)}
                                   className="efm__img-preview"
                                   alt={`Site Photo ${idx + 1}`}
                                 />
@@ -1343,7 +1343,7 @@ const EditFarmerModal = ({ show, onHide, handleClose, farmer, onUpdate, handleSu
                       <div className="efm__img-container">
                         {formData.finalfarmerPhotoUrl ? (
                           <Image
-                            src={formData.finalfarmerPhotoUrl}
+                            src={resolveAssetUrl(formData.finalfarmerPhotoUrl)}
                             className="efm__img-preview"
                             alt="Final Farmer"
                           />
@@ -1367,7 +1367,7 @@ const EditFarmerModal = ({ show, onHide, handleClose, farmer, onUpdate, handleSu
                       <div className="efm__img-container">
                         {formData.finalsurveyorsignatureUrl ? (
                           <Image
-                            src={formData.finalsurveyorsignatureUrl}
+                            src={resolveAssetUrl(formData.finalsurveyorsignatureUrl)}
                             className="efm__img-preview"
                             alt="Final Surveyor Signature"
                           />
@@ -1394,7 +1394,7 @@ const EditFarmerModal = ({ show, onHide, handleClose, farmer, onUpdate, handleSu
                             <div className="efm__img-container">
                               {url ? (
                                 <Image
-                                  src={url}
+                                  src={resolveAssetUrl(url)}
                                   className="efm__img-preview"
                                   alt={`Final Site Photo ${idx + 1}`}
                                 />
@@ -1595,7 +1595,7 @@ const EditFarmerModal = ({ show, onHide, handleClose, farmer, onUpdate, handleSu
                             <div className="efm__img-container">
                               {url ? (
                                 <Image
-                                  src={url}
+                                  src={resolveAssetUrl(url)}
                                   className="efm__img-preview"
                                   alt={`LR Photo ${idx + 1}`}
                                 />

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Button, Form, Row, Col, Toast, Image, Accordion } from 'react-bootstrap';
 import axios from 'axios';
 
-import { API_URL } from '../config.js';
+import { API_URL, resolveAssetUrl } from '../config.js';
 
 
 export default function OrderPlacementModal({ show, handleClose, onHide, farmer, onOrderPlaced, onSave }) {
@@ -244,7 +244,7 @@ export default function OrderPlacementModal({ show, handleClose, onHide, farmer,
                     <h6 className="mt-3">Site Photos</h6>
                     <div className="d-flex flex-wrap">
                       {farmer.sitePhotosUrls.map((url, i) => (
-                        <Image key={i} src={url} thumbnail style={{ maxWidth: 120, margin: 4 }} />
+                        <Image key={i} src={resolveAssetUrl(url)} thumbnail style={{ maxWidth: 120, margin: 4 }} />
                       ))}
                     </div>
                   </>
@@ -254,7 +254,7 @@ export default function OrderPlacementModal({ show, handleClose, onHide, farmer,
                 {farmer?.farmerPhotoUrl && (
                   <>
                     <h6 className="mt-3">Farmer Photo</h6>
-                    <Image src={farmer.farmerPhotoUrl} thumbnail style={{ maxWidth: 150 }} />
+                    <Image src={resolveAssetUrl(farmer.farmerPhotoUrl)} thumbnail style={{ maxWidth: 150 }} />
                   </>
                 )}
 
@@ -262,7 +262,7 @@ export default function OrderPlacementModal({ show, handleClose, onHide, farmer,
                 {farmer?.signatureUrl && (
                   <>
                     <h6 className="mt-3">Signature</h6>
-                    <Image src={farmer.signatureUrl} thumbnail style={{ maxWidth: 200 }} />
+                    <Image src={resolveAssetUrl(farmer.signatureUrl)} thumbnail style={{ maxWidth: 200 }} />
                   </>
                 )}
               </Accordion.Body>

@@ -19,7 +19,7 @@ import {
   FaDatabase,
 }
  from 'react-icons/fa';
-import { API_URL } from '../config';
+import { API_URL, resolveAssetUrl } from '../config';
 
 const isPresent = (v) => v !== undefined && v !== null && v !== '';
 const fmt = (v) => {
@@ -50,7 +50,7 @@ const Section = ({ icon, title, children, full = false }) => (
 );
 
 const Gallery = ({ title, images = [], geo = null }) => {
-  const clean = images.filter(Boolean);
+  const clean = images.filter(Boolean).map(resolveAssetUrl);
   if (!clean.length) return null;
   return (
     <div className="farmer-media-block">
@@ -110,7 +110,7 @@ const EvidenceChecklist = ({ items = [], farmerId, onUpdated }) => {
         <Badge bg={sub?.status === 'VERIFIED' ? 'success' : sub?.status === 'REJECTED' ? 'danger' : complete ? 'warning' : 'secondary'}>{sub?.status || 'PENDING'}</Badge>
         {['PHOTO','DOCUMENT','SIGNATURE'].includes(r.evidenceType) && <label className="farmer-evidence-upload btn btn-sm btn-outline-secondary mb-0"><FaUpload className="me-1" />{busyId===r._id?'Uploading…':sub?'Replace':'Upload'}<input type="file" accept="image/*" multiple={Number(r.minFiles||1)>1} disabled={busyId===r._id} onChange={e=>upload(entry,e.target.files)} /></label>}
         {r.evidenceType === 'BOOLEAN' && <Button size="sm" variant="outline-secondary" disabled={busyId===r._id} onClick={()=>submitValue(entry,true,[])}>{busyId===r._id?'Saving…':'Confirm'}</Button>}
-        {sub?.files?.length>0 && <div className="farmer-evidence-files">{sub.files.map((f,i)=><div className="farmer-evidence-file" key={`${f.url}-${i}`}><a href={f.url} target="_blank" rel="noreferrer">Evidence {i+1}</a><GeoMeta geo={f.geo||sub.captureGeo}/></div>)}</div>}
+        {sub?.files?.length>0 && <div className="farmer-evidence-files">{sub.files.map((f,i)=><div className="farmer-evidence-file" key={`${f.url}-${i}`}><a href={resolveAssetUrl(f.url)} target="_blank" rel="noreferrer">Evidence {i+1}</a><GeoMeta geo={f.geo||sub.captureGeo}/></div>)}</div>}
       </div>})}
     </div>
   </Section>;
@@ -185,7 +185,7 @@ export default function FarmerDetailView({ farmer, onBack }) {
 
       <div className="farmer-detail-hero">
         <div className="farmer-detail-avatar farmer-detail-avatar--photo">
-          {farmer.farmerPhotoUrl ? <img src={farmer.farmerPhotoUrl} alt={farmer.beneficiaryName || 'Beneficiary'} /> : <FaUser />}
+          {farmer.farmerPhotoUrl ? <img src={resolveAssetUrl(farmer.farmerPhotoUrl)} alt={farmer.beneficiaryName || 'Beneficiary'} /> : <FaUser />}
         </div>
         <div className="farmer-detail-hero__copy">
           <span className="farmer-detail-eyebrow">Beneficiary record</span>

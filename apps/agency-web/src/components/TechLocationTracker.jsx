@@ -1,140 +1,64 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Alert, Spinner } from "react-bootstrap";
-import io from "socket.io-client";
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Spinner } from 'react-bootstrap';
+import axios from 'axios';
+import io from 'socket.io-client';
+import { API_URL, SOCKET_REALTIME_ENABLED, SOCKET_SERVER_URL } from '../config';
 
-const SOCKET_SERVER_URL =
-  String(import.meta.env.VITE_SOCKET_SERVER_URL||'').replace(/\/$/,'')||(String(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')||(import.meta.env.PROD?'':'http://localhost:3000'));
-
-// How accurate (in meters) we require before sending to server
 const ACCURACY_THRESHOLD = 50;
+const MIN_SEND_INTERVAL = 30000;
 
 const TechLocationTracker = () => {
-  const socketRef = useRef(null);
+  const lastSendRef = useRef(0);
   const [trackingActive, setTrackingActive] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState('');
   const [waiting, setWaiting] = useState(true);
   const [currentAccuracy, setCurrentAccuracy] = useState(null);
 
   useEffect(() => {
-    // 1. Read technician info from localStorage
-    const technicianMobile = localStorage.getItem("technicianMobile") || "0000000000";
-    const technicianName = localStorage.getItem("techName") || "Technician";
-
-    // 2. Connect the socket
-    socketRef.current = io(SOCKET_SERVER_URL, {
-      withCredentials: true, transports: ["websocket", "polling"],
-      auth: { token: localStorage.getItem("token") },
-    });
-
-    socketRef.current.on("connect", () => {
-      console.log("Tracker: socket connected, id =", socketRef.current.id);
-      setTrackingActive(true);
-    });
-
-    socketRef.current.on("connect_error", (err) => {
-      console.error("Tracker: socket connection error:", err);
-      setErrorMsg("Could not connect to server.");
-    });
-
-    // 3. Ensure geolocation is available
-    if (!navigator.geolocation) {
-      setErrorMsg("Geolocation not supported by this browser.");
+    const token = localStorage.getItem('token');
+    if (!token || !navigator.geolocation) {
+      setErrorMsg(!navigator.geolocation ? 'Geolocation is not supported by this browser.' : 'Authentication required.');
       setWaiting(false);
-      return;
+      return undefined;
     }
+    const technicianMobile = localStorage.getItem('technicianMobile') || localStorage.getItem('userMobile') || '';
+    const technicianName = localStorage.getItem('techName') || localStorage.getItem('username') || 'Technician';
+    const auth = { headers: { Authorization: `Bearer ${token}` } };
+    const socket = SOCKET_REALTIME_ENABLED && SOCKET_SERVER_URL
+      ? io(SOCKET_SERVER_URL, { withCredentials: true, transports: ['websocket'], auth: { token } })
+      : null;
 
-    // 4. Success callback for both getCurrentPosition & watchPosition
-    const handlePosition = (position) => {
+    const handlePosition = async (position) => {
       const { latitude, longitude, accuracy } = position.coords;
-      console.log("Tracker: got position →", { latitude, longitude, accuracy });
-
-      // Update local “currentAccuracy” so UI can show it
       setCurrentAccuracy(accuracy);
-
-      // Only emit if accuracy is within threshold
-      if (accuracy <= ACCURACY_THRESHOLD) {
-        // If we were waiting, stop waiting now
-        if (waiting) setWaiting(false);
-
-        const payload = {
-          technicianId: technicianMobile,
-          username: technicianName,
-          technicianMobile,
-          latitude,
-          longitude,
-          accuracy: Math.round(accuracy),
-          timestamp: Date.now(),
-        };
-
-        socketRef.current.emit("techStatus", payload);
-      } else {
-        // Still waiting for better accuracy
-        console.log(
-          `Tracker: waiting for accuracy ≤ ${ACCURACY_THRESHOLD}m, currently ${accuracy}m`
-        );
+      if (accuracy > ACCURACY_THRESHOLD && lastSendRef.current) return;
+      const now = Date.now();
+      if (now - lastSendRef.current < MIN_SEND_INTERVAL) return;
+      lastSendRef.current = now;
+      const payload = { technicianMobile, username: technicianName, latitude, longitude, accuracy: Math.round(accuracy || 0), capturedAt: new Date(now).toISOString(), timestamp: now };
+      try {
+        await axios.post(`${API_URL}/api/users/me/location`, payload, auth);
+        socket?.emit('techStatus', payload);
+        setTrackingActive(true);
+        setWaiting(false);
+        setErrorMsg('');
+      } catch {
+        setErrorMsg(navigator.onLine ? 'Location could not be synced. It will retry automatically.' : 'Offline. Location will sync when the connection returns.');
+        setWaiting(false);
       }
     };
-
-    // 5. Error callback (for geolocation)
-    const handleError = (err) => {
-      console.error("Tracker: geolocation error:", err);
-      setErrorMsg("Error retrieving location. Please ensure location permissions are granted.");
-      setWaiting(false);
-    };
-
-    // 6. First, try a one‐time high‐accuracy request
-    navigator.geolocation.getCurrentPosition(handlePosition, handleError, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0,
-    });
-
-    // 7. Then, watchPosition for continuous updates
-    const watchId = navigator.geolocation.watchPosition(handlePosition, handleError, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0,
-    });
-
-    // 8. Cleanup on unmount
-    return () => {
-      navigator.geolocation.clearWatch(watchId);
-      socketRef.current.disconnect();
-    };
-  }, [waiting]);
+    const handleError = () => { setErrorMsg('Location unavailable. Allow location permission in your browser settings.'); setWaiting(false); };
+    navigator.geolocation.getCurrentPosition(handlePosition, handleError, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    const watchId = navigator.geolocation.watchPosition(handlePosition, handleError, { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 });
+    return () => { navigator.geolocation.clearWatch(watchId); socket?.disconnect(); };
+  }, []);
 
   return (
     <div className="mb-4">
-      {errorMsg ? (
-        <Alert variant="danger" className="mb-0">
-          {errorMsg}
-        </Alert>
-      ) : waiting ? (
-        <Alert
-          variant="secondary"
-          className="d-flex align-items-center mb-0"
-        >
-          <Spinner animation="border" size="sm" className="me-2" />
-          <span>Waiting for accurate location…</span>
-          {currentAccuracy !== null && (
-            <small className="ms-2 text-muted">
-              (current: {Math.round(currentAccuracy)} m)
-            </small>
-          )}
-        </Alert>
+      {errorMsg ? <Alert variant="warning" className="mb-0">{errorMsg}</Alert> : waiting ? (
+        <Alert variant="secondary" className="d-flex align-items-center mb-0"><Spinner animation="border" size="sm" className="me-2" /><span>Acquiring accurate location…</span>{currentAccuracy !== null && <small className="ms-2 text-muted">({Math.round(currentAccuracy)} m)</small>}</Alert>
       ) : (
-        <Alert
-          variant="success"
-          className="d-flex align-items-center mb-0"
-        >
-          <Spinner animation="border" size="sm" className="me-2" />
-          <span>TechLocationTracker is Active</span>
-          {currentAccuracy !== null && (
-            <small className="ms-2 text-muted">
-              (accuracy: {Math.round(currentAccuracy)} m)
-            </small>
-          )}
-        </Alert>
+        <Alert variant="success" className="d-flex align-items-center mb-0"><span>{trackingActive ? 'Location sync active' : 'Location ready'}</span>{currentAccuracy !== null && <small className="ms-2 text-muted">(accuracy: {Math.round(currentAccuracy)} m)</small>}</Alert>
       )}
     </div>
   );

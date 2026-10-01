@@ -4,7 +4,7 @@ import { Modal, Button, Form, Alert, Row, Col } from 'react-bootstrap';
 import SignatureCanvas from 'react-signature-canvas';
 import axios from 'axios';
 
-import { API_URL } from '../config.js';
+import { API_URL, resolveAssetUrl } from '../config.js';
 import './OrderConfirmationModal.css';
 
 
@@ -572,7 +572,7 @@ export default function OrderConfirmationModal({
                   <div className="mt-2">
                     <strong>Farmer's Signature:</strong>
                     <img
-                      src={formData.finalsignatureUrl}
+                      src={resolveAssetUrl(formData.finalsignatureUrl)}
                       alt="Farmer Signature"
                       style={{ maxWidth: '200px' }}
                     />
@@ -618,7 +618,7 @@ export default function OrderConfirmationModal({
                   <div className="mt-2">
                     <strong>Surveyor's Signature:</strong>
                     <img
-                      src={formData.finalsurveyorsignatureUrl}
+                      src={resolveAssetUrl(formData.finalsurveyorsignatureUrl)}
                       alt="Surveyor Signature"
                       style={{ maxWidth: '200px' }}
                     />

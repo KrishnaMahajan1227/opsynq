@@ -168,3 +168,14 @@
   .td-list-controls .form-select { width: 86px; }
   .td-queue-tabs button b { right: 4px; }
 }
+
+/* Technician workspace: company-side control language */
+.td-root{font-size:13px}
+.td-appbar button:disabled{opacity:.55;cursor:not-allowed}
+.td-header{align-items:flex-end;padding-bottom:13px;border-bottom:1px solid var(--td-line)}
+.td-header>div{max-width:760px}
+.td-header p{line-height:1.5}
+.td-queue-tabs button,.td-primary-action,.td-filter-button,.td-icon-button,.td-appbar-button,.td-pagination .btn{transition:background-color .12s ease,border-color .12s ease,color .12s ease,box-shadow .12s ease}
+.td-queue-tabs button:focus-visible,.td-primary-action:focus-visible,.td-filter-button:focus-visible,.td-appbar-button:focus-visible,.td-pagination .btn:focus-visible{outline:3px solid rgba(33,79,66,.16)!important;outline-offset:2px!important}
+.td-task-row{scroll-margin-bottom:84px}
+@media(max-width:767.98px){.td-header{padding:0 0 10px!important}.td-header p{max-width:100%!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.td-task-row{border-left:0;border-right:0}.td-primary-action{min-height:40px!important}}

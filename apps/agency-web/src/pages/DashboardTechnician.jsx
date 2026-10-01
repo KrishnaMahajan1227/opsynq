@@ -43,7 +43,7 @@ export default function DashboardTechnician() {
   const [inspFilter, setInspFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
   const [sortBy, setSortBy] = useState('priority');
-  const [activeTab, setActiveTab] = useState('verification');
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('opsynq_technician_tab') || 'verification');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [selectedId, setSelectedId] = useState(null);
@@ -179,6 +179,10 @@ export default function DashboardTechnician() {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
+  useEffect(() => {
+    sessionStorage.setItem('opsynq_technician_tab', activeTab);
+  }, [activeTab]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await fetchTasks();
@@ -246,17 +250,21 @@ export default function DashboardTechnician() {
 
   return (
     <Container fluid className="td-root">
+      <div className="td-appbar">
+        <div className="td-brand"><span className="td-brand-mark">O</span><div><strong>OPSYNQ Field Operations</strong><small>Agency technician workspace</small></div></div>
+        <div className="td-appbar-actions">
+          <div className="td-technician-identity"><strong>{technicianUsername || 'Technician'}</strong><small>{surveyorMobile || 'Assigned field user'}</small></div>
+          <button type="button" className="td-appbar-button" onClick={handleRefresh} disabled={isRefreshing} aria-label="Refresh assigned work" title="Refresh assigned work"><FaSyncAlt className={isRefreshing ? 'td-spin' : ''} /></button>
+        </div>
+      </div>
       {usernameError && <Alert variant="danger" className="td-alert-error">{usernameError}</Alert>}
 
       <header className="td-header">
         <div>
-          <span className="td-eyebrow">Field operations</span>
-          <h1>My work</h1>
-          <p>{technicianUsername || 'Loading profile'}{surveyorMobile ? ` · ${surveyorMobile}` : ''}</p>
+          <span className="td-eyebrow">Assigned work</span>
+          <h1>My field queue</h1>
+          <p>Complete verification, installation and rework from one focused workspace. Drafts remain protected during connectivity interruptions.</p>
         </div>
-        <Button className="td-icon-button" onClick={handleRefresh} disabled={isRefreshing} aria-label="Refresh assigned work" title="Refresh">
-          <FaSyncAlt className={isRefreshing ? 'td-spin' : ''} />
-        </Button>
       </header>
 
       <nav className="td-queue-tabs" aria-label="Work queues">

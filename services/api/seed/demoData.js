@@ -45,8 +45,7 @@ const PDIRecord = require('../models/platform/PDIRecord');
 const Farmer = require('../models/Farmer');
 const User = require('../models/User');
 
-const PORT = process.env.PORT || 3000;
-const DEMO_MEDIA_BASE_URL = String(process.env.DEMO_MEDIA_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+const DEMO_MEDIA_BASE_URL = String(process.env.DEMO_MEDIA_BASE_URL || '').replace(/\/$/, '');
 const DEMO_PASSWORD = process.env.DEMO_DEFAULT_PASSWORD || 'Demo@1234';
 
 const media = (name) => `${DEMO_MEDIA_BASE_URL}/demo-media/${name}`;

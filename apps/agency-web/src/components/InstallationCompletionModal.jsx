@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import './InstallationCompletionModal.css';
 
-import { API_URL } from '../config.js';
+import { API_URL, resolveAssetUrl } from '../config.js';
 
 
 export default function InstallationCompletionModal({
@@ -519,7 +519,7 @@ export default function InstallationCompletionModal({
                       <strong>Farmer Photo:</strong>
                       <div className="value">
                         <Image 
-                          src={farmer.farmerPhotoUrl} 
+                          src={resolveAssetUrl(farmer.farmerPhotoUrl)} 
                           thumbnail 
                           className="info-image" 
                           style={{ width: '140px', marginTop: '8px' }}
@@ -535,7 +535,7 @@ export default function InstallationCompletionModal({
                       <strong>Signature:</strong>
                       <div className="value">
                         <Image 
-                          src={farmer.signatureUrl} 
+                          src={resolveAssetUrl(farmer.signatureUrl)} 
                           thumbnail 
                           className="info-image" 
                           style={{ width: '140px', marginTop: '8px' }}
@@ -553,7 +553,7 @@ export default function InstallationCompletionModal({
                         {farmer.sitePhotosUrls.map((url, index) => (
                           <Image 
                             key={index} 
-                            src={url} 
+                            src={resolveAssetUrl(url)} 
                             thumbnail 
                             className="site-photo" 
                             style={{ width: '120px', height: '120px', objectFit: 'cover' }}

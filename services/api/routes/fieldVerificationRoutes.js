@@ -12,11 +12,20 @@ const router = express.Router();
 router.post(
   '/:id',
   protect,
-  upload.fields([
+  (req, res, next) => upload.fields([
     { name: 'farmerPhoto', maxCount: 1 },
     { name: 'sitePhotos',  maxCount: 10 },
     { name: 'signature',   maxCount: 1 }
-  ]),
+  ])(req, res, err => {
+    if (!err) return next();
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ message: 'One or more images are too large. Please retry; the technician app will optimise them before upload.' });
+    }
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ message: 'Too many files. A maximum of 12 verification files is supported.' });
+    }
+    return res.status(400).json({ message: err.message || 'Invalid verification upload.' });
+  }),
   ctl.submitFieldVerification
 );
 

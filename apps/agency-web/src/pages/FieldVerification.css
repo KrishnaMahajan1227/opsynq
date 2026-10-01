@@ -48,3 +48,17 @@
   .fv-sig-canvas { height:135px!important; }
   .fv-img-card img { height:180px; }
 }
+
+/* Field continuity + upload UX */
+.fv-draft-state{margin-top:4px;display:flex;align-items:center;gap:6px;color:#66736f;font-size:.7rem;font-weight:650;line-height:1.2}
+.fv-draft-state svg{color:#315f50;font-size:.72rem}
+.fv-upload-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:-2px 0 14px}
+.fv-upload-summary>div{min-width:0;padding:10px 11px;border:1px solid var(--fv-line);border-radius:9px;background:#fbfcfc}
+.fv-upload-summary strong,.fv-upload-summary span{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fv-upload-summary strong{margin-bottom:3px;color:#34423d;font-size:.72rem;font-weight:750}
+.fv-upload-summary span{color:#748079;font-size:.68rem}
+.fv-continuity{margin-right:auto;display:flex;align-items:center;gap:6px;color:#66736f;font-size:.7rem;font-weight:650}
+.fv-continuity svg{color:#315f50}
+.fv-body input[type="file"]{padding:8px 9px;line-height:1.6}
+.fv-body input[type="file"]::file-selector-button{margin:-8px 10px -8px -9px;padding:8px 11px;border:0;border-right:1px solid #d7dce2;background:#f5f7f6;color:#30463d;font-size:.74rem;font-weight:720}
+@media(max-width:575.98px){.fv-upload-summary{grid-template-columns:1fr}.fv-continuity{grid-column:1/-1;order:4;width:100%;justify-content:center;padding-top:2px}.fv-footer{grid-template-columns:1fr 1fr!important}.fv-footer .btn-success{grid-column:1/-1!important}.fv-draft-state{font-size:.65rem}}

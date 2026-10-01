@@ -31,7 +31,7 @@ export function installAgencyAxiosResilience(){
   const offline=!navigator.onLine||error.code==='ERR_NETWORK'||error.code==='ECONNABORTED';
   if(!offline)return Promise.reject(error);
   if(method==='GET'){const cached=await getCachedResponse(agencyGetCacheKey(url));if(cached)return {data:cached.data,status:200,statusText:'Offline cache',headers:{},config:cfg,offlineCache:true};}
-  if(['POST','PUT','PATCH','DELETE'].includes(method)&&!url.includes('/auth/')&&!url.includes('/unified-auth/')){await queueWrite({url,method,body:cfg.data});return {data:{queued:true,offline:true,message:'Saved offline. It will sync automatically when the connection returns.'},status:202,statusText:'Queued offline',headers:{},config:cfg};}
+  if(['POST','PUT','PATCH','DELETE'].includes(method)&&!url.includes('/auth/')&&!url.includes('/unified-auth/')){await queueWrite({url,method,body:cfg.data,draftKey:cfg.opsynqDraftKey||''});return {data:{queued:true,offline:true,message:'Saved offline. It will sync automatically when the connection returns.'},status:202,statusText:'Queued offline',headers:{},config:cfg};}
   return Promise.reject(error);
  });
 }

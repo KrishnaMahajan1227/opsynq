@@ -44,6 +44,12 @@ router.get(
   protect,
   userController.getMyProfile
 );
+router.post(
+  '/me/location',
+  protect,
+  userController.updateMyLocation
+);
+
 
 router.get(
   '/technicians',

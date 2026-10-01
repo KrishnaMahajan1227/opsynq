@@ -192,6 +192,39 @@ exports.getMyProfile = async (req, res) => {
   }
 };
 
+
+// POST /api/users/me/location
+exports.updateMyLocation = async (req, res) => {
+  try {
+    if (!req.user?._id) return res.status(401).json({ message: 'Authentication required.' });
+    const latitude = Number(req.body?.latitude);
+    const longitude = Number(req.body?.longitude);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ message: 'Valid latitude and longitude are required.' });
+    }
+    const rawCapturedAt = req.body?.capturedAt ? new Date(req.body.capturedAt) : new Date();
+    const capturedAt = Number.isNaN(rawCapturedAt.getTime()) ? new Date() : rawCapturedAt;
+    const location = {
+      latitude,
+      longitude,
+      accuracy: Math.min(10000, Math.max(0, Number(req.body?.accuracy) || 0)),
+      address: typeof req.body?.address === 'string' ? req.body.address.trim().slice(0, 500) : '',
+      capturedAt,
+      updatedAt: new Date(),
+    };
+    const user = await User.findOneAndUpdate(
+      { _id: req.user._id, isActive: { $ne: false } },
+      { $set: { lastLocation: location } },
+      { new: true, runValidators: true },
+    ).select('_id username mobile role lastLocation').lean();
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+    return res.json({ ok: true, location: user.lastLocation });
+  } catch (err) {
+    console.error('Error in updateMyLocation:', err.message);
+    return res.status(500).json({ message: 'Failed to update location.' });
+  }
+};
+
 // GET /api/users/technicians
 exports.getTechnicians = async (req, res) => {
   try {
