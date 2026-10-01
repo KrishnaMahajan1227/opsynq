@@ -77,9 +77,10 @@ export default function AgencyTeamAccessPanel({ role = 'admin' }) {
 
   const remove = async (user) => {
     if (!canManageAdmins) return;
-    const decision = await confirmAction({ title: 'Delete Agency user?', message: `${user.username} will lose access immediately. Existing audit/history records are preserved.`, confirmLabel: 'Delete user', tone: 'danger' });
+    try { const impact=await axios.get(`${API_URL}/api/users/${user._id}/delete-impact`,auth); if(!impact.data?.deletable){setError(impact.data?.message||'This user has protected operational history. Deactivate the account instead.');return;} } catch(e){setError(e.response?.data?.message||'Unable to inspect delete impact.');return;}
+    const decision = await confirmAction({ title: 'Permanently delete Agency user?', message: `${user.username} has no protected operational history and will lose access immediately.`, confirmLabel: 'Delete permanently', tone: 'danger', requireReason:true, reasonLabel:'Deletion reason', requireText:'DELETE', textLabel:'Type' });
     if (!decision.confirmed) return;
-    try { await axios.delete(`${API_URL}/api/users/${user._id}`, auth); await load(); }
+    try { await axios.delete(`${API_URL}/api/users/${user._id}`, {...auth,data:{reason:decision.reason}}); await load(); }
     catch (e) { setError(e.response?.data?.message || 'Unable to delete user.'); }
   };
 

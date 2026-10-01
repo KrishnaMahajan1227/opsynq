@@ -22,12 +22,15 @@ router.get('/work-packages',canOperationsRead,c.listWorkPackages);router.post('/
 router.get('/beneficiaries',canBeneficiaryRead,c.listBeneficiaries);
 router.post('/beneficiaries',canWrite,c.createBeneficiary);
 router.patch('/beneficiaries/bulk',canWrite,c.bulkUpdateBeneficiaries);
+router.post('/beneficiaries/delete-impact',canWrite,c.bulkBeneficiaryDeleteImpact);
 router.delete('/beneficiaries/bulk',canWrite,c.bulkDeleteBeneficiaries);
+router.delete('/beneficiaries/all',canWrite,c.deleteAllBeneficiaries);
 // IMPORTANT: fixed/static beneficiary routes must be declared before any /:farmerId route.
 router.get('/beneficiaries/template',canOperationsRead,c.downloadBeneficiaryTemplate);
 router.post('/beneficiaries/import',canWrite,upload.single('file'),c.importBeneficiaries);
 router.get('/beneficiaries/imports',canOperationsRead,c.listImports);
 router.get('/beneficiaries/imports/:id/errors',canOperationsRead,c.downloadImportErrors);
+router.get('/beneficiaries/:farmerId/delete-impact',canWrite,c.beneficiaryDeleteImpact);
 router.get('/beneficiaries/:farmerId',canBeneficiaryRead,c.getBeneficiaryDetail);
 router.patch('/beneficiaries/:farmerId',canWrite,c.updateBeneficiary);
 router.delete('/beneficiaries/:farmerId',canWrite,c.deleteBeneficiary);

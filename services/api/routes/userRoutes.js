@@ -20,6 +20,8 @@ router.put(
   userController.update
 );
 
+router.get('/:id/delete-impact', protect, authorizeRoles('superadmin'), userController.getDeleteImpact);
+
 // Delete user (only superadmin)
 router.delete(
   '/:id',

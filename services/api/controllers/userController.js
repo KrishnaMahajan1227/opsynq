@@ -8,6 +8,8 @@ const { unscopedDemoAllowed } = require('../utils/sessionCookies');
 const RealtimeRevision=require('../models/RealtimeRevision');
 const { validatePassword } = require('../utils/passwordSecurity');
 const dataConflict = require('../utils/dataConflict');
+const { userDependencySummary } = require('../utils/deleteGovernance');
+const AdminChangeLog = require('../models/AdminChangeLog');
 
 
 async function scopedLegacyUserIds(actor) {
@@ -134,6 +136,10 @@ exports.update = async (req, res) => {
   }
 };
 
+exports.getDeleteImpact = async (req,res)=>{
+  try{const userId=req.params.id;if(!mongoose.isValidObjectId(userId))return res.status(400).json({message:'Invalid userId'});if(!(await assertManageableUser(req.user,userId)))return res.status(403).json({message:'You cannot manage a user outside your agency.'});const user=await User.findById(userId).select('-password').lean();if(!user)return res.status(404).json({message:'User not found'});const dependencies=await userDependencySummary(userId);res.json({deletable:dependencies.total===0,protected:dependencies.total>0,dependencies,message:dependencies.total?'This user has protected operational history. Deactivate the account instead of hard deleting it.':'No protected operational history found. Hard delete is allowed.'});}catch(err){res.status(500).json({message:'Unable to inspect delete impact'})}
+};
+
 // DELETE /api/users/:id
 exports.delete = async (req, res) => {
   try {
@@ -149,8 +155,12 @@ exports.delete = async (req, res) => {
     if (!deleted) {
       return res.status(404).json({ message: 'User not found' });
     }
+    const reason=String(req.body?.reason||'').trim();if(reason.length<3)return res.status(400).json({message:'Deletion reason is required.'});
+    const dependencies=await userDependencySummary(userId);
+    if(dependencies.total)return res.status(409).json({message:'This user has protected operational history. Deactivate the account instead of hard deleting it.',code:'DELETE_BLOCKED_BY_DEPENDENCIES',dependencies});
     await User.deleteOne({ _id: userId });
     await AgencyUserLink.deleteMany({ legacyUserId: userId });
+    await AdminChangeLog.create({adminId:req.user._id,changeType:'user_deletion',details:{reason,changes:{userId,username:deleted.username,role:deleted.role}}});
     res.status(200).json({ message: 'User deleted successfully' });
   } catch (err) {
     console.error('Error in delete:', err.message);

@@ -482,9 +482,13 @@ export default function DashboardSuperAdmin() {
   };
 
   const deleteUser = async (userId) => {
-    const decision = await confirmAction({title:'Delete user?',message:'This user will lose access immediately. The action remains auditable.',confirmLabel:'Delete user',tone:'danger'}); if (!decision.confirmed) return;
     try {
-      await axios.delete(`${API_URL}/api/users/${userId}`, auth);
+      const impact=await axios.get(`${API_URL}/api/users/${userId}/delete-impact`,auth);
+      if(!impact.data?.deletable){setToast({show:true,variant:'danger',message:impact.data?.message||'This user has operational history. Deactivate the account instead.'});return;}
+    } catch (e) { setToast({show:true,variant:'danger',message:e.response?.data?.message||'Unable to inspect delete impact.'}); return; }
+    const decision = await confirmAction({title:'Permanently delete user?',message:'The account has no protected operational history and will lose access immediately.',confirmLabel:'Delete permanently',tone:'danger',requireReason:true,reasonLabel:'Deletion reason',requireText:'DELETE',textLabel:'Type'}); if (!decision.confirmed) return;
+    try {
+      await axios.delete(`${API_URL}/api/users/${userId}`, {...auth,data:{reason:decision.reason}});
       setToast({ show: true, variant: 'success', message: 'User deleted successfully' });
       await fetchUsers();
     } catch (error) {
@@ -1651,7 +1655,11 @@ export default function DashboardSuperAdmin() {
                               variant="outline-danger"
                               size="sm"
                               onClick={async () => {
-                                const decision = await confirmAction({title:'Delete beneficiary?',message:'The beneficiary will be deleted only if protected operational history does not block the action.',confirmLabel:'Delete beneficiary',tone:'danger',requireReason:true,reasonLabel:'Deletion reason'});
+                                try {
+                                  const impact = await axios.get(`${API_URL}/api/farmers/${f._id}/delete-impact`, auth);
+                                  if (!impact.data?.deletable) { setToast({ show:true, variant:'danger', message: impact.data?.message || 'Protected operational history blocks deletion.' }); return; }
+                                } catch (impactError) { setToast({ show:true, variant:'danger', message: impactError.response?.data?.message || 'Unable to inspect delete impact.' }); return; }
+                                const decision = await confirmAction({title:'Permanently delete beneficiary?',message:'This pre-execution beneficiary has no protected operational history. Ownership context will also be removed.',confirmLabel:'Delete permanently',tone:'danger',requireReason:true,reasonLabel:'Deletion reason',requireText:'DELETE',textLabel:'Type'});
                                 if (!decision.confirmed) return;
                                 const reason = decision.reason;
                                 try {

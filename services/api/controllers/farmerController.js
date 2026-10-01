@@ -11,6 +11,9 @@ const { farmerQueryForUser, canAccessFarmer, resolveAgencyScope } = require('../
 const { redactFarmer } = require('../utils/pii');
 const { validateApplicationTransition, contextForFarmer, publishAgencyProgress, syncComplaintServiceCase } = require('../utils/agencyLifecycle');
 const { cleanImportRows, rowNumber, sheetHeaders, extraFields, workbookBuffer } = require('../utils/excelImport');
+const { beneficiaryDependencySummary, dependencyMessage } = require('../utils/deleteGovernance');
+const BeneficiaryContext = require('../models/platform/BeneficiaryContext');
+const WorkPackage = require('../models/platform/WorkPackage');
 
 /* Multer setup for Excel uploads using memory storage */
 const storage = multer.memoryStorage();
@@ -652,6 +655,29 @@ exports.assignTechnician = asyncHandler(async (req, res) => {
   res.json({ message: `${assignmentType[0]}${assignmentType.slice(1).toLowerCase()} technician assigned successfully.`, assignmentType, technician: newTechnician, update });
 });
 
+exports.deleteAllFarmers = async(req,res)=>{
+ try{if(req.user.role!=='superadmin')return res.status(403).json({message:'Only Agency Superadmin can delete all beneficiaries.'});const reason=String(req.body?.reason||'').trim(),confirm=String(req.body?.confirm||'');if(reason.length<3)return res.status(400).json({message:'Deletion reason is required.'});if(confirm!=='DELETE ALL')return res.status(400).json({message:'Type DELETE ALL to confirm.'});const query=await farmerQueryForUser(req.user);const farmers=await Farmer.find(query).select('_id beneficiaryId beneficiaryName').lean();if(!farmers.length)return res.json({deleted:0});const ids=farmers.map(f=>f._id),contexts=await BeneficiaryContext.find({farmerId:{$in:ids}}).lean();const byCompany={};for(const c of contexts){const k=String(c.companyId||'');if(!k)continue;(byCompany[k]||(byCompany[k]=[])).push(c.farmerId)}for(const [companyId,farmerIds] of Object.entries(byCompany)){const summary=await beneficiaryDependencySummary(companyId,farmerIds);if(summary.total)return res.status(409).json({message:dependencyMessage(summary,'Agency beneficiary records'),code:'DELETE_ALL_BLOCKED_BY_DEPENDENCIES',dependencies:summary})}const packageIds=[...new Set(contexts.map(c=>String(c.workPackageId||'')).filter(Boolean))];await BeneficiaryContext.deleteMany({farmerId:{$in:ids}});await Farmer.deleteMany({_id:{$in:ids}});for(const packageId of packageIds){const count=await BeneficiaryContext.countDocuments({workPackageId:packageId});await WorkPackage.updateOne({_id:packageId},{$set:{assignedQuantity:count}}).catch(()=>{})}await AdminChangeLog.create({adminId:req.user._id,changeType:'farmer_deletion',details:{farmerIds:ids,reason,changes:{count:ids.length,deleteAll:true}}});res.json({deleted:ids.length});}catch(err){console.error('Delete all farmers failed:',err.message);res.status(500).json({message:'Failed to delete all beneficiaries'})}
+};
+
+exports.getBulkDeleteImpact = async (req,res)=>{
+ try{const ids=Array.isArray(req.body?.ids)?[...new Set(req.body.ids.filter(mongoose.isValidObjectId).map(String))].slice(0,500):[];if(!ids.length)return res.status(400).json({message:'Select at least one beneficiary.'});const farmers=await Farmer.find({_id:{$in:ids}}).lean();if(farmers.length!==ids.length)return res.status(404).json({message:'One or more beneficiaries were not found.'});for(const farmer of farmers)if(!(await canAccessFarmer(req.user,farmer)))return res.status(403).json({message:'One or more beneficiaries are outside your Agency scope.'});const contexts=await BeneficiaryContext.find({farmerId:{$in:ids}}).lean();const byCompany=new Map();for(const ctx of contexts){if(!ctx.companyId)continue;const key=String(ctx.companyId);if(!byCompany.has(key))byCompany.set(key,[]);byCompany.get(key).push(ctx.farmerId)};const summaries=[];let total=0;for(const [companyId,farmerIds] of byCompany){const summary=await beneficiaryDependencySummary(companyId,farmerIds);summaries.push({companyId,...summary});total+=summary.total}res.json({deletable:total===0,protected:total>0,count:ids.length,dependencies:summaries,message:total?'One or more selected beneficiaries have protected operational history. Archive/close them instead of hard deleting.':`${ids.length} beneficiary record(s) can be safely deleted.`});}catch(err){res.status(500).json({message:'Unable to inspect bulk delete impact'})}
+};
+exports.bulkDeleteFarmers = async(req,res)=>{
+ try{const ids=Array.isArray(req.body?.ids)?[...new Set(req.body.ids.filter(mongoose.isValidObjectId).map(String))].slice(0,500):[],reason=String(req.body?.reason||'').trim();if(!ids.length)return res.status(400).json({message:'Select at least one beneficiary.'});if(reason.length<3)return res.status(400).json({message:'Bulk deletion reason is required.'});const farmers=await Farmer.find({_id:{$in:ids}}).lean();if(farmers.length!==ids.length)return res.status(404).json({message:'One or more beneficiaries were not found.'});for(const farmer of farmers)if(!(await canAccessFarmer(req.user,farmer)))return res.status(403).json({message:'One or more beneficiaries are outside your Agency scope.'});const contexts=await BeneficiaryContext.find({farmerId:{$in:ids}}).lean();for(const group of Object.values(contexts.reduce((a,c)=>{const k=String(c.companyId||'');(a[k]||(a[k]=[])).push(c.farmerId);return a},{}))){const first=contexts.find(c=>group.some(id=>String(id)===String(c.farmerId)));if(first?.companyId){const summary=await beneficiaryDependencySummary(first.companyId,group);if(summary.total)return res.status(409).json({message:dependencyMessage(summary,'One or more selected beneficiaries'),code:'DELETE_BLOCKED_BY_DEPENDENCIES',dependencies:summary})}}const packageIds=[...new Set(contexts.map(c=>String(c.workPackageId||'')).filter(Boolean))];await BeneficiaryContext.deleteMany({farmerId:{$in:ids}});await Farmer.deleteMany({_id:{$in:ids}});for(const packageId of packageIds){const count=await BeneficiaryContext.countDocuments({workPackageId:packageId});await WorkPackage.updateOne({_id:packageId},{$set:{assignedQuantity:count}}).catch(()=>{})}await AdminChangeLog.create({adminId:req.user._id,changeType:'farmer_deletion',details:{farmerIds:ids,reason,changes:{count:ids.length,bulk:true}}});res.json({deleted:ids.length});}catch(err){console.error('Bulk delete farmers failed:',err.message);res.status(500).json({message:'Failed to delete selected beneficiaries'})}
+};
+
+exports.getDeleteImpact = async (req, res) => {
+  try {
+    const farmerId=req.params.id;if(!mongoose.isValidObjectId(farmerId))return res.status(400).json({message:'Invalid farmer ID'});
+    const farmer=await Farmer.findById(farmerId).lean();if(!farmer)return res.status(404).json({message:'Farmer not found'});
+    if(!(await canAccessFarmer(req.user,farmer)))return res.status(403).json({message:'You do not have access to this beneficiary.'});
+    const ctx=await contextForFarmer(farmerId);const companyId=ctx?.companyId;
+    if(!companyId)return res.json({deletable:true,protected:false,dependencies:{total:0,counts:{}},warning:'No governed company context is linked to this beneficiary.'});
+    const dependencies=await beneficiaryDependencySummary(companyId,[farmerId]);
+    res.json({deletable:dependencies.total===0,protected:dependencies.total>0,dependencies,message:dependencies.total?dependencyMessage(dependencies,'This beneficiary'):'No protected operational history found. Hard delete is allowed.'});
+  } catch(err){console.error('Delete impact failed:',err.message);res.status(500).json({message:'Unable to inspect delete impact'})}
+};
+
 // DELETE /api/farmers/:id
 exports.deleteFarmer = async (req, res) => {
   try {
@@ -673,7 +699,15 @@ exports.deleteFarmer = async (req, res) => {
     if (!(await canAccessFarmer(user, farmer))) {
       return res.status(403).json({ message: 'You do not have access to this beneficiary.' });
     }
+    const ctx = await contextForFarmer(farmerId);
+    if (ctx?.companyId) {
+      const dependencies = await beneficiaryDependencySummary(ctx.companyId, [farmerId]);
+      if (dependencies.total) return res.status(409).json({ message: dependencyMessage(dependencies, 'This beneficiary'), code: 'DELETE_BLOCKED_BY_DEPENDENCIES', dependencies });
+    }
+    const packageId=ctx?.workPackageId;
+    await BeneficiaryContext.deleteMany({ farmerId });
     await Farmer.deleteOne({ _id: farmerId });
+    if(packageId){const count=await BeneficiaryContext.countDocuments({workPackageId:packageId});await WorkPackage.updateOne({_id:packageId},{$set:{assignedQuantity:count}}).catch(()=>{});}
 
     // Log the action
     await AdminChangeLog.create({

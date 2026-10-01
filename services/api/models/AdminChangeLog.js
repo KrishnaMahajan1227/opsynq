@@ -4,7 +4,7 @@ const adminChangeLogSchema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   changeType: {
     type: String,
-    enum: ['direct_update', 'excel_upload', 'jsr_update', 'technician_assignment', 'farmer_deletion'],
+    enum: ['direct_update', 'excel_upload', 'jsr_update', 'technician_assignment', 'farmer_deletion', 'user_deletion'],
     required: true,
   },
   details: {
