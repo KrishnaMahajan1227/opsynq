@@ -12,7 +12,7 @@ const META={
  reports:['Reports & Audit','Daily to annual agency-scoped operational, RMS, material and audit reports.'],
  rms:['RMS Monitoring','Live remote monitoring, alerts and device performance for assigned beneficiaries.'],
  'technician-summary':['Technician Performance','Team workload, completion and field accountability.'],
- users:['User Management','Manage agency users, roles and recovery access.'],
+ users:['Team & Access','Manage Agency Admin and technician access with role-safe controls.'],
  requests:['Admin Requests','Review controlled administrative requests.'],
  upload:['Bulk Data Import','Validate and import approved operational spreadsheets.'],
 };

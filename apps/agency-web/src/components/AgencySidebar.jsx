@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaChartPie, FaDatabase, FaTools, FaCheckCircle, FaExclamationTriangle,
@@ -34,7 +34,10 @@ const operationalSections = [
   },
   {
     id: 'team', label: 'Team',
-    items: [{ key: 'technician-summary', label: 'Technician Summary', icon: <FaUsers /> }],
+    items: [
+      { key: 'technician-summary', label: 'Technician Summary', icon: <FaUsers /> },
+      { key: 'users', label: 'Team & Access', icon: <FaUserCog /> },
+    ],
   },
   {
     id: 'data', label: 'Data',
@@ -45,7 +48,6 @@ const operationalSections = [
 const governanceSection = {
   id: 'administration', label: 'Administration',
   items: [
-    { key: 'users', label: 'User Management', icon: <FaUserCog /> },
     { key: 'requests', label: 'Admin Requests', icon: <FaFileAlt /> },
   ],
 };
@@ -56,6 +58,15 @@ export default function AgencySidebar({ role, activeTab, setActiveTab, collapsed
   const activeKey = activeTab === 'farmer-detail' ? 'records' : activeTab;
   const activeSection = sections.find(section => section.items.some(item => item.key === activeKey))?.id || sections[0]?.id;
   const [openSection, setOpenSection] = useState(activeSection);
+  useEffect(() => {
+    const saved = localStorage.getItem('opsynq_agency_sidebar_collapsed');
+    if (saved === '1' && window.innerWidth > 820) setCollapsed?.(true);
+  }, [setCollapsed]);
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    localStorage.setItem('opsynq_agency_sidebar_collapsed', next ? '1' : '0');
+    setCollapsed(next);
+  };
 
   const choose = (item) => {
     if (item.route) navigate(item.route);
@@ -68,7 +79,7 @@ export default function AgencySidebar({ role, activeTab, setActiveTab, collapsed
       <div className="agency-sidebar__brand">
         <div className="agency-sidebar__mark">O</div>
         {!collapsed && <div className="agency-sidebar__brandcopy"><strong>Opsynq</strong><span>Agency Operations</span></div>}
-        <button className="agency-sidebar__collapse" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+        <button className="agency-sidebar__collapse" onClick={toggleCollapsed} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
           {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
         </button>
       </div>
@@ -96,7 +107,7 @@ export default function AgencySidebar({ role, activeTab, setActiveTab, collapsed
         <button className="agency-sidebar__logout" title="Sign out" onClick={onLogout}><FaSignOutAlt/>{!collapsed && <span>Sign out</span>}</button>
       </div>
 
-      {collapsed && <button className="agency-sidebar__reopen" onClick={() => setCollapsed(false)} aria-label="Expand agency navigation"><FaChevronRight/></button>}
+      {collapsed && <button className="agency-sidebar__reopen" onClick={() => { localStorage.setItem('opsynq_agency_sidebar_collapsed', '0'); setCollapsed(false); }} aria-label="Expand agency navigation"><FaChevronRight/></button>}
     </aside>
   );
 }

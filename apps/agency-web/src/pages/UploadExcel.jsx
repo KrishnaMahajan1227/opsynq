@@ -38,6 +38,8 @@ const UploadExcel = () => {
   const [fileError, setFileError] = useState('');
   const [jsrFileError, setJsrFileError] = useState('');
   const [dupModal, setDupModal] = useState({ show: false, duplicates: [], decisions: {} });
+  const [schemaModal, setSchemaModal] = useState({ show: false, columns: [], totalRows: 0 });
+  const [customFieldDecision, setCustomFieldDecision] = useState('');
   const [jsrResultModal, setJsrResultModal] = useState({ show: false, updated: 0, failedRecords: [], invalidRecords: [] });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -70,6 +72,8 @@ const UploadExcel = () => {
     if (type === 'regular') {
       setFile(null);
       setFileError('');
+      setCustomFieldDecision('');
+      setSchemaModal({ show: false, columns: [], totalRows: 0 });
     } else {
       setJsrFile(null);
       setJsrFileError('');
@@ -148,23 +152,28 @@ const UploadExcel = () => {
     multiple: false,
   });
 
-  const handleRegularUpload = async (e) => {
-    e.preventDefault();
+  const processRegularUpload = async ({ customDecision = customFieldDecision, duplicateDecisions = null } = {}) => {
     if (!validateFile(file, 'regular')) return;
     setLoading(true);
     setLoadingType('regular');
     try {
       const formData = new FormData();
       formData.append('excel', file);
+      if (customDecision) formData.append('customFieldDecision', customDecision);
+      if (duplicateDecisions) formData.append('decisions', JSON.stringify(duplicateDecisions));
       const { data } = await callApi(formData, 'uploadExcel');
+      if (data.status === 'customFieldsReview') {
+        setSchemaModal({ show: true, columns: data.customColumns || [], totalRows: data.totalRows || 0 });
+        return;
+      }
       if (data.status === 'duplicatesFound') {
         const decisions = Object.fromEntries(data.duplicates.map((d) => [d.beneficiaryId, 'skip']));
         setDupModal({ show: true, duplicates: data.duplicates, decisions });
         toast.info('Duplicate records found. Review them before continuing.');
-      } else {
-        toast.success(data.message || 'Farmer file processed successfully.');
-        reset('regular');
+        return;
       }
+      toast.success(data.message || 'Farmer file processed successfully.');
+      reset('regular');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Upload failed. Please try again.');
     } finally {
@@ -173,23 +182,20 @@ const UploadExcel = () => {
     }
   };
 
+  const handleRegularUpload = async (e) => {
+    e.preventDefault();
+    await processRegularUpload({ customDecision: '' });
+  };
+
+  const confirmSchemaDecision = async (decision) => {
+    setCustomFieldDecision(decision);
+    setSchemaModal((prev) => ({ ...prev, show: false }));
+    await processRegularUpload({ customDecision: decision });
+  };
+
   const confirmDuplicates = async (decisions) => {
-    setLoading(true);
-    setLoadingType('regular');
-    try {
-      const formData = new FormData();
-      formData.append('excel', file);
-      formData.append('decisions', JSON.stringify(decisions));
-      const { data } = await callApi(formData, 'uploadExcel');
-      toast.success(data.message || 'Duplicate decisions processed successfully.');
-      setDupModal({ show: false, duplicates: [], decisions: {} });
-      reset('regular');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to process duplicate records.');
-    } finally {
-      setLoading(false);
-      setLoadingType('');
-    }
+    setDupModal((prev) => ({ ...prev, show: false }));
+    await processRegularUpload({ customDecision: customFieldDecision || 'include', duplicateDecisions: decisions });
   };
 
   const handleJsrUpload = async (e) => {
@@ -352,6 +358,16 @@ const UploadExcel = () => {
           </section>
         </div>
       </main>
+
+      <Modal show={schemaModal.show} onHide={() => !loading && setSchemaModal((prev) => ({ ...prev, show: false }))} size="lg" centered backdrop="static">
+        <Modal.Header closeButton={!loading}><div><div className="upload-page-kicker">COLUMN REVIEW</div><Modal.Title>Extra columns found</Modal.Title><p className="mb-0 mt-1 text-muted">Nothing has been written yet. Choose whether these workbook columns should be stored with each beneficiary.</p></div></Modal.Header>
+        <Modal.Body>
+          <div className="schema-review-summary"><strong>{schemaModal.columns.length}</strong><span>extra columns across {schemaModal.totalRows} rows</span></div>
+          <div className="schema-review-list">{schemaModal.columns.map((column) => <article key={column.header}><div><strong>{column.header}</strong><span>{column.populatedRows} populated rows</span></div><p>{column.sampleValues?.length ? column.sampleValues.join(' · ') : 'No sample value available'}</p></article>)}</div>
+          <div className="upload-notes-card mt-3"><div><FaInfoCircle /></div><div><strong>How extra columns are stored</strong><p>Included columns are preserved under the beneficiary's Custom Fields, so the original workbook data is not discarded and remains visible in record details and exports.</p></div></div>
+        </Modal.Body>
+        <Modal.Footer><Button variant="outline-secondary" disabled={loading} onClick={() => confirmSchemaDecision('ignore')}>Ignore extra columns</Button><Button disabled={loading} onClick={() => confirmSchemaDecision('include')}>{loading ? 'Processing…' : 'Include as Custom Fields'}</Button></Modal.Footer>
+      </Modal>
 
       <DuplicateDecisionModal
         show={dupModal.show}

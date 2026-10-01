@@ -127,6 +127,10 @@ const farmerSchema = new mongoose.Schema({
   installationDate: Date,
   installationCompletionDate: Date,
   installedByTechnicianName: String,
+  installationAssignedTechnician: String,
+  installationAssignedTechnicianMobile: String,
+  installationAssignedAt: Date,
+  installationAssignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   commissioningDate: Date,
 
   installedPhotoUpload: String,
@@ -219,6 +223,8 @@ farmerSchema.index({ surveyorMobile: 1 });
 farmerSchema.index({ surveyorName: 1 });
 farmerSchema.index({ jsrTechnician: 1 });
 farmerSchema.index({ installedByTechnicianName: 1 });
+farmerSchema.index({ installationAssignedTechnician: 1 });
+farmerSchema.index({ installationAssignedTechnicianMobile: 1 });
 farmerSchema.index({ reworkAssignTechnician: 1 });
 farmerSchema.index({ confirmedBy: 1 });
 farmerSchema.index({ applicationStatus: 1, updatedAt: -1 });

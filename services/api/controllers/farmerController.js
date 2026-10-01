@@ -69,6 +69,8 @@ const mapping = {
   'Installation Date': 'installationDate',
   'Installation Completion Date': 'installationCompletionDate',
   'Installed By (Technician Name)': 'installedByTechnicianName',
+  'Installation Technician': 'installationAssignedTechnician',
+  'Installation Technician Mobile': 'installationAssignedTechnicianMobile',
   'Commissioning Date': 'commissioningDate',
   'Installed Photo Upload': 'installedPhotoUpload',
   'Pump No Unique': 'pumpNoUnique',
@@ -148,6 +150,25 @@ function toDate(v) {
 }
 
 const keepInspection = s => ['Done', 'Completed'].includes(s);
+
+async function scopedTechniciansForUser(user) {
+  const scope = await resolveAgencyScope(user);
+  let query = { role: 'field_technician', isActive: true };
+  if (scope.linked) {
+    const AgencyUserLink = require('../models/platform/AgencyUserLink');
+    const links = await AgencyUserLink.find({ agencyId: { $in: scope.agencyIds }, isActive: true }).select('legacyUserId').lean();
+    query._id = { $in: links.map((x) => x.legacyUserId) };
+  } else if (!scope.demoUnscoped) {
+    query._id = { $in: [] };
+  }
+  return User.find(query).select('username mobile email role').lean();
+}
+
+const ASSIGNMENT_TYPES = {
+  SURVEY: { nameField: 'surveyorName', mobileField: 'surveyorMobile' },
+  INSTALLATION: { nameField: 'installationAssignedTechnician', mobileField: 'installationAssignedTechnicianMobile' },
+  REWORK: { nameField: 'reworkAssignTechnician', mobileField: null },
+};
 
 // GET /api/farmers
 exports.getFarmers = async (req, res) => {
@@ -534,6 +555,55 @@ exports.bulkUpdateFarmers = asyncHandler(async (req, res) => {
   }
 });
 
+// POST /api/farmers/:id/assign-technician
+exports.assignTechnician = asyncHandler(async (req, res) => {
+  const farmerId = req.params.id;
+  const assignmentType = String(req.body.assignmentType || '').toUpperCase();
+  const technicianId = String(req.body.technicianId || '');
+  const reason = String(req.body.reason || '').trim();
+  if (!mongoose.isValidObjectId(farmerId)) return res.status(400).json({ message: 'Invalid farmer ID' });
+  if (!ASSIGNMENT_TYPES[assignmentType]) return res.status(400).json({ message: 'Assignment type must be SURVEY, INSTALLATION or REWORK' });
+  if (!mongoose.isValidObjectId(technicianId)) return res.status(400).json({ message: 'Select a valid technician' });
+  if (reason.length < 3) return res.status(400).json({ message: 'Reason is required for assignment' });
+
+  const farmer = await Farmer.findById(farmerId);
+  if (!farmer) return res.status(404).json({ message: 'Beneficiary not found' });
+  if (!(await canAccessFarmer(req.user, farmer))) return res.status(403).json({ message: 'This beneficiary is outside your agency scope.' });
+  const technicians = await scopedTechniciansForUser(req.user);
+  const technician = technicians.find((t) => String(t._id) === technicianId);
+  if (!technician) return res.status(403).json({ message: 'Selected technician is not active in your agency.' });
+
+  const fields = ASSIGNMENT_TYPES[assignmentType];
+  const currentTechnician = {
+    username: String(farmer[fields.nameField] || ''),
+    mobile: fields.mobileField ? String(farmer[fields.mobileField] || '') : '',
+  };
+  const newTechnician = { username: technician.username, mobile: String(technician.mobile || '') };
+
+  if (req.user.role !== 'superadmin') {
+    const existingRequest = await TechnicianChangeRequest.findOne({ farmerId, assignmentType, status: 'Pending' }).lean();
+    if (existingRequest) return res.status(409).json({ message: `A pending ${assignmentType.toLowerCase()} assignment request already exists for this beneficiary.` });
+    const request = await TechnicianChangeRequest.create({
+      farmerId,
+      assignmentType,
+      farmerDetails: { beneficiaryId: farmer.beneficiaryId || '-', beneficiaryName: farmer.beneficiaryName || '-', mobile: farmer.mobile || '-', aadharNo: farmer.aadharNo || '-' },
+      requestedBy: req.user._id,
+      requestedByDetails: { username: req.user.username, mobile: String(req.user.mobile || ''), role: req.user.role },
+      currentTechnician, newTechnician, reason, requestDate: new Date(),
+    });
+    await AdminChangeLog.create({ adminId: req.user._id, changeType: 'technician_assignment', details: { farmerId, assignmentType, technicianId, technician: newTechnician, reason, requestId: request._id, status: 'PENDING_APPROVAL' } });
+    return res.status(202).json({ message: `${assignmentType[0]}${assignmentType.slice(1).toLowerCase()} assignment submitted for approval.`, requestId: request._id, status: 'PENDING_APPROVAL' });
+  }
+
+  const update = { [fields.nameField]: technician.username };
+  if (fields.mobileField) update[fields.mobileField] = String(technician.mobile || '');
+  if (assignmentType === 'INSTALLATION') { update.installationAssignedAt = new Date(); update.installationAssignedBy = req.user._id; }
+  if (assignmentType === 'REWORK') update.reworkAssignDate = new Date();
+  await Farmer.findByIdAndUpdate(farmerId, { $set: update }, { runValidators: true });
+  await AdminChangeLog.create({ adminId: req.user._id, changeType: 'technician_assignment', details: { farmerId, assignmentType, technicianId, technician: newTechnician, reason, changes: update } });
+  res.json({ message: `${assignmentType[0]}${assignmentType.slice(1).toLowerCase()} technician assigned successfully.`, assignmentType, technician: newTechnician, update });
+});
+
 // DELETE /api/farmers/:id
 exports.deleteFarmer = async (req, res) => {
   try {
@@ -579,7 +649,7 @@ exports.downloadExcelTemplate=async(req,res)=>{
   const columns=type==='jsr'?['Beneficiary ID','Beneficiary Name','Mobile','Aadhar No','JSR Status']:Object.keys(mapping);
   const sample=Object.fromEntries(columns.map(k=>[k,k==='Beneficiary ID'?'APP-0001':k==='Beneficiary Name'?'Sample Beneficiary':k==='Mobile'?'9876543210':k==='JSR Status'?'JSR SUBMITTED':'']));
   const ws=xlsx.utils.json_to_sheet([sample],{header:columns});const wb=xlsx.utils.book_new();xlsx.utils.book_append_sheet(wb,ws,type==='jsr'?'JSR Update':'Beneficiaries');
-  const help=xlsx.utils.aoa_to_sheet([['Instructions'],['Do not rename required standard headers. Extra columns are allowed on the beneficiary template and are preserved as Custom Fields.'],[type==='jsr'?'Required: Beneficiary ID, Beneficiary Name, Mobile, Aadhar No, JSR Status':'Required: Beneficiary ID. Use the template headers to avoid mapping errors.']]);xlsx.utils.book_append_sheet(wb,help,'Instructions');
+  const help=xlsx.utils.aoa_to_sheet([['Instructions'],['Do not rename required standard headers. Extra columns are reviewed before import and can be preserved as Custom Fields.'],[type==='jsr'?'Required: Beneficiary ID, Beneficiary Name, Mobile, Aadhar No, JSR Status':'Required: Beneficiary ID. Surveyor Name/Mobile, Installation Technician and Rework Assign Technician can be used to carry work ownership into the Agency workflow.'],['Assignment rule'],['Technician usernames must belong to an active technician in the current Agency scope; invalid technician values are not assigned.']]);xlsx.utils.book_append_sheet(wb,help,'Instructions');
   const buf=xlsx.write(wb,{type:'buffer',bookType:'xlsx'});res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition',`attachment; filename="opsynq-agency-${type}-template.xlsx"`);res.send(buf);
 };
 
@@ -593,8 +663,24 @@ exports.uploadExcel = [
       const wb = xlsx.read(req.file.buffer, { type: 'buffer' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const raw = xlsx.utils.sheet_to_json(sheet).filter(r => r['Beneficiary ID']);
+      const allHeaders = [...new Set(raw.flatMap((row) => Object.keys(row || {})))];
+      const knownHeadersForImport = new Set([...Object.keys(mapping), ...Array.from({ length: 20 }, (_, i) => `Panel${i + 1}`)]);
+      const customHeaders = allHeaders.filter((header) => !knownHeadersForImport.has(header));
+      const customFieldDecision = String(req.body.customFieldDecision || '').toLowerCase();
+      if (customHeaders.length && !['include', 'ignore'].includes(customFieldDecision)) {
+        return res.json({
+          status: 'customFieldsReview',
+          message: 'Extra columns found. Review them before any records are written.',
+          customColumns: customHeaders.map((header) => ({
+            header,
+            populatedRows: raw.filter((row) => row?.[header] !== undefined && row?.[header] !== null && String(row[header]).trim() !== '').length,
+            sampleValues: raw.map((row) => row?.[header]).filter((value) => value !== undefined && value !== null && String(value).trim() !== '').slice(0, 3),
+          })),
+          totalRows: raw.length,
+        });
+      }
 
-      const technicians = await User.find({ role: 'field_technician', isActive: true }).lean();
+      const technicians = await scopedTechniciansForUser(req.user);
       const technicianMap = new Map(technicians.map(t => [t.username.toLowerCase(), t.mobile.toString()]));
 
 
@@ -647,7 +733,7 @@ exports.uploadExcel = [
         }
 
         const knownHeaders=new Set([...Object.keys(mapping),...Array.from({length:20},(_,i)=>`Panel${i+1}`)]);
-        obj.customFields=Object.fromEntries(Object.entries(r).filter(([k,v])=>!knownHeaders.has(k)&&v!==undefined&&v!==null&&String(v).trim()!=='').map(([k,v])=>[k,v]));
+        obj.customFields=customFieldDecision === 'ignore' ? {} : Object.fromEntries(Object.entries(r).filter(([k,v])=>!knownHeaders.has(k)&&v!==undefined&&v!==null&&String(v).trim()!=='').map(([k,v])=>[k,v]));
         obj.excelFileName = req.file.originalname;
         obj.excelUploadDate = new Date();
 
@@ -681,6 +767,14 @@ exports.uploadExcel = [
           delete obj.surveyorMobile;
         }
 
+        for (const assignmentField of ['installationAssignedTechnician', 'reworkAssignTechnician']) {
+          const username = String(obj[assignmentField] || '').trim().toLowerCase();
+          if (!username) continue;
+          const technician = technicians.find((t) => String(t.username || '').toLowerCase() === username);
+          if (!technician) { delete obj[assignmentField]; if (assignmentField === 'installationAssignedTechnician') delete obj.installationAssignedTechnicianMobile; }
+          else { obj[assignmentField] = technician.username; if (assignmentField === 'installationAssignedTechnician') obj.installationAssignedTechnicianMobile = String(technician.mobile || ''); }
+        }
+
         return obj;
       });
 
@@ -701,14 +795,17 @@ exports.uploadExcel = [
         return res.json({
           status: 'duplicatesFound',
           message: 'Duplicates found. Awaiting decisions.',
-          duplicates: duplicates.map(d => { const fields=['beneficiaryName','aadharNo','mobile','alternateMobileNumber','scheme','village','taluka','district','pumpHP','surveyorName','surveyorMobile']; return {
+          duplicates: duplicates.map(d => { const fields=['beneficiaryName','aadharNo','mobile','alternateMobileNumber','scheme','village','taluka','district','pumpHP','surveyorName','surveyorMobile','installationAssignedTechnician','installationAssignedTechnicianMobile','reworkAssignTechnician']; return {
             beneficiaryId: d.incoming.beneficiaryId,
             beneficiaryName: d.incoming.beneficiaryName,
             aadharNo: d.incoming.aadharNo,
             mobile: d.incoming.mobile,
             existing: Object.fromEntries(fields.map(k=>[k,d.existing?.[k]??''])),
             incoming: Object.fromEntries(fields.map(k=>[k,d.incoming?.[k]??''])),
-            differences: fields.filter(k=>String(d.existing?.[k]??'')!==String(d.incoming?.[k]??'')).map(k=>({field:k,existing:d.existing?.[k]??'',incoming:d.incoming?.[k]??''}))
+            differences: [
+              ...fields.filter(k=>String(d.existing?.[k]??'')!==String(d.incoming?.[k]??'')).map(k=>({field:k,existing:d.existing?.[k]??'',incoming:d.incoming?.[k]??''})),
+              ...Object.keys(d.incoming?.customFields || {}).filter(k=>String(d.existing?.customFields?.[k]??'')!==String(d.incoming.customFields[k]??'')).map(k=>({field:`Custom: ${k}`,existing:d.existing?.customFields?.[k]??'',incoming:d.incoming.customFields[k]??''}))
+            ]
           }})
         });
       }
@@ -717,7 +814,7 @@ exports.uploadExcel = [
       if (decisions) {
         for (const { existing, incoming } of duplicates) {
           if (decisions[incoming.beneficiaryId] !== 'update') continue;
-          const merged = { ...existing.toObject(), ...incoming };
+          const merged = { ...existing.toObject(), ...incoming, customFields: { ...(existing.customFields || {}), ...(incoming.customFields || {}) } };
           if (keepInspection(existing.inspectionStatus)) {
             merged.inspectionStatus = existing.inspectionStatus;
             merged.applicationStatus = existing.applicationStatus;
@@ -933,7 +1030,7 @@ exports.getChangeRequests = async (req, res) => {
     }
 
     const requests = await TechnicianChangeRequest.find(query)
-      .populate('farmerId', 'beneficiaryId beneficiaryName mobile aadharNo surveyorName surveyorMobile jsrTechnician installedByTechnicianName reworkAssignTechnician confirmedBy')
+      .populate('farmerId', 'beneficiaryId beneficiaryName mobile aadharNo surveyorName surveyorMobile jsrTechnician installedByTechnicianName installationAssignedTechnician installationAssignedTechnicianMobile reworkAssignTechnician confirmedBy')
       .populate('requestedBy', 'username mobile role')
       .populate('approvedBy', 'username')
       .lean();
@@ -970,14 +1067,13 @@ exports.approveChangeRequest = async (req, res) => {
       return res.status(403).json({ message: 'This change request is outside your agency scope.' });
     }
 
-    // Apply changes to farmer
-    const updateData = {
-      surveyorName: request.newTechnician.username,
-      surveyorMobile: request.newTechnician.mobile,
-    };
-    if (request.newTechnician.username && request.newTechnician.username !== request.currentTechnician.username) {
-      updateData.reworkAssignTechnician = request.newTechnician.username;
-    }
+    // Apply the requested assignment without changing unrelated work owners.
+    const assignmentType = request.assignmentType || 'SURVEY';
+    const config = ASSIGNMENT_TYPES[assignmentType] || ASSIGNMENT_TYPES.SURVEY;
+    const updateData = { [config.nameField]: request.newTechnician.username };
+    if (config.mobileField) updateData[config.mobileField] = request.newTechnician.mobile;
+    if (assignmentType === 'INSTALLATION') { updateData.installationAssignedAt = new Date(); updateData.installationAssignedBy = user._id; }
+    if (assignmentType === 'REWORK') updateData.reworkAssignDate = new Date();
 
     await Farmer.findByIdAndUpdate(request.farmerId, {
       $set: updateData,
@@ -1071,7 +1167,7 @@ exports.getRequests = async (req, res) => {
       requestId: req._id,
       requestedBy: req.requestedBy.username,
       requestType: 'technician_change',
-      details: `Change technician for farmer ${req.farmerId.beneficiaryId} - ${req.farmerId.beneficiaryName}`,
+      details: `${String(req.assignmentType || 'SURVEY').replaceAll('_',' ')} assignment for farmer ${req.farmerId.beneficiaryId} - ${req.farmerId.beneficiaryName}`,
       status: req.status,
       createdAt: req.requestDate,
       remarks: req.remarks || '',
@@ -1107,7 +1203,7 @@ exports.getAllRequests = async (req, res) => {
       requestId: req._id.toString(),
       requestedBy: req.requestedBy?.username || 'Unknown',
       requestType: 'technician_change',
-      details: `Change technician for farmer ${req.farmerId?.beneficiaryId || 'N/A'} - ${req.farmerId?.beneficiaryName || 'N/A'}`,
+      details: `${String(req.assignmentType || 'SURVEY').replaceAll('_',' ')} assignment for farmer ${req.farmerId?.beneficiaryId || 'N/A'} - ${req.farmerId?.beneficiaryName || 'N/A'}`,
       status: req.status,
       createdAt: req.requestDate,
       remarks: req.remarks || '',

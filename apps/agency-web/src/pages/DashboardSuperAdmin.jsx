@@ -62,6 +62,8 @@ import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
 import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
 import AgencyRmsPanel,{AgencyRmsSummary} from '../components/AgencyRmsPanel';
 import AgencyReportsPanel from '../components/AgencyReportsPanel';
+import AgencyTeamAccessPanel from '../components/AgencyTeamAccessPanel';
+import AgencyTechnicianAssignmentModal from '../components/AgencyTechnicianAssignmentModal';
 import { confirmAction } from '../utils/confirmAction';
 import AgencyConflictResolutionModal from '../components/AgencyConflictResolutionModal';
 
@@ -173,6 +175,7 @@ export default function DashboardSuperAdmin() {
   const [showOrder, setShowOrder] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAssignTechnicianModal, setShowAssignTechnicianModal] = useState(false);
+  const [assignmentFarmer, setAssignmentFarmer] = useState(null);
 
   const [reworkData, setReworkData] = useState({});
   const [assignTechnicianForm, setAssignTechnicianForm] = useState({
@@ -1615,6 +1618,7 @@ export default function DashboardSuperAdmin() {
                             </OverlayTrigger>
                           </td>
                           <td className="action-col">
+                            <Button variant="outline-secondary" size="sm" className="me-1" onClick={() => setAssignmentFarmer(f)}><FaUsers className="me-1" /> Assign</Button>
                             <Button
                               variant="outline-primary"
                               size="sm"
@@ -2021,6 +2025,8 @@ export default function DashboardSuperAdmin() {
           {activeTab === 'rms' && !isLoading && (<AgencyRmsPanel />)}
           {activeTab === 'reports' && !isLoading && (<AgencyReportsPanel />)}
 
+          {activeTab === 'users' && !isLoading && (<AgencyTeamAccessPanel role="superadmin" />)}
+
           {activeTab === 'technician-summary' && !isLoading && (
             <Card className="mb-4">
               <Card.Header className="d-flex justify-content-between align-items-center">
@@ -2105,7 +2111,7 @@ export default function DashboardSuperAdmin() {
           )}
 
           {/* ─── USER MANAGEMENT TAB ─────────────────────────────────────────── */}
-          {activeTab === 'users' && !isLoading && (
+          {activeTab === '__legacy-users' && !isLoading && (
             <Card className="mb-4">
               <Card.Header className="d-flex justify-content-between align-items-center">
                 <span>User Management</span>
@@ -2822,6 +2828,15 @@ export default function DashboardSuperAdmin() {
               </Button>
             </Modal.Footer>
           </Modal>
+
+          <AgencyTechnicianAssignmentModal
+            show={!!assignmentFarmer}
+            farmer={assignmentFarmer}
+            technicians={technicians}
+            role="superadmin"
+            onClose={() => setAssignmentFarmer(null)}
+            onDone={async (result) => { setAssignmentFarmer(null); setToast({ show: true, variant: 'success', message: result?.message || 'Technician assignment saved.' }); await refreshAll(); }}
+          />
         </div>
       </div>
     </Container>

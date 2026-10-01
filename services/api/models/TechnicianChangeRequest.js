@@ -18,6 +18,7 @@ const technicianChangeRequestSchema = new mongoose.Schema({
     username: { type: String, default: '' },
     mobile: { type: String, default: '' },
   },
+  assignmentType: { type: String, enum: ['SURVEY', 'INSTALLATION', 'REWORK'], default: 'SURVEY' },
   newTechnician: {
     username: { type: String, required: false }, // Changed from required: true
     mobile: { type: String, required: false },   // Changed from required: true

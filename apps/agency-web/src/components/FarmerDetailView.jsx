@@ -16,6 +16,7 @@ import {
   FaShieldAlt,
   FaBoxOpen,
   FaUpload,
+  FaDatabase,
 }
  from 'react-icons/fa';
 import { API_URL } from '../config';
@@ -277,6 +278,8 @@ export default function FarmerDetailView({ farmer, onBack }) {
           <Field label="Controller no." value={farmer.controllerNoUnique} mono />
           <Field label="IMEI" value={farmer.imeiNoUnique} mono />
           <Field label="Installation done" value={farmer.installationDoneYesNo} />
+          <Field label="Installation assigned to" value={farmer.installationAssignedTechnician} />
+          <Field label="Installation assignment date" value={fmtDate(farmer.installationAssignedAt)} />
           <Field label="Installed by" value={farmer.installedByTechnicianName} />
           <Field label="Installation date" value={fmtDate(farmer.installationDate)} />
           <Field label="Completion date" value={fmtDate(farmer.installationCompletionDate)} />
@@ -313,6 +316,12 @@ export default function FarmerDetailView({ farmer, onBack }) {
             </div>
           ))}
         </Section>
+
+        {farmer.customFields && Object.keys(farmer.customFields).length > 0 && (
+          <Section icon={<FaDatabase />} title="Custom imported fields" full>
+            {Object.entries(farmer.customFields).sort(([a],[b]) => a.localeCompare(b)).map(([key, value]) => <Field key={key} label={key} value={value} />)}
+          </Section>
+        )}
 
         {ops && (
           <Section icon={<FaBuilding />} title="Opsynq assignment context">

@@ -8,7 +8,7 @@ const { authorizeRoles } = require('../middleware/roleMiddleware');
 router.post(
   '/register',
   protect,
-  authorizeRoles('superadmin'),
+  authorizeRoles('admin','superadmin'),
   userController.register
 );
 

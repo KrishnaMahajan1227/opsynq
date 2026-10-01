@@ -31,6 +31,7 @@ router.post('/change-requests/:id/reject', protect, authorizeRoles('superadmin')
 router.get('/', protect, farmerController.getFarmers);
 router.get('/detail-context/:id', protect, farmerController.getFarmerDetailContext);
 router.post('/:id/evidence/:requirementId', protect, farmerController.submitFarmerEvidence);
+router.post('/:id/assign-technician', protect, authorizeRoles('admin','superadmin'), farmerController.assignTechnician);
 router.get('/:id', protect, farmerController.getFarmerById);
 router.put('/:id', protect, authorizeRoles('admin','superadmin'), farmerController.updateFarmer);
 router.delete('/:id', protect, authorizeRoles('admin','superadmin'), farmerController.deleteFarmer);

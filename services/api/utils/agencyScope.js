@@ -9,7 +9,7 @@ const cloneScope=scope=>({...scope,agencyIds:[...(scope.agencyIds||[])],companyI
 
 const technicianAssignmentFilter=(user={})=>({$or:[
  {surveyorMobile:String(user.mobile||'')},{surveyorName:String(user.username||'')},{jsrTechnician:String(user.username||'')},
- {installedByTechnicianName:String(user.username||'')},{reworkAssignTechnician:String(user.username||'')},{confirmedBy:String(user.username||'')},
+ {installedByTechnicianName:String(user.username||'')},{installationAssignedTechnician:String(user.username||'')},{reworkAssignTechnician:String(user.username||'')},{confirmedBy:String(user.username||'')},{orderReceivedByTechnician:String(user.username||'')},
 ]});
 
 async function resolveAgencyScope(user){
@@ -47,6 +47,6 @@ async function canAccessFarmer(user,farmer){
  if(scope.linked&&!scope.farmerIds.includes(String(farmer._id)))return false;
  if(user.role!=='field_technician')return true;
  const username=String(user.username||''),mobile=String(user.mobile||'');
- return [String(farmer.surveyorMobile||'')===mobile,String(farmer.surveyorName||'')===username,String(farmer.jsrTechnician||'')===username,String(farmer.installedByTechnicianName||'')===username,String(farmer.reworkAssignTechnician||'')===username,String(farmer.confirmedBy||'')===username].some(Boolean);
+ return [String(farmer.surveyorMobile||'')===mobile,String(farmer.surveyorName||'')===username,String(farmer.jsrTechnician||'')===username,String(farmer.installedByTechnicianName||'')===username,String(farmer.installationAssignedTechnician||'')===username,String(farmer.reworkAssignTechnician||'')===username,String(farmer.confirmedBy||'')===username,String(farmer.orderReceivedByTechnician||'')===username].some(Boolean);
 }
 module.exports={resolveAgencyScope,farmerQueryForUser,canAccessFarmer,technicianAssignmentFilter,clearAgencyScopeCache};

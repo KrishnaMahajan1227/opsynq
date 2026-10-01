@@ -14,7 +14,6 @@ import {
   FaSlidersH,
   FaTimes,
   FaWifi,
-  FaSignOutAlt,
 } from 'react-icons/fa';
 import axios from 'axios';
 import FieldVerification from './FieldVerification';
@@ -102,28 +101,23 @@ export default function DashboardTechnician() {
   }, [fetchTasks, technicianUsername, activeTab]);
 
   const verificationTasks = useMemo(
-    () => tasks.filter(t => t.inspectionStatus !== 'Completed' && t.surveyorMobile === surveyorMobile),
-    [tasks, surveyorMobile]
+    () => tasks.filter(t => t.inspectionStatus !== 'Completed' && (t.surveyorMobile === surveyorMobile || String(t.surveyorName || '').toLowerCase() === technicianUsername.toLowerCase())),
+    [tasks, surveyorMobile, technicianUsername]
   );
 
   const approvedInstallationTasks = useMemo(() => tasks.filter(t => {
-    if (t.inspectionStatus === 'Completed' && t.surveyorMobile === surveyorMobile && (t.reworkAssignTechnician || t.surveyorName)) {
-      const assignedTech = (t.reworkAssignTechnician || t.surveyorName).toLowerCase();
-      const me = technicianUsername.toLowerCase();
-      const allowedStatuses = ['Pending Approval', 'Pending Installation', 'Move to Installation', 'Ordered', 'Dispatch Completed', 'Ready for Installation'];
-      return assignedTech === me && allowedStatuses.includes(t.applicationStatus);
-    }
-    return false;
-  }), [tasks, surveyorMobile, technicianUsername]);
+    if (t.inspectionStatus !== 'Completed') return false;
+    const assignedTech = String(t.installationAssignedTechnician || t.reworkAssignTechnician || t.surveyorName || '').toLowerCase();
+    const me = technicianUsername.toLowerCase();
+    const allowedStatuses = ['Pending Approval', 'Pending Installation', 'Move to Installation', 'Ordered', 'Dispatch Completed', 'Ready for Installation'];
+    return assignedTech === me && allowedStatuses.includes(t.applicationStatus);
+  }), [tasks, technicianUsername]);
 
   const completedTasks = useMemo(() => tasks.filter(t => {
-    if (t.surveyorMobile === surveyorMobile && (t.reworkAssignTechnician || t.surveyorName)) {
-      const assignedTech = (t.reworkAssignTechnician || t.surveyorName).toLowerCase();
-      const me = technicianUsername.toLowerCase();
-      return assignedTech === me && ['Installation Completed', 'Closed'].includes(t.applicationStatus);
-    }
-    return false;
-  }), [tasks, surveyorMobile, technicianUsername]);
+    const assignedTech = String(t.installationAssignedTechnician || t.installedByTechnicianName || t.surveyorName || '').toLowerCase();
+    const me = technicianUsername.toLowerCase();
+    return assignedTech === me && ['Installation Completed', 'Closed'].includes(t.applicationStatus);
+  }), [tasks, technicianUsername]);
 
   const complaintTasks = useMemo(() => tasks.filter(t => {
     if (t.applicationStatus === 'Complaint Raised' && (t.reworkAssignTechnician || t.surveyorName)) {
@@ -184,14 +178,6 @@ export default function DashboardTechnician() {
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
-
-
-  const handleLogout = () => {
-    fetch('/api/unified-auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
-    localStorage.clear();
-    const platformBase = import.meta.env.VITE_PLATFORM_APP_URL || (import.meta.env.PROD ? window.location.origin : `${window.location.protocol}//${window.location.hostname || 'localhost'}:5173`);
-    window.location.assign(`${platformBase}/?login=1`);
-  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -260,26 +246,17 @@ export default function DashboardTechnician() {
 
   return (
     <Container fluid className="td-root">
-      <div className="td-appbar">
-        <div className="td-brand">
-          <span className="td-brand-mark" aria-hidden="true">O</span>
-          <div><strong>Opsynq</strong><small>Field Operations</small></div>
-        </div>
-        <div className="td-appbar-actions">
-          <span className="td-technician-identity"><strong>{technicianUsername || 'Technician'}</strong>{surveyorMobile && <small>{surveyorMobile}</small>}</span>
-          <button className="td-appbar-button" onClick={handleRefresh} disabled={isRefreshing} aria-label="Refresh assigned work" title="Refresh"><FaSyncAlt className={isRefreshing ? 'td-spin' : ''} /></button>
-          <button className="td-appbar-button" onClick={handleLogout} aria-label="Sign out" title="Sign out"><FaSignOutAlt /></button>
-        </div>
-      </div>
-
       {usernameError && <Alert variant="danger" className="td-alert-error">{usernameError}</Alert>}
 
       <header className="td-header">
         <div>
-          <span className="td-eyebrow">Assigned field work</span>
+          <span className="td-eyebrow">Field operations</span>
           <h1>My work</h1>
-          <p>Verify sites, complete installations, resolve issues and monitor assigned assets.</p>
+          <p>{technicianUsername || 'Loading profile'}{surveyorMobile ? ` · ${surveyorMobile}` : ''}</p>
         </div>
+        <Button className="td-icon-button" onClick={handleRefresh} disabled={isRefreshing} aria-label="Refresh assigned work" title="Refresh">
+          <FaSyncAlt className={isRefreshing ? 'td-spin' : ''} />
+        </Button>
       </header>
 
       <nav className="td-queue-tabs" aria-label="Work queues">
@@ -386,6 +363,9 @@ export default function DashboardTechnician() {
                   </div>
                   <div className="td-secondary-info">
                     {task.assignedVendorCompanyName && <div><span>Vendor</span><strong>{task.assignedVendorCompanyName}</strong></div>}
+                    {activeTab === 'installation' && <div><span>Assigned to</span><strong>{task.installationAssignedTechnician || task.surveyorName || technicianUsername || 'You'}</strong></div>}
+                    {activeTab === 'verification' && <div><span>Survey owner</span><strong>{task.surveyorName || technicianUsername || 'You'}</strong></div>}
+                    {activeTab === 'complaints' && <div><span>Rework owner</span><strong>{task.reworkAssignTechnician || technicianUsername || 'You'}</strong></div>}
                     {activeTab === 'complaints' && task.reworkAssignDate && <div><span>Assigned</span><strong>{new Date(task.reworkAssignDate).toLocaleDateString('en-IN')}</strong></div>}
                   </div>
                   <div className="td-task-action">{renderTaskAction(task)}</div>

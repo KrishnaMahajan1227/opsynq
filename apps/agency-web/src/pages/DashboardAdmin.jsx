@@ -21,6 +21,7 @@ import {
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import {
   FaChartPie,
+  FaUsers,
   FaSyncAlt,
   FaCheckCircle,
   FaPrint,
@@ -54,6 +55,8 @@ import AgencyWorkspaceHeader from '../components/AgencyWorkspaceHeader';
 import MaterialReceiptsPanel from '../components/MaterialReceiptsPanel';
 import AgencyRmsPanel,{AgencyRmsSummary} from '../components/AgencyRmsPanel';
 import AgencyReportsPanel from '../components/AgencyReportsPanel';
+import AgencyTeamAccessPanel from '../components/AgencyTeamAccessPanel';
+import AgencyTechnicianAssignmentModal from '../components/AgencyTechnicianAssignmentModal';
 import { confirmAction } from '../utils/confirmAction';
 
 // Constants for dropdowns
@@ -166,6 +169,7 @@ export default function DashboardAdmin() {
   const [showEdit, setShowEdit] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAssignTechnicianModal, setShowAssignTechnicianModal] = useState(false);
+  const [assignmentFarmer, setAssignmentFarmer] = useState(null);
 
   // Form States
   const [reworkData, setReworkData] = useState({});
@@ -1546,6 +1550,7 @@ export default function DashboardAdmin() {
                           </Badge>
                         </td>
                         <td>
+                          <Button variant="outline-secondary" size="sm" className="me-1" onClick={() => setAssignmentFarmer(farmer)}><FaUsers className="me-1" /> Assign</Button>
                           <OverlayTrigger
                             overlay={<Tooltip>Edit Farmer</Tooltip>}
                           >
@@ -1901,6 +1906,8 @@ export default function DashboardAdmin() {
           {activeTab === 'material-receipts' && !isLoading && (<MaterialReceiptsPanel />)}
           {activeTab === 'rms' && !isLoading && (<AgencyRmsPanel />)}
           {activeTab === 'reports' && !isLoading && (<AgencyReportsPanel />)}
+
+          {activeTab === 'users' && !isLoading && (<AgencyTeamAccessPanel role="admin" />)}
 
           {activeTab === 'technician-summary' && !isLoading && (
             <Card className="mb-4">
@@ -2402,6 +2409,15 @@ export default function DashboardAdmin() {
               </Button>
             </Modal.Body>
           </Modal>
+
+          <AgencyTechnicianAssignmentModal
+            show={!!assignmentFarmer}
+            farmer={assignmentFarmer}
+            technicians={technicians}
+            role="admin"
+            onClose={() => setAssignmentFarmer(null)}
+            onDone={async (result) => { setAssignmentFarmer(null); setToast({ show: true, variant: 'success', message: result?.message || 'Technician assignment saved.' }); await refreshAll(); }}
+          />
         </main>
       </div>
     </Container>

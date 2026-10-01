@@ -30,6 +30,12 @@ exports.register = async (req, res) => {
     if (!username || !email || !mobile || !password || !role) {
       return res.status(400).json({ message: 'Username, email, mobile, password and role are required' });
     }
+    if (!['admin', 'field_technician'].includes(role)) {
+      return res.status(400).json({ message: 'Agency users can only be Admin or Field Technician.' });
+    }
+    if (req.user.role === 'admin' && role !== 'field_technician') {
+      return res.status(403).json({ message: 'Agency Admins can add field technicians only. Superadmin approval is required for new Admin accounts.' });
+    }
 
     const exist = await User.findOne({
       $or: [{ username }, { mobile }, ...(email ? [{ email: String(email).trim().toLowerCase() }] : [])],
@@ -83,6 +89,11 @@ exports.update = async (req, res) => {
 
     if (!(await assertManageableUser(req.user, userId))) {
       return res.status(403).json({ message: 'You cannot manage a user outside your agency.' });
+    }
+    const currentUser = await User.findById(userId).select('role').lean();
+    if (!currentUser) return res.status(404).json({ message: 'User not found' });
+    if (req.user.role === 'admin' && (currentUser.role !== 'field_technician' || role !== 'field_technician')) {
+      return res.status(403).json({ message: 'Agency Admins can manage field technicians only.' });
     }
 
     const duplicateClauses = [{ mobile }];

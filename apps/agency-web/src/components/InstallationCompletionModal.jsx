@@ -160,6 +160,22 @@ export default function InstallationCompletionModal({
 
   const scanIssuedMaterial = async e => { e?.preventDefault?.(); await submitScanValue(); };
 
+  // Prefill existing beneficiary/install context when the work item opens.
+  useEffect(() => {
+    if (!show || !farmer?._id) return;
+    setPumpNoUnique(String(farmer.pumpNoUnique || ''));
+    setMotorNoUnique(String(farmer.motorNoUnique || ''));
+    setControllerNoUnique(String(farmer.controllerNoUnique || ''));
+    setImeiNoUnique(String(farmer.imeiNoUnique || ''));
+    setPanelsArray(Array.isArray(farmer.panels) && farmer.panels.length ? farmer.panels.map((x) => String(x || '')) : ['']);
+    setInstallationDoneYesNo(String(farmer.installationDoneYesNo || ''));
+    setPumpNotOperatingYesNo(String(farmer.pumpNotOperatingYesNo || ''));
+    setCompanyAssignedPersonName(String(farmer.companyAssignedPersonName || farmer.installationAssignedTechnician || ''));
+    setComplaintIssue(String(farmer.complaintIssue || ''));
+    setComplaintNumber(String(farmer.complaintNumber || ''));
+    setShowComplaintSection(farmer.applicationStatus === 'Complaint Raised' || Boolean(farmer.complaintIssue));
+  }, [show, farmer?._id]);
+
   // Prefill complaint date with the technician's current local date.
   useEffect(() => {
     if (showComplaintSection) {
