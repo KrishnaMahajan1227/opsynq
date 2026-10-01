@@ -1,37 +1,18 @@
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const bcrypt = require("bcryptjs");
-const User = require('../models/User');
-
-dotenv.config();
-
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-.then(() => {
-  console.log('MongoDB connected for seeding superadmin');
-  seedSuperAdmin();
-})
-.catch((err) => {
-  console.error('MongoDB connection error:', err.message);
-  process.exit(1);
-});
-
-async function seedSuperAdmin() {
-  try {
-    const existing = await User.findOne({ role: 'superadmin' });
-    if (existing) {
-      console.log('Superadmin already exists:', existing.username);
-      process.exit(0);
-    }
-    const username = 'Krishna';
-    const mobile = '7038255944';
-    const password = 'Krishna';
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const superadmin = new User({ username, mobile, password: hashedPassword, role: 'superadmin' });
-    await superadmin.save();
-    console.log('Superadmin created successfully with username:', username);
-    process.exit(0);
-  } catch (err) {
-    console.error('Error creating superadmin:', err.message);
-    process.exit(1);
-  }
-}
+const path=require('path');
+require('dotenv').config({path:path.resolve(__dirname,'../.env')});
+const mongoose=require('mongoose');
+const bcrypt=require('bcryptjs');
+const connectDB=require('../config/db');
+const User=require('../models/User');
+(async()=>{
+ await connectDB();
+ const existing=await User.findOne({role:'superadmin'});
+ if(existing){console.log(`Legacy SuperAdmin already exists: ${existing.username}`);return;}
+ const username=String(process.env.LEGACY_SUPERADMIN_USERNAME||'').trim();
+ const mobile=String(process.env.LEGACY_SUPERADMIN_MOBILE||'').trim();
+ const password=String(process.env.LEGACY_SUPERADMIN_PASSWORD||'');
+ if(!username||!mobile||!password)throw new Error('Set LEGACY_SUPERADMIN_USERNAME, LEGACY_SUPERADMIN_MOBILE and LEGACY_SUPERADMIN_PASSWORD before first legacy SuperAdmin seed.');
+ const hashed=await bcrypt.hash(password,12);
+ await User.create({username,mobile,password:hashed,role:'superadmin',isActive:true});
+ console.log(`Legacy SuperAdmin created: ${username}`);
+})().catch(e=>{console.error('Legacy SuperAdmin seed failed:',e.message);process.exitCode=1}).finally(async()=>{try{await mongoose.connection.close()}catch{}});

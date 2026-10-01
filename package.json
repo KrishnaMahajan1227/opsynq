@@ -81,7 +81,13 @@
     "qa:map-refresh": "node scripts/agency-map-refresh-regression.js",
     "qa:agency-production-flow": "node scripts/agency-production-flow-contracts.js",
     "qa:beneficiary-material": "node scripts/final-beneficiary-material-custody-regression.js",
-    "qa:excel-import": "node scripts/excel-import-governance-regression.js"
+    "qa:excel-import": "node scripts/excel-import-governance-regression.js",
+    "demo:db-check": "cd services/api && node scripts/demoDbPreflight.js",
+    "demo:backup": "cd services/api && node scripts/backupDemoDb.js",
+    "demo:wipe": "cd services/api && node scripts/wipeDemoDb.js",
+    "demo:seed": "cd services/api && node seed/demoData.js",
+    "demo:sanity": "cd services/api && node scripts/demoSanity.js",
+    "demo:reset": "npm run demo:backup && npm run demo:wipe && npm run demo:seed && npm run demo:sanity"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",

@@ -111,7 +111,7 @@ async function getEvidenceChecklist({companyId,programId,farmerId,stages=[]}){
   return{requirements,submissions,checklist};
 }
 
-async function syncConfiguredEvidence({context,farmerId,user,stages=[],proofs={},geo,notes='Submitted from Agency field workflow.'}){
+async function syncConfiguredEvidence({context,farmerId,user,stages=[],proofs={},geo,notes='Submitted from Agency field workflow.',submissionSource='AGENCY_EVIDENCE_CHECKLIST'}){
   if(!context?.companyId||!farmerId)return{requirements:[],synced:[]};
   const requirements=await getStageRequirements({companyId:context.companyId,programId:context.programId,stages});
   const synced=[];
@@ -128,6 +128,7 @@ async function syncConfiguredEvidence({context,farmerId,user,stages=[],proofs={}
         agencyId:context.agencyId,
         stage:requirement.stage,
         status:'SUBMITTED',
+        submissionSource,
         files:files.map(x=>({...x,...(geo?{geo}:{} )})),
         captureGeo:geo,
         submittedByLegacyUser:user?._id,

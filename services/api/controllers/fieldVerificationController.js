@@ -100,6 +100,7 @@ exports.submitFieldVerification = async (req, res) => {
         farmerId,
         user: req.user,
         stages: ['SURVEY'],
+        submissionSource: 'AGENCY_FIELD_SURVEY',
         geo,
         proofs: {
           beneficiaryPhoto: req.files?.farmerPhoto || [],

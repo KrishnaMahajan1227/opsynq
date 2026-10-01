@@ -1,14 +1,20 @@
 # Demo Accounts
 
-All seeded demo accounts use the same default password unless you override it with `DEMO_DEFAULT_PASSWORD` before seeding.
+The reset/seed flow preserves every existing demo account record, `_id`, tenant mapping, role and password hash. It does not reset existing credentials.
 
-**Default demo password:** `Demo@1234`
+On a brand-new isolated demo database only, if a listed demo account does not exist, `seed/demoData.js` creates it with `DEMO_DEFAULT_PASSWORD` (default `Demo@1234`). The existing Platform SuperAdmin always keeps the credentials already configured for that environment.
 
-> Existing platform superadmin continues to use the credentials already present in your real `.env`.
+## Unified sign-in
+
+Use the same Opsynq sign-in page for Platform, Company, Agency and Technician users:
+
+`http://localhost:5173/?login=1`
+
+Agency users are routed to Agency Operations through the existing one-time handoff flow. Passwords and JWTs are not placed in redirect URLs.
 
 ## Platform / Company demo accounts
 
-### Company 1 — SuryaKisan Energy Private Limited (SKEPL)
+### SuryaKisan Energy Private Limited (SKEPL)
 
 | Role | Name | Login | Mobile |
 |---|---|---|---|
@@ -21,7 +27,7 @@ All seeded demo accounts use the same default password unless you override it wi
 | finance_user | Vikram Naik | vikram.naik@opsynq.demo | 9000000007 |
 | viewer | Prerna Sable | prerna.sable@opsynq.demo | 9000000008 |
 
-### Company 2 — AgriVolt Solar Infra Limited (AVSIL)
+### AgriVolt Solar Infra Limited (AVSIL)
 
 | Role | Name | Login | Mobile |
 |---|---|---|---|
@@ -31,7 +37,7 @@ All seeded demo accounts use the same default password unless you override it wi
 | inventory_manager | Nitin Kale | nitin.kale@opsynq.demo | 9100000004 |
 | quality_user | Manasi Pawar | manasi.pawar@opsynq.demo | 9100000005 |
 
-## Agency app demo accounts
+## Agency / Technician demo accounts
 
 ### Nagpur Field Ops Agency (NAGFOPS)
 
@@ -61,38 +67,21 @@ All seeded demo accounts use the same default password unless you override it wi
 
 ## Demo data summary
 
-- 2 demo companies
-- 3 demo agencies
-- 24 seeded beneficiaries / farmer records
-- 3 work packages
-- 3 shipments
-- installed asset records
-- material issues
-- service complaints
-- compliance records
-- commercial claims
-- documents and notifications
+- 2 demo companies and 3 linked demo agencies.
+- Exactly 18 beneficiaries: 10 Nagpur, 5 Nashik, 3 Pune.
+- 3 work packages with assigned quantities matching beneficiary counts.
+- Lifecycle coverage from new/pending through survey, dispatch, installation, complaint, closed, plus ON_HOLD and REJECTED edge demonstrations.
+- Serialized inventory with available, agency-stock, issued and installed states tied to beneficiaries/technicians.
+- Procurement, GRN, stock movement, shipments, material issue, installed assets, service, compliance, claims, RMS-supporting records, notifications, audit and reports seed data.
+- 329 unique synthetic demo media files; no seeded evidence path is intentionally reused.
 
-## Which login screen to use
+## Recommended demo walkthrough
 
-**Platform / Company users:** `http://localhost:5173`
+1. **Company Owner/Admin — SKEPL:** open Company Overview, Delivery, Beneficiaries, Supply Chain, Agency Performance, Financial Control, RMS, Reports and Audit. Use `OPS-DM-004`, `OPS-DM-005`, `OPS-DM-015` and `OPS-DM-016` for installed/closed/service examples.
+2. **Operations Manager — SKEPL:** show Nagpur/Nashik work packages and beneficiary drill-down. `OPS-DM-001` is early-stage, `OPS-DM-002` survey in progress, `OPS-DM-003` ready for installation, `OPS-DM-017` is the on-hold edge case, and `OPS-DM-018` is the rejected edge case.
+3. **Inventory/Logistics:** show free stock first, then serialized material assigned/installed against `OPS-DM-004/005/006/015/016`; `OPS-DM-011` demonstrates material issued and ready for field installation.
+4. **Agency Admin — Nagpur:** show only NAGFOPS work, team/access, inbound material, assignments and beneficiary operations. No Nashik/Pune tenant data should be visible.
+5. **Technician — `nagpur.tech01`:** show mobile-first field queue and the assigned installation/evidence flow around `OPS-DM-004` or `OPS-DM-015`.
+6. **Company 2 — AVSIL:** use AVSIL owner/admin and Pune Agency accounts to demonstrate a second tenant and prove separation from SKEPL.
 
-**Agency Superadmin / Admin / Technician:** `http://localhost:5174`
-
-Agency accounts authenticate against `/api/auth/login`, not `/api/platform/auth/login`.
-
-After `npm run seed:full-demo` and while the backend is running, verify the seeded demo accounts with:
-
-```bash
-npm run verify:demo
-```
-
-## Phase 20 unified login
-
-Use the **same Opsynq sign-in page** for every seeded account:
-
-`http://localhost:5173/?login=1`
-
-- Platform / Company accounts remain in the Platform application.
-- Agency Superadmin / Admin / Technician accounts are securely redirected to Agency Operations after authentication.
-- Agency passwords and JWT tokens are never placed in redirect URLs; a one-time 60-second handoff code is used instead.
+Run `npm run demo:sanity` after a verified demo reset/seed before presenting the client demo.

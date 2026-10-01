@@ -14,7 +14,7 @@ check(gov.includes('Notification details')&&gov.includes('Notification filters')
 check(((ops.includes('dashboard-kpis')&&ops.includes('Beneficiary execution funnel'))||(ops.includes('command-kpis')&&(ops.includes('Execution pipeline')||ops.includes('Execution mix'))))&&ops.includes('opsynq.dashboard.filter.'),'dashboard KPIs and stage rows are actionable');
 check(opsController.includes('beneficiaryStatus')&&opsController.includes('surveyStatus')&&opsController.includes('districts'),'dashboard API exposes beneficiary, survey and district execution aggregates');
 check(opsController.includes('req.query.district')&&opsController.includes('req.query.survey'),'beneficiary API supports dashboard drill-down filters');
-check(seed.includes("'OPS-DM-024'")&&seed.includes('demoSurveyPhotos')&&seed.includes('demoInstallPhotos'),'scenario-rich demo beneficiary seed is present');
+check(seed.includes("'OPS-DM-018'")&&!seed.includes("'OPS-DM-019'")&&seed.includes('const mediaSet=')&&seed.includes('installationBeforeUrl')&&seed.includes('completionCertificateUrl'),'scenario-rich 18-beneficiary demo seed is present');
 check(seed.includes('Survey backlog requires review')&&seed.includes('Final inspection queue updated'),'role-relevant demo notifications are seeded');
 check((css.includes('.dashboard-kpis')&&css.includes('.funnel-list')&&css.includes('.management-action-list'))||(css.includes('.command-kpis')&&css.includes('.command-panel')&&css.includes('.command-bars')),'restrained command dashboard styles are present');
 const mediaDir=path.join(root,'services/api/demo-media');

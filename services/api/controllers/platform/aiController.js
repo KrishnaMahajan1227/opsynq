@@ -136,12 +136,16 @@ async function buildScreenFacts(companyId,page){const cid=new mongoose.Types.Obj
 exports.status=async(req,res)=>{const c=await ensureCompany(req,res);if(!c)return;const result=await ai.health();res.json({...result,company:{id:c._id,name:c.name}})};
 exports.brief=async(req,res)=>{
  const c=await ensureCompany(req,res);if(!c)return;
- if(!ai.enabled())return res.status(503).json({message:'Operations intelligence is not configured on the API service.'});
  const page=String(req.body.page||'company-overview').trim();if(!PAGE_SCOPE[page])return res.status(400).json({message:'Unsupported Company workspace screen.'});
  const scope=PAGE_SCOPE[page],requestedScope=String(req.body.scope||scope).toUpperCase();if(requestedScope!==scope&&requestedScope!=='EXECUTIVE')return res.status(400).json({message:'AI scope does not match the current Company screen.'});
  const question=String(req.body.question||'').trim();const restriction=restrictedQuestion(question);
  if(restriction){await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_QUESTION_RESTRICTED',entityType:'Organization',entityId:c._id,after:{page,scope,reason:restriction.slice(0,180)}});return res.json({scope,page,restricted:true,generatedAt:new Date(),brief:{executiveSummary:restriction,findings:[],risks:[],recommendedActions:[],confidence:'HIGH',dataLimitations:[]},actions:actionsFor(page)});}
  const facts=await buildScreenFacts(c._id,page);
+ if(!ai.enabled()){
+  const fallback=ai.fallbackOperationsBrief({pageLabel:String(req.body.pageLabel||page).slice(0,100),facts});
+  await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_PROVIDER_FALLBACK',entityType:'Organization',entityId:c._id,after:{scope,page,providerCode:'NOT_CONFIGURED'}});
+  return res.json({scope,page,generatedAt:new Date(),brief:fallback,actions:actionsFor(page),factsAsOf:facts.generatedAt,provider:{ready:false,code:'NOT_CONFIGURED',message:'Live AI is not configured; rule-based tenant-scoped summary shown.'}});
+ }
  try{
   const brief=await ai.operationsBrief({scope,page,pageLabel:String(req.body.pageLabel||page).slice(0,100),question,facts});
   if(!brief)return res.status(502).json({message:'Operations intelligence returned no usable response.'});

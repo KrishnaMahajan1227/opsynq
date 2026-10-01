@@ -237,6 +237,7 @@ exports.completeInstallation = [
           farmerId,
           user: req.user,
           stages: ['INSTALLATION', 'FINAL_INSPECTION'],
+          submissionSource: 'AGENCY_FIELD_INSTALLATION',
           proofs: {
             beneficiaryPhoto: req.files?.finalFarmerPhoto || [],
             sitePhotos: req.files?.finalSitePhotos || [],

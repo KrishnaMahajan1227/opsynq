@@ -1471,7 +1471,7 @@ exports.submitFarmerEvidence = async (req,res)=>{
     if(requirement.required&&['PHOTO','DOCUMENT','SIGNATURE'].includes(requirement.evidenceType)&&files.length<Number(requirement.minFiles||1))return res.status(400).json({message:`At least ${requirement.minFiles||1} file(s) are required.`});
     const item=await EvidenceSubmission.findOneAndUpdate(
       {companyId:context.companyId,farmerId:farmer._id,requirementId:requirement._id},
-      {$set:{workPackageId:context.workPackageId,agencyId:context.agencyId,stage:requirement.stage,status:'SUBMITTED',files,value:req.body.value,notes:req.body.notes||'',captureGeo,submittedByLegacyUser:req.user._id,verifiedBy:null,verifiedAt:null}},
+      {$set:{workPackageId:context.workPackageId,agencyId:context.agencyId,stage:requirement.stage,status:'SUBMITTED',submissionSource:'AGENCY_EVIDENCE_CHECKLIST',files,value:req.body.value,notes:req.body.notes||'',captureGeo,submittedByLegacyUser:req.user._id,verifiedBy:null,verifiedAt:null}},
       {upsert:true,new:true,setDefaultsOnInsert:true}
     );
     try{const AuditLog=require('../models/platform/AuditLog');await AuditLog.create({companyId:context.companyId,organizationId:context.agencyId,actorId:req.user._id,actorType:'User',action:'FIELD_EVIDENCE_SUBMITTED',entityType:'Farmer',entityId:farmer._id,after:{stage:requirement.stage,requirement:requirement.label,fileCount:files.length,geo:captureGeo||null}})}catch(auditErr){console.error('Evidence audit failed:',auditErr.message)}
