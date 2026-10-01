@@ -84,6 +84,7 @@ export default function InstallationCompletionModal({
   const [scanMode, setScanMode] = useState('ANY');
   const [scanLoading, setScanLoading] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
+  const [installationVerifiedCodes, setInstallationVerifiedCodes] = useState({});
   const [scanDetails, setScanDetails] = useState({});
   const [scanCameraOpen, setScanCameraOpen] = useState(false);
   const [scanCameraError, setScanCameraError] = useState('');
@@ -115,7 +116,7 @@ export default function InstallationCompletionModal({
     const attrs = item.scanAttributes || item.metadata?.scanAttributes || item.agencyReceiptAttributes || {};
     setScanDetails({ code, role, item: item.itemId?.name || item.itemId?.sku || 'Serialized material', ...attrs });
     const existing = selectedCodes();
-    if (existing.includes(code.toLowerCase())) { setScanMessage(`${code} is already selected for this beneficiary.`); return false; }
+    if (existing.includes(code.toLowerCase())) { setInstallationVerifiedCodes(prev => ({ ...prev, [code.toLowerCase()]: code })); setScanMessage(`${code} re-scanned and confirmed against beneficiary receipt.`); return true; }
     if (role === 'PUMP') setPumpNoUnique(code);
     else if (role === 'MOTOR') setMotorNoUnique(code);
     else if (role === 'CONTROLLER') {
@@ -130,7 +131,8 @@ export default function InstallationCompletionModal({
     } else {
       setAdditionalItems(prev => [...prev, { code, name: item.itemId?.name || item.itemId?.sku || 'Additional serialized item', role: 'OTHER' }]);
     }
-    setScanMessage(`${role === 'PANEL' ? 'Solar panel' : role.charAt(0) + role.slice(1).toLowerCase()} ${code} verified and added.`);
+    setInstallationVerifiedCodes(prev => ({ ...prev, [code.toLowerCase()]: code }));
+    setScanMessage(`${role === 'PANEL' ? 'Solar panel' : role.charAt(0) + role.slice(1).toLowerCase()} ${code} re-scanned and confirmed.`);
     return true;
   };
 
@@ -228,7 +230,20 @@ export default function InstallationCompletionModal({
       try {
         const token = localStorage.getItem('token');
         const res = await axios.get(`${API_URL}/api/installation/issued-material/${farmer._id}`, { headers: { Authorization: `Bearer ${token}` } });
-        if (active) setIssuedInventory(res.data || { linked: false, items: [] });
+        if (active) {
+          const data = res.data || { linked: false, items: [] };
+          setIssuedInventory(data);
+          setInstallationVerifiedCodes({});
+          const good = (data.receipt?.items || []).filter(x => x.condition === 'GOOD');
+          if (good.length) {
+            const byRole = role => good.find(x => x.role === role)?.serialNumber || '';
+            setPumpNoUnique(byRole('PUMP') || String(farmer.pumpNoUnique || ''));
+            setMotorNoUnique(byRole('MOTOR') || String(farmer.motorNoUnique || ''));
+            setControllerNoUnique(byRole('CONTROLLER') || String(farmer.controllerNoUnique || ''));
+            const receiptPanels = good.filter(x => x.role === 'PANEL').map(x => x.serialNumber);
+            if (receiptPanels.length) setPanelsArray(receiptPanels);
+          }
+        }
       } catch (e) {
         if (active) setIssuedInventory({ linked: false, items: [] });
       } finally { if (active) setInventoryLoading(false); }
@@ -308,7 +323,7 @@ export default function InstallationCompletionModal({
       setPumpNoUnique(d.pumpNoUnique || ''); setMotorNoUnique(d.motorNoUnique || ''); setControllerNoUnique(d.controllerNoUnique || ''); setImeiNoUnique(d.imeiNoUnique || '');
       setPanelsArray(Array.isArray(d.panelsArray) && d.panelsArray.length ? d.panelsArray : ['']); setInstallationDoneYesNo(d.installationDoneYesNo || ''); setPumpNotOperatingYesNo(d.pumpNotOperatingYesNo || ''); setCompanyAssignedPersonName(d.companyAssignedPersonName || '');
       setShowComplaintSection(!!d.showComplaintSection); setComplaintIssue(d.complaintIssue || ''); setComplaintRaisedDate(d.complaintRaisedDate || ''); setComplaintNumber(d.complaintNumber || '');
-      setFinalFarmerPhoto(d.finalFarmerPhoto || null); setFinalSitePhotos(Array.isArray(d.finalSitePhotos) ? d.finalSitePhotos : []); setFinalSignature(d.finalSignature || null); setFinalSurveyorSignature(d.finalSurveyorSignature || null); setAdditionalItems(Array.isArray(d.additionalItems) ? d.additionalItems : []); setDraftSavedAt(rec.updatedAt || Date.now());
+      setFinalFarmerPhoto(d.finalFarmerPhoto || null); setFinalSitePhotos(Array.isArray(d.finalSitePhotos) ? d.finalSitePhotos : []); setFinalSignature(d.finalSignature || null); setFinalSurveyorSignature(d.finalSurveyorSignature || null); setAdditionalItems(Array.isArray(d.additionalItems) ? d.additionalItems : []); setInstallationVerifiedCodes(d.installationVerifiedCodes || {}); setDraftSavedAt(rec.updatedAt || Date.now());
     });
     return () => { active = false; };
   }, [show, draftKey]);
@@ -316,11 +331,11 @@ export default function InstallationCompletionModal({
   useEffect(() => {
     if (!show || !draftKey) return;
     const timer = setTimeout(async () => {
-      await saveFieldDraft(draftKey, { pumpNoUnique,motorNoUnique,controllerNoUnique,imeiNoUnique,panelsArray,installationDoneYesNo,pumpNotOperatingYesNo,companyAssignedPersonName,showComplaintSection,complaintIssue,complaintRaisedDate,complaintNumber,finalFarmerPhoto,finalSitePhotos,finalSignature,finalSurveyorSignature,additionalItems,beneficiaryId:farmer?.beneficiaryId,beneficiaryName:farmer?.beneficiaryName });
+      await saveFieldDraft(draftKey, { pumpNoUnique,motorNoUnique,controllerNoUnique,imeiNoUnique,panelsArray,installationDoneYesNo,pumpNotOperatingYesNo,companyAssignedPersonName,showComplaintSection,complaintIssue,complaintRaisedDate,complaintNumber,finalFarmerPhoto,finalSitePhotos,finalSignature,finalSurveyorSignature,additionalItems,installationVerifiedCodes,beneficiaryId:farmer?.beneficiaryId,beneficiaryName:farmer?.beneficiaryName });
       setDraftSavedAt(Date.now());
     }, 450);
     return () => clearTimeout(timer);
-  }, [show,draftKey,pumpNoUnique,motorNoUnique,controllerNoUnique,imeiNoUnique,panelsArray,installationDoneYesNo,pumpNotOperatingYesNo,companyAssignedPersonName,showComplaintSection,complaintIssue,complaintRaisedDate,complaintNumber,finalFarmerPhoto,finalSitePhotos,finalSignature,finalSurveyorSignature,additionalItems,farmer?.beneficiaryId,farmer?.beneficiaryName]);
+  }, [show,draftKey,pumpNoUnique,motorNoUnique,controllerNoUnique,imeiNoUnique,panelsArray,installationDoneYesNo,pumpNotOperatingYesNo,companyAssignedPersonName,showComplaintSection,complaintIssue,complaintRaisedDate,complaintNumber,finalFarmerPhoto,finalSitePhotos,finalSignature,finalSurveyorSignature,additionalItems,installationVerifiedCodes,farmer?.beneficiaryId,farmer?.beneficiaryName]);
 
   // Reset form state
   const resetForm = () => {
@@ -394,6 +409,13 @@ export default function InstallationCompletionModal({
       return;
     }
     const nonEmptyPanels = panelsArray.filter(panel => panel.trim() !== '');
+    const receiptExpected = (issuedInventory.receipt?.items || []).filter(x => x.condition === 'GOOD').map(x => String(x.serialNumber || '').trim()).filter(Boolean);
+    const verifiedInstall = Object.values(installationVerifiedCodes);
+    if (issuedInventory.receipt && receiptExpected.length && (verifiedInstall.length !== receiptExpected.length || receiptExpected.some(code => !installationVerifiedCodes[code.toLowerCase()]))) {
+      setError(`Re-scan all ${receiptExpected.length} item(s) confirmed at material receipt before installation. ${verifiedInstall.length}/${receiptExpected.length} verified.`);
+      setIsSubmitting(false);
+      return;
+    }
     if (nonEmptyPanels.length < 1) {
       setError('Please provide at least one panel serial number.');
       console.log('Validation failed: At least one panel required');
@@ -417,6 +439,7 @@ export default function InstallationCompletionModal({
     fd.append('imeiNoUnique', imeiNoUnique);
     fd.append('panels', JSON.stringify(nonEmptyPanels));
     fd.append('additionalItems', JSON.stringify(additionalItems.map(x => x.code)));
+    fd.append('installationScanCodes', JSON.stringify(Object.values(installationVerifiedCodes)));
     fd.append('installationDoneYesNo', installationDoneYesNo);
     fd.append('pumpNotOperatingYesNo', pumpNotOperatingYesNo);
     fd.append('companyAssignedPersonName', companyAssignedPersonName);
@@ -657,10 +680,15 @@ export default function InstallationCompletionModal({
                     <div className="issued-inventory-head">
                       <div>
                         <h6><PackageCheck size={18} /> Issued Material</h6>
-                        <p>{inventoryLoading ? 'Checking technician custody…' : 'Use only material issued to you for this work package. Serial ownership is verified again when you submit.'}</p>
+                        <p>{inventoryLoading ? 'Checking technician custody…' : 'Receipt-confirmed beneficiary material is prefilled. Re-scan every serialized item physically at installation; the backend compares the scan set with the confirmed receipt before completion.'}</p>
                       </div>
                       {!inventoryLoading && <span className="inventory-count">{issuedInventory.items?.length || 0} serialized assets</span>}
                     </div>
+                    {!inventoryLoading && issuedInventory.receipt && <div className={`installation-receipt-context ${issuedInventory.receipt.status !== 'CONFIRMED' ? 'has-exception' : ''}`}>
+                      <div><strong>Confirmed beneficiary receipt</strong><span>{issuedInventory.receipt.receiptNo} · {new Date(issuedInventory.receipt.receivedAt || Date.now()).toLocaleString('en-IN')}</span></div>
+                      <span>{issuedInventory.receipt.status}</span>
+                      <div className="installation-receipt-items">{(issuedInventory.receipt.items || []).map(item => { const code=String(item.serialNumber||''); const scanned=!!installationVerifiedCodes[code.toLowerCase()]; return <span key={`${code}-${item.role}`} className={`${item.condition !== 'GOOD' ? 'has-exception' : ''} ${scanned ? 'is-scanned' : ''}`}><small>{item.role}</small><code>{code}</code><b>{item.condition !== 'GOOD' ? item.condition : scanned ? 'Re-scanned' : 'Scan required'}</b></span>; })}</div>
+                    </div>}
                     {!inventoryLoading && issuedInventory.linked && (
                       <div className="beneficiary-scan-box">
                         <div className="beneficiary-scan-copy">
@@ -713,9 +741,7 @@ export default function InstallationCompletionModal({
                               <span>{item.itemId?.name || item.itemId?.sku || 'Serialized material'}</span>
                               <code>{item.serialNumber || item.barcodeValue}</code>
                             </div>
-                            <Button type="button" className="btn-use-issued" onClick={() => useIssuedSerial(item)}>
-                              <ScanLine size={15} /> Use
-                            </Button>
+                            <span className={`installation-item-scan-state ${installationVerifiedCodes[String(item.serialNumber || item.barcodeValue || '').toLowerCase()] ? 'is-scanned' : ''}`}>{installationVerifiedCodes[String(item.serialNumber || item.barcodeValue || '').toLowerCase()] ? 'Re-scanned' : 'Scan required'}</span>
                           </div>
                         ))}
                       </div>

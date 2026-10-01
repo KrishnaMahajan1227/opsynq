@@ -6,6 +6,7 @@ const upload = multer({ storage, limits:{fileSize:8*1024*1024,files:23} });
 const Farmer = require('../models/Farmer');
 const { protect } = require('../middleware/authMiddleware');
 const { getIssuedInventory, resolveIssuedScan, prepareInstallation, finalizeInstallation } = require('../utils/assetLifecycle');
+const { confirmReceipt, compareInstallationToReceipt, latestReceipt } = require('../utils/beneficiaryMaterialCustody');
 const { canAccessFarmer } = require('../utils/agencyScope');
 const { contextForFarmer, publishAgencyProgress, syncComplaintServiceCase } = require('../utils/agencyLifecycle');
 const { syncConfiguredEvidence, requiredEvidenceState } = require('../utils/evidenceRuntime');
@@ -42,6 +43,7 @@ exports.completeInstallation = [
         imeiNoUnique,
         panels, // Array of panel serial numbers
         additionalItems, // Additional serialized accessories installed at site
+        installationScanCodes, // Physical second-scan confirmation at installation
         installationDoneYesNo,
         pumpNotOperatingYesNo,
         complaintIssue,
@@ -84,18 +86,16 @@ exports.completeInstallation = [
         if (!Array.isArray(additionalItemsArray) || additionalItemsArray.length > 100) return res.status(400).json({ message: 'Additional installed items are invalid.' });
         additionalItemsArray = additionalItemsArray.map(x => String(x || '').trim()).filter(Boolean);
       }
+      let installationScanArray = [];
+      if (installationScanCodes) {
+        try { installationScanArray = Array.isArray(installationScanCodes) ? installationScanCodes : JSON.parse(installationScanCodes); }
+        catch { return res.status(400).json({ message: 'Installation scan confirmation is invalid.' }); }
+        installationScanArray = [...new Set((installationScanArray || []).map(x => String(x || '').trim()).filter(Boolean))];
+      }
 
       // Any failed installation outcome becomes a complaint/rework case. A normal
       // successful path must not be blocked by stale complaint state.
-      const hasComplaint = pumpNotOperatingYesNo === 'No' || installationDoneYesNo === 'No';
-      if (hasComplaint && (!complaintIssue || !complaintRaisedDate || !complaintNumber)) {
-        console.log('Validation failed: Complaint fields missing', {
-          complaintIssue,
-          complaintRaisedDate,
-          complaintNumber,
-        });
-        return res.status(400).json({ message: 'All complaint fields (issue, date, number) are required when pump is not operating.' });
-      }
+      let hasComplaint = pumpNotOperatingYesNo === 'No' || installationDoneYesNo === 'No';
 
       // Identify who raised the complaint and who completed the installation
       const raisedByName = req.user?.name || 'Unknown';
@@ -112,12 +112,45 @@ exports.completeInstallation = [
       }
       const ctx = await contextForFarmer(farmerId);
 
+      // Beneficiary custody is authoritative once a governed material receipt exists.
+      // Installation must re-scan the exact GOOD receipt set. Any shortage, damaged
+      // item, missing serial or unexpected serial automatically becomes a complaint
+      // instead of silently completing the installation.
+      const submittedMaterialCodes = installationScanArray.length ? installationScanArray : [pumpNoUnique, motorNoUnique, controllerNoUnique, ...panelsArray, ...additionalItemsArray].map(x => String(x || '').trim()).filter(Boolean);
+      let materialCheck = null;
+      let materialMismatchComplaint = false;
+      let effectiveComplaintIssue = complaintIssue || '';
+      let effectiveComplaintRaisedDate = complaintRaisedDate || '';
+      let effectiveComplaintNumber = complaintNumber || '';
+      if (ctx?.companyId) {
+        const receipt = await latestReceipt({ farmerId, companyId: ctx.companyId });
+        const issued = await getIssuedInventory({ farmerId, technicianUserId: req.user._id });
+        if (receipt || (issued.linked && (issued.issues || []).length)) {
+          if (receipt && !installationScanArray.length) return res.status(409).json({ message: 'Re-scan the confirmed beneficiary material at installation before submitting.', code: 'INSTALLATION_RESCAN_REQUIRED' });
+          materialCheck = await compareInstallationToReceipt({ farmerId, companyId: ctx.companyId, codes: submittedMaterialCodes });
+          if (materialCheck.code === 'MATERIAL_RECEIPT_REQUIRED') {
+            return res.status(409).json({ message: materialCheck.message, code: materialCheck.code });
+          }
+          if (!materialCheck.ok) {
+            hasComplaint = true;
+            materialMismatchComplaint = true;
+            effectiveComplaintIssue = `Material reconciliation mismatch: ${materialCheck.message}`;
+            effectiveComplaintRaisedDate = new Date().toISOString();
+            effectiveComplaintNumber = effectiveComplaintNumber || `MAT-${String(farmer.beneficiaryId || farmer._id).replace(/[^A-Za-z0-9]/g, '').slice(-12)}-${Date.now().toString().slice(-6)}`;
+          }
+        }
+      }
+
+      if (hasComplaint && !materialMismatchComplaint && (!effectiveComplaintIssue || !effectiveComplaintRaisedDate || !effectiveComplaintNumber)) {
+        return res.status(400).json({ message: 'All complaint fields (issue, date, number) are required when installation is incomplete or the pump is not operating.' });
+      }
+
       // Opsynq Phase 5: for company/work-package linked farmers, verify that
       // serialized hardware belongs to the logged-in technician before updating
       // the legacy Farmer record. Unlinked legacy farmers keep the proven flow.
       let inventoryPrepared = { linked: false };
       try {
-        inventoryPrepared = await prepareInstallation({
+        if (!materialMismatchComplaint) inventoryPrepared = await prepareInstallation({
           farmerId,
           technicianUserId: req.user._id,
           pump: pumpNoUnique,
@@ -141,7 +174,7 @@ exports.completeInstallation = [
         controllerNoUnique: inventoryPrepared.canonical?.controller || controllerNoUnique || '',
         imeiNoUnique: imeiNoUnique || '',
         panels: inventoryPrepared.canonical?.panels?.length ? inventoryPrepared.canonical.panels : panelsArray, // Save canonical inventory serials when linked
-        installationDoneYesNo: installationDoneYesNo || '',
+        installationDoneYesNo: materialMismatchComplaint ? 'No' : (installationDoneYesNo || ''),
         pumpNotOperatingYesNo: pumpNotOperatingYesNo || '',
         companyAssignedPersonName: companyAssignedPersonName || '',
         installationCompletionDate: new Date(), // Current date: May 23, 2025, 05:16 PM IST
@@ -157,9 +190,9 @@ exports.completeInstallation = [
 
       // Add complaint fields if applicable
       if (hasComplaint) {
-        updateData.complaintIssue = complaintIssue || '';
-        updateData.complaintRaisedDate = complaintRaisedDate ? new Date(complaintRaisedDate) : new Date();
-        updateData.complaintNumber = complaintNumber || '';
+        updateData.complaintIssue = effectiveComplaintIssue || '';
+        updateData.complaintRaisedDate = effectiveComplaintRaisedDate ? new Date(effectiveComplaintRaisedDate) : new Date();
+        updateData.complaintNumber = effectiveComplaintNumber || '';
         updateData.complaintRaisedByName = raisedByName;
         updateData.complaintRaisedById = raisedById;
         updateData.complaintStatus = complaintStatus;
@@ -263,9 +296,11 @@ exports.completeInstallation = [
           context: ctx,
           action: isRework ? 'AGENCY_REWORK_STILL_OPEN' : 'AGENCY_COMPLAINT_RAISED',
           title: `${isRework ? 'Rework still open' : 'Installation issue'} · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`,
-          message: isRework
-            ? `${completedByTechnician} completed a rework attempt, but the installation is still not operating. Complaint ${updatedFarmer.complaintNumber || ''} remains open.`
-            : `${completedByTechnician} reported an installation issue and opened complaint ${updatedFarmer.complaintNumber || ''}.`,
+          message: materialMismatchComplaint
+            ? `${completedByTechnician} found material mismatch during installation. Complaint ${updatedFarmer.complaintNumber || ''} was opened automatically for reconciliation.`
+            : isRework
+              ? `${completedByTechnician} completed a rework attempt, but the installation is still not operating. Complaint ${updatedFarmer.complaintNumber || ''} remains open.`
+              : `${completedByTechnician} reported an installation issue and opened complaint ${updatedFarmer.complaintNumber || ''}.`,
           type: 'WARNING',
           after: { applicationStatus: updatedFarmer.applicationStatus, complaintStatus: updatedFarmer.complaintStatus, complaintNumber: updatedFarmer.complaintNumber, complaintIssue: updatedFarmer.complaintIssue },
         });
@@ -280,6 +315,7 @@ exports.completeInstallation = [
         updatedFarmer,
         inventoryLinked: inventoryPrepared.linked,
         installedAssets,
+        materialReconciliation: materialCheck ? { ok: materialCheck.ok, code: materialCheck.code, missing: materialCheck.missing || [], unexpected: materialCheck.unexpected || [], exceptions: materialCheck.exceptions || [], complaintCreated: materialMismatchComplaint } : null,
       });
     } catch (err) {
       console.error('Error in completeInstallation:', err.message, err.stack);
@@ -287,6 +323,70 @@ exports.completeInstallation = [
     }
   },
 ];
+
+exports.confirmMaterialReceipt = async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    const farmer = await Farmer.findById(req.params.farmerId);
+    if (!farmer) return res.status(404).json({ message: 'Farmer not found.' });
+    if (!(await canAccessFarmer(req.user, farmer))) return res.status(403).json({ message: 'You do not have access to this beneficiary.' });
+    const isReworkReceipt = farmer.applicationStatus === 'Complaint Raised';
+    if (!isReworkReceipt && !['Ordered','Dispatch Completed'].includes(farmer.applicationStatus)) return res.status(409).json({ message: 'Material receipt can be confirmed only after material is ordered/dispatched for this beneficiary.', code: 'MATERIAL_RECEIPT_NOT_READY' });
+    const receivedCodes = Array.isArray(req.body?.receivedCodes) ? req.body.receivedCodes : [];
+    const damagedCodes = Array.isArray(req.body?.damagedCodes) ? req.body.damagedCodes : [];
+    if (!req.body?.farmerSignatureUrl || !req.body?.technicianSignatureUrl) return res.status(400).json({ message: 'Farmer and technician signatures are required for beneficiary material custody confirmation.' });
+    let receipt;
+    await session.withTransaction(async () => {
+      receipt = await confirmReceipt({
+        farmerId: farmer._id,
+        technicianUserId: req.user._id,
+        receivedCodes,
+        damagedCodes,
+        remarks: req.body?.remarks || '',
+        fullSetOrPartialSet: req.body?.fullSetOrPartialSet || '',
+        lrPhotoUrls: Array.isArray(req.body?.lrPhotoUrls) ? req.body.lrPhotoUrls : [],
+        farmerSignatureUrl: req.body?.farmerSignatureUrl || '',
+        technicianSignatureUrl: req.body?.technicianSignatureUrl || '',
+        session,
+      });
+      const good = (receipt.items || []).filter(x => x.condition === 'GOOD');
+      const first = role => good.find(x => x.role === role)?.serialNumber || '';
+      const panels = good.filter(x => x.role === 'PANEL').map(x => x.serialNumber);
+      await Farmer.updateOne({ _id: farmer._id }, { $set: {
+        fullSetOrPartialSet: req.body?.fullSetOrPartialSet || (receipt.status === 'CONFIRMED' ? 'Full Set' : 'Partial Set'),
+        materialDispatchDate: req.body?.materialDispatchDate ? new Date(req.body.materialDispatchDate) : farmer.materialDispatchDate,
+        materialReceivedConfirmationYesNo: receipt.status === 'CONFIRMED' ? 'Yes' : 'No',
+        materialReceivedDate: req.body?.materialReceivedDate ? new Date(req.body.materialReceivedDate) : new Date(),
+        shortageDamagedRemarks: req.body?.remarks || '',
+        pumpNoUnique: first('PUMP') || farmer.pumpNoUnique || '',
+        motorNoUnique: first('MOTOR') || farmer.motorNoUnique || '',
+        controllerNoUnique: first('CONTROLLER') || farmer.controllerNoUnique || '',
+        imeiNoUnique: req.body?.imeiNoUnique || farmer.imeiNoUnique || '',
+        panels: panels.length ? panels : (farmer.panels || []),
+        orderReceivedByTechnician: req.body?.orderReceivedByTechnician || req.user.username || farmer.orderReceivedByTechnician || '',
+        orderReceivedConfirmationYesNo: 'Yes',
+        orderReceivedDate: req.body?.orderReceivedDate ? new Date(req.body.orderReceivedDate) : new Date(),
+        orderReceivedRemarks: req.body?.orderReceivedRemarks || req.body?.remarks || '',
+        orderReceivedYesNo: 'Yes',
+        lrPhotoUrls: Array.isArray(req.body?.lrPhotoUrls) ? req.body.lrPhotoUrls : (farmer.lrPhotoUrls || []),
+        finalsignatureUrl: req.body?.farmerSignatureUrl || farmer.finalsignatureUrl || '',
+        finalsurveyorsignatureUrl: req.body?.technicianSignatureUrl || farmer.finalsurveyorsignatureUrl || '',
+        confirmedBy: req.user.username || req.user.name || '',
+        confirmationDate: new Date(),
+        applicationStatus: isReworkReceipt ? 'Complaint Raised' : 'Dispatch Completed',
+      } }, { runValidators: true, session });
+    });
+    const ctx = await contextForFarmer(farmer._id);
+    const updatedFarmer = await Farmer.findById(farmer._id);
+    await publishAgencyProgress({ req, farmer: updatedFarmer, context: ctx, action: 'AGENCY_BENEFICIARY_MATERIAL_RECEIVED', title: `Material received · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`, message: `${req.user.username || 'Technician'} confirmed ${receipt.items.filter(x=>x.condition==='GOOD').length} item(s) for beneficiary custody${receipt.status === 'CONFIRMED' ? '' : ' with exceptions'}.`, type: receipt.status === 'CONFIRMED' ? 'SUCCESS' : 'WARNING', after: { receiptNo: receipt.receiptNo, receiptStatus: receipt.status, items: receipt.items.map(x => ({ serialNumber: x.serialNumber, role: x.role, condition: x.condition })) } });
+    return res.json({ message: receipt.status === 'CONFIRMED' ? 'Beneficiary material receipt confirmed.' : 'Material receipt recorded with exceptions. Installation will remain blocked until reconciliation.', receipt, updatedFarmer });
+  } catch (err) {
+    console.error('Material receipt confirmation failed:', err);
+    return res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : 'Unable to confirm beneficiary material receipt.', code: err.code || 'MATERIAL_RECEIPT_FAILED' });
+  } finally {
+    await session.endSession();
+  }
+};
 
 exports.scanIssuedMaterial = async (req, res) => {
   try {
@@ -306,7 +406,8 @@ exports.getMyIssuedMaterial = async (req, res) => {
     if (!farmer) return res.status(404).json({ message: 'Farmer not found.' });
     if (!(await canAccessFarmer(req.user, farmer))) return res.status(403).json({ message: 'You do not have access to this beneficiary.' });
     const data = await getIssuedInventory({ farmerId: farmer._id, technicianUserId: req.user._id });
-    return res.json({ linked: data.linked, context: data.context ? { agencyId: data.context.agencyId, workPackageId: data.context.workPackageId } : null, items: data.serials || [] });
+    const receipt = data.context?.companyId ? await latestReceipt({ farmerId: farmer._id, companyId: data.context.companyId }) : null;
+    return res.json({ linked: data.linked, context: data.context ? { agencyId: data.context.agencyId, workPackageId: data.context.workPackageId } : null, items: data.serials || [], receipt: receipt ? { receiptNo: receipt.receiptNo, revision: receipt.revision, status: receipt.status, receivedAt: receipt.receivedAt, items: (receipt.items || []).map(x => ({ serialNumber: x.serialNumber, barcodeValue: x.barcodeValue, role: x.role, condition: x.condition, assignmentScope: x.assignmentScope })) } : null });
   } catch (err) {
     console.error('Issued material lookup failed:', err);
     return res.status(500).json({ message: 'Unable to load issued material.' });

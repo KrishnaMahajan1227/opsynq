@@ -85,6 +85,7 @@ export default function OrderConfirmationModal({
   const [scanMode, setScanMode] = useState('ANY');
   const [scanLoading, setScanLoading] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
+  const [verifiedReceiptItems, setVerifiedReceiptItems] = useState({});
   const [scanCameraOpen, setScanCameraOpen] = useState(false);
   const [scanCameraError, setScanCameraError] = useState('');
   const scanVideoRef = useRef(null);
@@ -112,10 +113,10 @@ export default function OrderConfirmationModal({
       imeiNoUnique: farmer?.imeiNoUnique || '',
       panels: farmer?.panels?.length > 0 ? farmer.panels.map((x) => String(x || '')) : [''],
       orderReceivedByTechnician: technicianMobile ? `${technicianLabel} (${technicianMobile})` : technicianLabel,
-      orderReceivedConfirmationYesNo: farmer?.orderReceivedConfirmationYesNo || '',
+      orderReceivedConfirmationYesNo: farmer?.orderReceivedConfirmationYesNo || 'Yes',
       orderReceivedDate: farmer?.orderReceivedDate ? String(farmer.orderReceivedDate).slice(0, 10) : today,
       orderReceivedRemarks: farmer?.orderReceivedRemarks || '',
-      orderReceivedYesNo: farmer?.orderReceivedYesNo || '',
+      orderReceivedYesNo: farmer?.orderReceivedYesNo || 'Yes',
       lrPhotoUrls: farmer?.lrPhotoUrls || [],
       finalsignatureUrl: farmer?.finalsignatureUrl || '',
       finalsurveyorsignatureUrl: farmer?.finalsurveyorsignatureUrl || '',
@@ -125,18 +126,22 @@ export default function OrderConfirmationModal({
     setPanelScanCode('');
     setScanMode('ANY');
     setScanMessage('');
+    setVerifiedReceiptItems({});
     setScanCameraError('');
     setError('');
   }, [show, farmer?._id, technicianUsername]);
 
-  const applyIssuedItem = (item, { expectedRole = '' } = {}) => {
+  const applyIssuedItem = (item, { expectedRole = '', markVerified = true } = {}) => {
     const code = String(item?.serialNumber || item?.barcodeValue || '').trim();
     if (!code) return;
     const role = item?.role || materialRole(item);
     if (expectedRole && role !== expectedRole) { setError(`Scanned item is ${role.toLowerCase()}, not a ${expectedRole.toLowerCase()}. Scan the correct serialized asset.`); return false; }
     const currentCodes = [formData.pumpNoUnique, formData.motorNoUnique, formData.controllerNoUnique, ...(formData.panels || [])]
       .map((x) => String(x || '').trim().toLowerCase()).filter(Boolean);
-    if (currentCodes.includes(code.toLowerCase())) { setScanMessage(`${code} is already captured for this beneficiary.`); return false; }
+    if (currentCodes.includes(code.toLowerCase())) {
+      if (markVerified) { setVerifiedReceiptItems(prev => ({ ...prev, [code.toLowerCase()]: { code, condition: prev[code.toLowerCase()]?.condition || 'GOOD', item } })); setScanMessage(`${code} physically verified for this beneficiary.`); return true; }
+      return false;
+    }
     const attrs = item?.scanAttributes || item?.metadata?.scanAttributes || item?.agencyReceiptAttributes || {};
     setFormData((prev) => {
       if (role === 'PUMP') return { ...prev, pumpNoUnique: code };
@@ -155,7 +160,8 @@ export default function OrderConfirmationModal({
       }
       return prev;
     });
-    setScanMessage(`${role === 'PANEL' ? 'Solar panel' : role.charAt(0) + role.slice(1).toLowerCase()} ${code} verified against issued material and added.`);
+    if (markVerified) setVerifiedReceiptItems(prev => ({ ...prev, [code.toLowerCase()]: { code, condition: prev[code.toLowerCase()]?.condition || 'GOOD', item } }));
+    setScanMessage(markVerified ? `${role === 'PANEL' ? 'Solar panel' : role.charAt(0) + role.slice(1).toLowerCase()} ${code} physically verified against issued material.` : `${role === 'PANEL' ? 'Solar panel' : role.charAt(0) + role.slice(1).toLowerCase()} ${code} expected for this beneficiary.`);
     return true;
   };
 
@@ -170,7 +176,7 @@ export default function OrderConfirmationModal({
         if (!active) return;
         const data = resp.data || { linked: false, items: [] };
         setIssuedInventory(data);
-        (data.items || []).filter((item) => item.assignmentScope === 'BENEFICIARY').forEach(applyIssuedItem);
+        (data.items || []).filter((item) => item.assignmentScope === 'BENEFICIARY').forEach((item) => applyIssuedItem(item, { markVerified: false }));
       } catch (err) {
         if (active) setError(err.response?.data?.message || 'Unable to load issued material for this beneficiary.');
       } finally {
@@ -357,75 +363,35 @@ export default function OrderConfirmationModal({
     e.preventDefault();
 
     // Validate that required fields are non-empty
-    const required = [
-      'fullSetOrPartialSet',
-      'materialDispatchDate',
-      'materialReceivedConfirmationYesNo',
-      'materialReceivedDate',
-      'pumpNoUnique',
-      'motorNoUnique',
-      'controllerNoUnique',
-      'imeiNoUnique',
-      'orderReceivedByTechnician',
-      'orderReceivedConfirmationYesNo',
-      'orderReceivedDate',
-      'orderReceivedYesNo',
-      'finalsignatureUrl',
-      'finalsurveyorsignatureUrl',
-    ];
-    if (
-      required.some((f) => !formData[f]) ||
-      formData.panels.some((p) => !p.trim())
-    ) {
-      setError('All fields, panels, and both signatures are required.');
-      return;
-    }
+    const required = ['fullSetOrPartialSet','materialDispatchDate','materialReceivedDate','orderReceivedByTechnician','orderReceivedDate','finalsignatureUrl','finalsurveyorsignatureUrl'];
+    if (required.some((f) => !formData[f])) { setError('Receipt type, dates and both signatures are required.'); return; }
+    if (!issuedInventory.linked && (!formData.pumpNoUnique || !formData.motorNoUnique || !formData.controllerNoUnique || !formData.imeiNoUnique || formData.panels.some((p) => !p.trim()))) { setError('All legacy equipment fields, panels and IMEI are required when governed inventory is unavailable.'); return; }
+    const verified = Object.values(verifiedReceiptItems);
+    if (issuedInventory.linked && !verified.length) { setError('Scan the material physically received before confirming beneficiary custody. Prefilled serials are expected items, not receipt confirmation.'); return; }
+    const receivedCodes = verified.filter(x => x.condition === 'GOOD').map(x => x.code);
+    const damagedCodes = verified.filter(x => x.condition === 'DAMAGED').map(x => x.code);
 
     try {
-      console.log('Submitting order confirmation → /api/farmers/:id', { farmerId: farmer._id });
-
       const payload = {
-        // ─── These must match your schema exactly ─────────────────────────
         fullSetOrPartialSet: formData.fullSetOrPartialSet,
         materialDispatchDate: new Date(formData.materialDispatchDate).toISOString(),
-        materialReceivedConfirmationYesNo: formData.materialReceivedConfirmationYesNo,
         materialReceivedDate: new Date(formData.materialReceivedDate).toISOString(),
-
-        shortageDamagedRemarks: formData.shortageDamagedRemarks,
-
-        pumpNoUnique: formData.pumpNoUnique,
-        motorNoUnique: formData.motorNoUnique,
-        controllerNoUnique: formData.controllerNoUnique,
+        remarks: formData.shortageDamagedRemarks,
         imeiNoUnique: formData.imeiNoUnique,
-
-        panels: formData.panels.filter(Boolean),
-
         orderReceivedByTechnician: formData.orderReceivedByTechnician,
-        orderReceivedConfirmationYesNo: formData.orderReceivedConfirmationYesNo,
         orderReceivedDate: new Date(formData.orderReceivedDate).toISOString(),
         orderReceivedRemarks: formData.orderReceivedRemarks,
-        orderReceivedYesNo: formData.orderReceivedYesNo,
-
         lrPhotoUrls: formData.lrPhotoUrls,
-        finalsignatureUrl: formData.finalsignatureUrl,
-        finalsurveyorsignatureUrl: formData.finalsurveyorsignatureUrl,
-
-        // Change applicationStatus in one shot
-        applicationStatus: 'Dispatch Completed',
-
-        // Who confirmed and when (timestamps)
-        confirmedBy: technicianUsername,
-        confirmationDate: new Date().toISOString(),
+        farmerSignatureUrl: formData.finalsignatureUrl,
+        technicianSignatureUrl: formData.finalsurveyorsignatureUrl,
+        receivedCodes,
+        damagedCodes,
       };
-
-      const resp = await axios.put(
-        `${API_URL}/api/farmers/${farmer._id}`,
-        payload,
-        auth
-      );
-      console.log('Order confirmation response:', resp.data);
+      const resp = issuedInventory.linked
+        ? await axios.post(`${API_URL}/api/installation/confirm-material-receipt/${farmer._id}`, payload, auth)
+        : await axios.put(`${API_URL}/api/farmers/${farmer._id}`, { ...formData, applicationStatus: 'Dispatch Completed', confirmedBy: technicianUsername, confirmationDate: new Date().toISOString() }, auth);
       setError('');
-      onOrderConfirmed(resp.data);
+      onOrderConfirmed(resp.data?.updatedFarmer || resp.data);
       handleClose();
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
@@ -552,10 +518,16 @@ export default function OrderConfirmationModal({
                 {scanCameraError && <Alert variant="warning" className="mt-2 mb-0">{scanCameraError}</Alert>}
                 {scanMessage && <Alert variant="success" className="mt-2 mb-0">{scanMessage}</Alert>}
                 {!!issuedInventory.items?.length && <div className="order-issued-list">
-                  {issuedInventory.items.map((item) => <div key={item._id || item.serialNumber}>
-                    <span><b>{item.itemId?.name || item.itemId?.sku || 'Material'}</b><small>{item.assignmentScope === 'BENEFICIARY' ? 'Beneficiary allocated' : 'Work-package issued'}{item.issueNo ? ` · ${item.issueNo}` : ''}</small></span>
-                    <code>{item.serialNumber || item.barcodeValue || '—'}</code>
-                  </div>)}
+                  {issuedInventory.items.map((item) => {
+                    const code = String(item.serialNumber || item.barcodeValue || '');
+                    const verified = verifiedReceiptItems[code.toLowerCase()];
+                    return <div key={item._id || item.serialNumber} className={verified ? 'is-verified' : ''}>
+                      <span><b>{item.itemId?.name || item.itemId?.sku || 'Material'}</b><small>{item.assignmentScope === 'BENEFICIARY' ? 'Expected for beneficiary' : 'Available in technician work-package custody'}{item.issueNo ? ` · ${item.issueNo}` : ''}</small></span>
+                      <code>{code || '—'}</code>
+                      <span className={`receipt-scan-state ${verified ? (verified.condition === 'DAMAGED' ? 'is-damaged' : 'is-good') : ''}`}>{verified ? (verified.condition === 'DAMAGED' ? 'Damaged' : 'Received') : 'Scan to confirm'}</span>
+                      {verified && <button type="button" className="receipt-condition-toggle" onClick={() => setVerifiedReceiptItems(prev => ({ ...prev, [code.toLowerCase()]: { ...prev[code.toLowerCase()], condition: prev[code.toLowerCase()]?.condition === 'DAMAGED' ? 'GOOD' : 'DAMAGED' } }))}>{verified.condition === 'DAMAGED' ? 'Mark good' : 'Mark damaged'}</button>}
+                    </div>;
+                  })}
                 </div>}
                 <small className="agency-scan-help">Receipt values are prefilled only from beneficiary-bound issued material. Work-package stock must be physically scanned before it is attached to this beneficiary; the same serials are revalidated again at installation.</small>
               </div>

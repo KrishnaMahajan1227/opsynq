@@ -13,7 +13,7 @@ const field=read('services/api/controllers/fieldVerificationController.js');
 ok('Survey creates legacy evidence defaults only when Company has no survey rules',field.includes('if (!configured.length)')&&field.includes('syncConfiguredEvidence')&&field.includes("code: 'SURVEY_EVIDENCE_PENDING'"));
 
 const install=read('services/api/controllers/installationController.js');
-ok('No-complaint installation path is independent from complaint fields',install.includes("const hasComplaint = pumpNotOperatingYesNo === 'No' || installationDoneYesNo === 'No'")&&install.includes('if (hasComplaint && (!complaintIssue || !complaintRaisedDate || !complaintNumber))'));
+ok('No-complaint installation path is independent from complaint fields',install.includes("let hasComplaint = pumpNotOperatingYesNo === 'No' || installationDoneYesNo === 'No'")&&install.includes('if (hasComplaint && !materialMismatchComplaint && (!effectiveComplaintIssue || !effectiveComplaintRaisedDate || !effectiveComplaintNumber))'));
 ok('Installation completion is gated by governed Company evidence with legacy signature fallback only',install.includes("stages: ['INSTALLATION', 'FINAL_INSPECTION']")&&install.includes('governedEvidenceConfigured')&&install.includes('LEGACY_INSTALLATION_SIGNATURES_REQUIRED'));
 ok('Failed rework remains open while successful rework resolves',install.includes('AGENCY_REWORK_STILL_OPEN')&&install.includes('AGENCY_REWORK_COMPLETED')&&install.includes("updateData.complaintStatus = 'Resolved'"));
 

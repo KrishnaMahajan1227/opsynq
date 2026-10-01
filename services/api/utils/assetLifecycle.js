@@ -16,9 +16,9 @@ async function getIssuedInventory({farmerId,technicianUserId}){
  const issueQuery={companyId:context.companyId,agencyId:context.agencyId,technicianUserId,status:{$in:['ISSUED','PARTIALLY_RETURNED']},$or:[{farmerId},{farmerId:null,workPackageId:context.workPackageId}]};
  const issues=await MaterialIssue.find(issueQuery).select('items issueNo farmerId workPackageId').lean();
  const ids=[...new Set(issues.flatMap(i=>i.items.flatMap(x=>(x.serialIds||[]).map(String))))];
- const serials=ids.length?await InventorySerial.find({_id:{$in:ids},companyId:context.companyId,status:'ISSUED'}).populate('itemId','sku name category brand model warrantyMonths installationRole').lean():[];
+ const serials=ids.length?await InventorySerial.find({_id:{$in:ids},companyId:context.companyId,status:'ISSUED',$or:[{farmerId:null},{farmerId}]}).populate('itemId','sku name category brand model warrantyMonths installationRole').lean():[];
  const serialAssignment=new Map();for(const issue of issues){const direct=String(issue.farmerId||'')===String(farmerId),scope=direct?'BENEFICIARY':'WORK_PACKAGE';for(const line of issue.items||[])for(const id of line.serialIds||[]){const key=String(id),prev=serialAssignment.get(key);if(!prev||direct)serialAssignment.set(key,{scope,issueNo:issue.issueNo||''});}}
- const scopedSerials=serials.map(x=>({...x,assignmentScope:serialAssignment.get(String(x._id))?.scope||'WORK_PACKAGE',issueNo:serialAssignment.get(String(x._id))?.issueNo||''}));
+ const scopedSerials=serials.map(x=>({...x,assignmentScope:String(x.farmerId||'')===String(farmerId)?'BENEFICIARY':(serialAssignment.get(String(x._id))?.scope||'WORK_PACKAGE'),issueNo:serialAssignment.get(String(x._id))?.issueNo||''}));
  return{linked:true,context,issues,serials:scopedSerials};
 }
 

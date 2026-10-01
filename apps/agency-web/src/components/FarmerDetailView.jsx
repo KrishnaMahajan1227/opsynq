@@ -303,13 +303,19 @@ export default function FarmerDetailView({ farmer, onBack }) {
         {materialReconciliation && <Section icon={<FaBoxOpen />} title="Material reconciliation" full>
           <div className="agency-material-recon farmer-detail-field--wide">
             <div><small>Issued</small><strong>{materialReconciliation.totals?.issued || 0}</strong></div>
+            <div><small>Technician received</small><strong>{materialReconciliation.totals?.received || 0}</strong></div>
             <div><small>Installed</small><strong>{materialReconciliation.totals?.installed || 0}</strong></div>
             <div><small>Remaining</small><strong>{materialReconciliation.totals?.remaining || 0}</strong></div>
             <div><small>Returned</small><strong>{materialReconciliation.totals?.returned || 0}</strong></div>
             <div><small>Damaged / missing</small><strong>{Number(materialReconciliation.totals?.damaged || 0) + Number(materialReconciliation.totals?.missing || 0)}</strong></div>
             <div><small>Mismatch</small><strong>{materialReconciliation.totals?.mismatch || 0}</strong></div>
           </div>
-          {(materialReconciliation.items || []).map((item) => <div key={item.itemId} className="farmer-context-row farmer-detail-field--wide"><div><strong>{item.sku || 'Item'} · {item.name}</strong><span>{item.role || 'OTHER'} · Issued {item.issued} · Installed {item.installed} · Remaining {item.remaining}</span></div><Badge bg={Number(item.mismatch || 0) > 0 || Number(item.damaged || 0) > 0 || Number(item.missing || 0) > 0 ? 'warning' : 'success'}>{Number(item.mismatch || 0) > 0 ? `${item.mismatch} mismatch` : 'Reconciled'}</Badge></div>)}
+          {materialReconciliation.receipt && <div className="beneficiary-custody-card farmer-detail-field--wide">
+            <div className="beneficiary-custody-head"><div><strong>Technician receipt · {materialReconciliation.receipt.receiptNo}</strong><span>{materialReconciliation.receipt.technician?.username || 'Technician'} · {materialReconciliation.receipt.receivedAt ? new Date(materialReconciliation.receipt.receivedAt).toLocaleString('en-IN') : '—'}</span></div><Badge bg={materialReconciliation.receipt.status === 'CONFIRMED' ? 'success' : 'warning'}>{materialReconciliation.receipt.status}</Badge></div>
+            <div className="beneficiary-custody-items">{(materialReconciliation.receipt.items || []).map((x,idx)=><div key={`${x.serialNumber}-${idx}`} className={x.condition === 'GOOD' ? 'is-good' : 'has-exception'}><small>{x.role || 'OTHER'} · {x.item?.name || x.item?.sku || 'Material'}</small><code>{x.serialNumber}</code><strong>{x.condition}</strong></div>)}</div>
+            {materialReconciliation.receipt.remarks && <p>{materialReconciliation.receipt.remarks}</p>}
+          </div>}
+          {(materialReconciliation.items || []).map((item) => <div key={item.itemId} className="farmer-context-row farmer-detail-field--wide"><div><strong>{item.sku || 'Item'} · {item.name}</strong><span>{item.role || 'OTHER'} · Issued {item.issued} · Received {item.received || 0} · Installed {item.installed} · Remaining {item.remaining}</span></div><Badge bg={Number(item.mismatch || 0) > 0 || Number(item.damaged || 0) > 0 || Number(item.missing || 0) > 0 ? 'warning' : 'success'}>{Number(item.mismatch || 0) > 0 ? `${item.mismatch} mismatch` : 'Reconciled'}</Badge></div>)}
         </Section>}
 
         <Section icon={<FaTools />} title="Pump, installation & commissioning">
