@@ -1,11 +1,30 @@
 // OrderConfirmationModal.jsx
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Modal, Button, Form, Alert, Row, Col } from 'react-bootstrap';
 import SignatureCanvas from 'react-signature-canvas';
 import axios from 'axios';
 
 import { API_URL, resolveAssetUrl } from '../config.js';
 import './OrderConfirmationModal.css';
+
+
+const dataUrlToBlob = (dataUrl) => {
+  const [header, payload] = String(dataUrl || '').split(',');
+  const mime = header?.match(/data:([^;]+)/)?.[1] || 'image/png';
+  const binary = atob(payload || '');
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+};
+
+const materialRole = (item) => {
+  const text = `${item?.itemId?.category || ''} ${item?.itemId?.name || ''} ${item?.itemId?.sku || ''}`.toLowerCase();
+  if (text.includes('pump')) return 'PUMP';
+  if (text.includes('motor')) return 'MOTOR';
+  if (text.includes('controller') || text.includes('inverter')) return 'CONTROLLER';
+  if (text.includes('panel') || text.includes('module')) return 'PANEL';
+  return 'OTHER';
+};
 
 
 export default function OrderConfirmationModal({
@@ -59,12 +78,162 @@ export default function OrderConfirmationModal({
   });
 
   const [error, setError] = useState('');
+  const [issuedInventory, setIssuedInventory] = useState({ linked: false, items: [] });
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [scanCode, setScanCode] = useState('');
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanMessage, setScanMessage] = useState('');
+  const [scanCameraOpen, setScanCameraOpen] = useState(false);
+  const [scanCameraError, setScanCameraError] = useState('');
+  const scanVideoRef = useRef(null);
   const token = localStorage.getItem('token');
   const auth = { headers: { Authorization: `Bearer ${token}` } };
 
   // Refs for signature pads
   const farmerSigPad = useRef(null);
   const surveyorSigPad = useRef(null);
+
+
+  useEffect(() => {
+    if (!show || !farmer?._id) return;
+    const technicianLabel = String(technicianUsername || localStorage.getItem('username') || farmer?.surveyorName || '').trim();
+    const technicianMobile = String(localStorage.getItem('mobile') || farmer?.surveyorMobile || '').trim();
+    setFormData({
+      fullSetOrPartialSet: farmer?.fullSetOrPartialSet || 'Full Set',
+      materialDispatchDate: farmer?.materialDispatchDate ? String(farmer.materialDispatchDate).slice(0, 10) : today,
+      materialReceivedConfirmationYesNo: farmer?.materialReceivedConfirmationYesNo || 'Yes',
+      materialReceivedDate: farmer?.materialReceivedDate ? String(farmer.materialReceivedDate).slice(0, 10) : today,
+      shortageDamagedRemarks: farmer?.shortageDamagedRemarks || '',
+      pumpNoUnique: farmer?.pumpNoUnique || '',
+      motorNoUnique: farmer?.motorNoUnique || '',
+      controllerNoUnique: farmer?.controllerNoUnique || '',
+      imeiNoUnique: farmer?.imeiNoUnique || '',
+      panels: farmer?.panels?.length > 0 ? farmer.panels.map((x) => String(x || '')) : [''],
+      orderReceivedByTechnician: technicianMobile ? `${technicianLabel} (${technicianMobile})` : technicianLabel,
+      orderReceivedConfirmationYesNo: farmer?.orderReceivedConfirmationYesNo || '',
+      orderReceivedDate: farmer?.orderReceivedDate ? String(farmer.orderReceivedDate).slice(0, 10) : today,
+      orderReceivedRemarks: farmer?.orderReceivedRemarks || '',
+      orderReceivedYesNo: farmer?.orderReceivedYesNo || '',
+      lrPhotoUrls: farmer?.lrPhotoUrls || [],
+      finalsignatureUrl: farmer?.finalsignatureUrl || '',
+      finalsurveyorsignatureUrl: farmer?.finalsurveyorsignatureUrl || '',
+    });
+    setIssuedInventory({ linked: false, items: [] });
+    setScanCode('');
+    setScanMessage('');
+    setScanCameraError('');
+    setError('');
+  }, [show, farmer?._id, technicianUsername]);
+
+  const applyIssuedItem = (item) => {
+    const code = String(item?.serialNumber || item?.barcodeValue || '').trim();
+    if (!code) return;
+    const role = item?.role || materialRole(item);
+    const attrs = item?.scanAttributes || item?.metadata?.scanAttributes || item?.agencyReceiptAttributes || {};
+    setFormData((prev) => {
+      const all = [prev.pumpNoUnique, prev.motorNoUnique, prev.controllerNoUnique, ...(prev.panels || [])]
+        .map((x) => String(x || '').trim().toLowerCase()).filter(Boolean);
+      if (all.includes(code.toLowerCase())) return prev;
+      if (role === 'PUMP') return { ...prev, pumpNoUnique: code };
+      if (role === 'MOTOR') return { ...prev, motorNoUnique: code };
+      if (role === 'CONTROLLER') return {
+        ...prev,
+        controllerNoUnique: code,
+        imeiNoUnique: prev.imeiNoUnique || String(attrs.imei || attrs.IMEI || attrs.imeiNo || attrs.imeiNumber || ''),
+      };
+      if (role === 'PANEL') {
+        const panels = [...(prev.panels || [''])];
+        const empty = panels.findIndex((x) => !String(x || '').trim());
+        if (empty >= 0) panels[empty] = code;
+        else panels.push(code);
+        return { ...prev, panels };
+      }
+      return prev;
+    });
+    setScanMessage(`${code} verified against issued material and added.`);
+  };
+
+  useEffect(() => {
+    if (!show || !farmer?._id) return;
+    let active = true;
+    const loadIssued = async () => {
+      setInventoryLoading(true);
+      setScanMessage('');
+      try {
+        const resp = await axios.get(`${API_URL}/api/installation/issued-material/${farmer._id}`, auth);
+        if (!active) return;
+        const data = resp.data || { linked: false, items: [] };
+        setIssuedInventory(data);
+        (data.items || []).filter((item) => item.assignmentScope === 'BENEFICIARY').forEach(applyIssuedItem);
+      } catch (err) {
+        if (active) setError(err.response?.data?.message || 'Unable to load issued material for this beneficiary.');
+      } finally {
+        if (active) setInventoryLoading(false);
+      }
+    };
+    loadIssued();
+    return () => { active = false; };
+  }, [show, farmer?._id]);
+
+  const submitScan = async (rawValue) => {
+    const code = String(rawValue ?? scanCode).trim();
+    if (!code || !farmer?._id || scanLoading) return;
+    setScanLoading(true);
+    setError('');
+    setScanMessage('');
+    try {
+      const resp = await axios.post(
+        `${API_URL}/api/installation/scan-issued-material/${farmer._id}`,
+        { code },
+        auth
+      );
+      applyIssuedItem(resp.data?.item || {});
+      setScanCode('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Scanned material is not valid for this technician/beneficiary.');
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!scanCameraOpen) return;
+    let stream; let stopped = false; let frame;
+    const start = async () => {
+      try {
+        setScanCameraError('');
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is unavailable. Use a Bluetooth/USB scanner or type the serial.');
+        if (!('BarcodeDetector' in window)) throw new Error('Camera barcode decoding is not supported in this browser. Bluetooth/USB scanner input still works.');
+        const detector = new window.BarcodeDetector({ formats: ['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','data_matrix'] });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        if (scanVideoRef.current) { scanVideoRef.current.srcObject = stream; await scanVideoRef.current.play(); }
+        const tick = async () => {
+          if (stopped) return;
+          try {
+            const found = await detector.detect(scanVideoRef.current);
+            const raw = found?.[0]?.rawValue;
+            if (raw) {
+              stopped = true;
+              setScanCameraOpen(false);
+              await submitScan(raw);
+              return;
+            }
+          } catch {}
+          frame = requestAnimationFrame(tick);
+        };
+        tick();
+      } catch (e) {
+        setScanCameraError(e.message);
+        setScanCameraOpen(false);
+      }
+    };
+    start();
+    return () => {
+      stopped = true;
+      if (frame) cancelAnimationFrame(frame);
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, [scanCameraOpen]);
 
   // ─── Handlers for form inputs ─────────────────────────────────────────────────
   const handleChange = (e) => {
@@ -138,7 +307,7 @@ export default function OrderConfirmationModal({
     }
     try {
       const dataUrl = sigPadRef.current.toDataURL('image/png');
-      const blob = await (await fetch(dataUrl)).blob();
+      const blob = dataUrlToBlob(dataUrl);
       const uploadData = new FormData();
       uploadData.append('files', blob, `${fieldName}-${Date.now()}.png`);
 
@@ -343,6 +512,43 @@ export default function OrderConfirmationModal({
                   placeholder="Enter any shortage or damaged remarks"
                 />
               </Form.Group>
+            </Col>
+
+
+            <Col md={12}>
+              <div className="order-issued-material">
+                <div className="order-issued-material__head">
+                  <div>
+                    <strong>Issued material verification</strong>
+                    <small>{inventoryLoading ? 'Loading assigned material…' : issuedInventory.linked ? `${issuedInventory.items?.length || 0} serialized item(s) available · beneficiary-bound items are prefilled, work-package stock is confirmed by scan.` : 'No governed issued inventory is linked; legacy manual entry remains available.'}</small>
+                  </div>
+                </div>
+                <div className="order-scan-row">
+                  <Form.Control
+                    value={scanCode}
+                    onChange={(e) => setScanCode(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitScan(); } }}
+                    placeholder="Scan barcode / QR / serial"
+                    aria-label="Scan material serial"
+                  />
+                  <Button type="button" variant="outline-primary" disabled={scanLoading} onClick={() => submitScan()}>
+                    {scanLoading ? 'Checking…' : 'Add scan'}
+                  </Button>
+                  <Button type="button" variant="outline-secondary" onClick={() => setScanCameraOpen((v) => !v)}>
+                    {scanCameraOpen ? 'Stop camera' : 'Camera scan'}
+                  </Button>
+                </div>
+                {scanCameraOpen && <div className="order-camera-scan"><video ref={scanVideoRef} playsInline muted /><small>Point the rear camera at the barcode or QR. Capture is automatic.</small></div>}
+                {scanCameraError && <Alert variant="warning" className="mt-2 mb-0">{scanCameraError}</Alert>}
+                {scanMessage && <Alert variant="success" className="mt-2 mb-0">{scanMessage}</Alert>}
+                {!!issuedInventory.items?.length && <div className="order-issued-list">
+                  {issuedInventory.items.map((item) => <div key={item._id || item.serialNumber}>
+                    <span><b>{item.itemId?.name || item.itemId?.sku || 'Material'}</b><small>{item.assignmentScope === 'BENEFICIARY' ? 'Beneficiary allocated' : 'Work-package issued'}{item.issueNo ? ` · ${item.issueNo}` : ''}</small></span>
+                    <code>{item.serialNumber || item.barcodeValue || '—'}</code>
+                  </div>)}
+                </div>}
+                <small className="agency-scan-help">Receipt values are prefilled only from beneficiary-bound issued material. Work-package stock must be physically scanned before it is attached to this beneficiary; the same serials are revalidated again at installation.</small>
+              </div>
             </Col>
 
             {/* ─── Pump No Unique ──────────────────────────────────────────────── */}

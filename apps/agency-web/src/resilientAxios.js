@@ -14,6 +14,8 @@ export async function getAgencyCached(url,{maxAge=30*60*1000}={}){
 
 export function installAgencyAxiosResilience(){
  if(installed)return;installed=true;axios.defaults.withCredentials=true;
+ axios.interceptors.request.use(config=>{window.dispatchEvent(new CustomEvent('opsynq:request-start',{detail:{url:config.url,method:config.method}}));return config},error=>{window.dispatchEvent(new CustomEvent('opsynq:request-end'));return Promise.reject(error)});
+ axios.interceptors.response.use(response=>{window.dispatchEvent(new CustomEvent('opsynq:request-end',{detail:{url:response.config?.url,method:response.config?.method}}));return response},error=>{window.dispatchEvent(new CustomEvent('opsynq:request-end',{detail:{url:error.config?.url,method:error.config?.method}}));return Promise.reject(error)});
  const rawGet=axios.get.bind(axios),rawPost=axios.post.bind(axios),rawPut=axios.put.bind(axios),rawPatch=axios.patch.bind(axios),rawDelete=axios.delete.bind(axios);
  axios.get=(url,config={})=>{
   if(config?.responseType||config?.opsynqNoCache)return rawGet(url,config);

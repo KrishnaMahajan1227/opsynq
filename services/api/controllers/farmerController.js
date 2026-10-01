@@ -171,6 +171,31 @@ const ASSIGNMENT_TYPES = {
   REWORK: { nameField: 'reworkAssignTechnician', mobileField: null },
 };
 
+async function enrichFarmerOwnership(farmers = []) {
+  const rows = Array.isArray(farmers) ? farmers : [];
+  const ids = rows.filter((x) => x?._id && !String(x.assignedVendorCompanyName || '').trim()).map((x) => x._id);
+  if (!ids.length) return rows;
+  const BeneficiaryContext = require('../models/platform/BeneficiaryContext');
+  const contexts = await BeneficiaryContext.find({ farmerId: { $in: ids } })
+    .select('farmerId companyId agencyId assignedByName assignedAt')
+    .populate('companyId', 'name code')
+    .populate('agencyId', 'name code')
+    .lean();
+  const byFarmer = new Map(contexts.map((x) => [String(x.farmerId), x]));
+  return rows.map((farmer) => {
+    if (String(farmer.assignedVendorCompanyName || '').trim()) return farmer;
+    const ctx = byFarmer.get(String(farmer._id));
+    if (!ctx) return farmer;
+    return {
+      ...farmer,
+      assignedVendorCompanyName: ctx.companyId?.name || ctx.companyId?.code || '',
+      assignedAgencyName: ctx.agencyId?.name || ctx.agencyId?.code || '',
+      opsynqAssignmentAt: ctx.assignedAt || null,
+      opsynqAssignedByName: ctx.assignedByName || '',
+    };
+  });
+}
+
 // GET /api/farmers
 exports.getFarmers = async (req, res) => {
   try {
@@ -190,10 +215,12 @@ exports.getFarmers = async (req, res) => {
         Farmer.countDocuments(query),
         Farmer.find(query).sort({updatedAt:-1,_id:-1}).skip((page-1)*pageSize).limit(pageSize).lean(),
       ]);
-      return res.status(200).json({items:farmers.map(redactFarmer),total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
+      const enriched = await enrichFarmerOwnership(farmers);
+      return res.status(200).json({items:enriched.map(redactFarmer),total,page,pageSize,pages:Math.max(1,Math.ceil(total/pageSize))});
     }
     const farmers = await Farmer.find(query).sort({updatedAt:-1,_id:-1}).lean();
-    res.status(200).json(farmers.map(redactFarmer));
+    const enriched = await enrichFarmerOwnership(farmers);
+    res.status(200).json(enriched.map(redactFarmer));
   } catch (err) {
     console.error('Error in getFarmers:', err.message);
     res.status(500).json({ message: 'Failed to fetch farmers' });

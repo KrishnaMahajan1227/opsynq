@@ -8,6 +8,7 @@ const DEFAULT_CACHE_TTL=15000;
 async function request(path,options,context){
  const {token,method,isForm,cacheKey,cacheTtl}=context;
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),Number(options.timeout||30000));
+ window.dispatchEvent(new CustomEvent('opsynq:request-start',{detail:{path,method}}));
  try{
   const res=await fetch(`${API}${path}`,{...options,credentials:'include',method,signal:options.signal||controller.signal,headers:{...(isForm?{}:{'Content-Type':'application/json'}),...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});
   const body=res.status===204?{}:await res.json().catch(()=>({}));
@@ -32,7 +33,7 @@ async function request(path,options,context){
   }
   if(e.name==='AbortError')throw new Error('Request timed out. Check your connection and try again.');
   throw e;
- }finally{clearTimeout(timeout)}
+ }finally{clearTimeout(timeout);window.dispatchEvent(new CustomEvent('opsynq:request-end',{detail:{path,method}}))}
 }
 
 export const api=async(path,options={})=>{

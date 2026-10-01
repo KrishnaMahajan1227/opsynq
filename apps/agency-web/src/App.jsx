@@ -18,6 +18,21 @@ import './agency-enterprise-v2.css';
 import './agency-professional.css';
 installAgencyAxiosResilience();
 
+const GlobalActivity = () => {
+  const [count, setCount] = React.useState(0);
+  React.useEffect(() => {
+    const start = () => setCount((x) => x + 1);
+    const end = () => setCount((x) => Math.max(0, x - 1));
+    window.addEventListener('opsynq:request-start', start);
+    window.addEventListener('opsynq:request-end', end);
+    return () => {
+      window.removeEventListener('opsynq:request-start', start);
+      window.removeEventListener('opsynq:request-end', end);
+    };
+  }, []);
+  return <div className={`global-activity ${count > 0 ? 'is-active' : ''}`} role="status" aria-live="polite"><span /></div>;
+};
+
 const ProtectedRoute = ({ children }) => {
   const active = localStorage.getItem('opsynq_agency_session')==='1'||Boolean(localStorage.getItem('token'));
   return active ? <><UserLocationTracker />{children}</> : <Navigate to="/" />;
@@ -28,7 +43,7 @@ const Router = import.meta.env.PROD ? HashRouter : BrowserRouter;
 const App = () => {
   return (
     <Router>
-      <div className="d-flex flex-column min-vh-100"><ResilienceStatus />
+      <div className="d-flex flex-column min-vh-100"><GlobalActivity/><ResilienceStatus />
         <NavbarComponent />
         <div className="app-content flex-grow-1">
           <Suspense fallback={<div className="agency-route-loader"><span/><b>Loading workspace…</b><small>Preparing the latest operational view.</small></div>}>
