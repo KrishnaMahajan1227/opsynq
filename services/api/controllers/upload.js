@@ -1,13 +1,13 @@
-const { storage } = require('../config/cloudinary');
+const { evidenceStorage } = require('../config/cloudinary');
 const multer = require('multer');
 
 const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024, files: 10 },
+  storage: evidenceStorage,
+  limits: { fileSize: 8 * 1024 * 1024, files: 10 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
     if (allowedTypes.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Invalid file type. Only JPG, JPEG, and PNG are allowed.'));
+    else cb(new Error('Invalid file type. Only JPG, JPEG, PNG, and PDF are allowed.'));
   },
 });
 
@@ -19,7 +19,7 @@ exports.uploadFiles = (req, res) => {
       console.error('Upload error:', err.message);
       return res.status(status).json({
         message: tooLarge
-          ? 'Upload is too large. Reduce the number/size of images and try again.'
+          ? 'Upload is too large. Reduce the number or file size and try again.'
           : `Failed to upload files: ${err.message}`,
         code: err.code || 'UPLOAD_FAILED',
       });

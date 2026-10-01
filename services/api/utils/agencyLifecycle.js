@@ -105,6 +105,8 @@ async function syncComplaintServiceCase({ req, farmer, context, resolved = false
     item.status = 'RESOLVED';
     item.resolvedAt = farmer.solutionDate || new Date();
     item.resolution = text(farmer.reWork || farmer.remarks) || 'Resolved by agency technician.';
+  } else if (text(farmer.complaintStatus).toLowerCase() === 'in progress') {
+    item.status = 'IN_PROGRESS';
   } else if (farmer.reworkAssignTechnician) {
     item.status = item.status === 'OPEN' ? 'ASSIGNED' : item.status;
   }

@@ -27,6 +27,7 @@ import './InstallationCompletionModal.css';
 import { API_URL, resolveAssetUrl } from '../config.js';
 import { saveFieldDraft, getFieldDraft, deleteFieldDraft } from '../offlineStore';
 import { optimiseImageFile, optimiseImageFiles, totalFileBytes, formatBytes } from '../utils/imageFiles';
+import StageRequirementsPanel from './StageRequirementsPanel';
 
 
 export default function InstallationCompletionModal({
@@ -38,6 +39,7 @@ export default function InstallationCompletionModal({
   // Accordion state
   const [openKeys, setOpenKeys] = useState(['0', '1']);
   const [error, setError] = useState('');
+  const [validationDetails, setValidationDetails] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState(null);
   const [optimisingPhotos, setOptimisingPhotos] = useState(false);
@@ -87,6 +89,9 @@ export default function InstallationCompletionModal({
   const [scanCameraError, setScanCameraError] = useState('');
   const scanVideoRef = useRef(null);
   const [additionalItems, setAdditionalItems] = useState([]);
+  const [requirementsState, setRequirementsState] = useState({ loading: false, items: [], pendingRequired: [], slaItems: [] });
+  const isRework = farmer?.applicationStatus === 'Complaint Raised';
+  const requiresComplaint = installationDoneYesNo === 'No' || pumpNotOperatingYesNo === 'No';
 
   const inventoryRole = item => {
     const text = `${item?.itemId?.category || ''} ${item?.itemId?.name || ''} ${item?.itemId?.sku || ''}`.toLowerCase();
@@ -187,7 +192,7 @@ export default function InstallationCompletionModal({
     setPanelsArray(Array.isArray(farmer.panels) && farmer.panels.length ? farmer.panels.map((x) => String(x || '')) : ['']);
     setInstallationDoneYesNo(String(farmer.installationDoneYesNo || ''));
     setPumpNotOperatingYesNo(String(farmer.pumpNotOperatingYesNo || ''));
-    setCompanyAssignedPersonName(String(farmer.companyAssignedPersonName || farmer.installationAssignedTechnician || ''));
+    setCompanyAssignedPersonName(String(farmer.companyAssignedPersonName || farmer.installationAssignedTechnician || localStorage.getItem('username') || ''));
     setComplaintIssue(String(farmer.complaintIssue || ''));
     setComplaintNumber(String(farmer.complaintNumber || ''));
     setShowComplaintSection(farmer.applicationStatus === 'Complaint Raised' || Boolean(farmer.complaintIssue));
@@ -201,6 +206,19 @@ export default function InstallationCompletionModal({
       setComplaintRaisedDate(local);
     }
   }, [showComplaintSection]);
+
+  useEffect(() => {
+    if (!requiresComplaint) {
+      setShowComplaintSection(false);
+      if (!isRework) {
+        setComplaintIssue('');
+        setComplaintRaisedDate('');
+        setComplaintNumber('');
+      }
+      return;
+    }
+    setShowComplaintSection(true);
+  }, [requiresComplaint, isRework]);
 
   useEffect(() => {
     if (!show || !farmer?._id) return;
@@ -327,6 +345,7 @@ export default function InstallationCompletionModal({
     farmerSigRef.current?.clear();
     surveyorSigRef.current?.clear();
     setError('');
+    setValidationDetails([]);
     setIsSubmitting(false);
     setIssuedInventory({ linked: false, items: [] });
     setScanCode('');
@@ -341,6 +360,7 @@ export default function InstallationCompletionModal({
   const handleSubmit = async e => {
     e.preventDefault();
     setError('');
+    setValidationDetails([]);
     setIsSubmitting(true);
 
     if (!farmer?._id) {
@@ -363,13 +383,7 @@ export default function InstallationCompletionModal({
       setIsSubmitting(false);
       return;
     }
-    if (pumpNotOperatingYesNo === 'No' && !showComplaintSection) {
-      setError('Please raise a complaint if the pump is not operating.');
-      console.log('Validation failed: Complaint section not opened');
-      setIsSubmitting(false);
-      return;
-    }
-    if (showComplaintSection && (!complaintIssue || !complaintRaisedDate || !complaintNumber)) {
+    if (requiresComplaint && (!complaintIssue || !complaintRaisedDate || !complaintNumber)) {
       setError('Please fill all complaint fields.');
       console.log('Validation failed: Complaint fields missing', {
         complaintIssue,
@@ -386,15 +400,11 @@ export default function InstallationCompletionModal({
       setIsSubmitting(false);
       return;
     }
-    if (!finalSignature) {
-      setError('Farmer signature is required.');
-      console.log('Validation failed: Farmer signature missing');
-      setIsSubmitting(false);
-      return;
-    }
-    if (!finalSurveyorSignature) {
-      setError('Surveyor signature is required.');
-      console.log('Validation failed: Surveyor signature missing');
+    // Legacy installations keep the proven two-signature rule. When the Company
+    // has configured governed evidence requirements, that checklist becomes the
+    // completion gate and the backend returns the exact missing requirement(s).
+    if (!requirementsState.items?.length && (!finalSignature || !finalSurveyorSignature)) {
+      setError('Farmer and technician signatures are required for this legacy installation.');
       setIsSubmitting(false);
       return;
     }
@@ -411,7 +421,7 @@ export default function InstallationCompletionModal({
     fd.append('pumpNotOperatingYesNo', pumpNotOperatingYesNo);
     fd.append('companyAssignedPersonName', companyAssignedPersonName);
 
-    if (pumpNotOperatingYesNo === 'No' && showComplaintSection) {
+    if (requiresComplaint) {
       fd.append('complaintIssue', complaintIssue);
       fd.append('complaintRaisedDate', complaintRaisedDate);
       fd.append('complaintNumber', complaintNumber);
@@ -466,7 +476,9 @@ export default function InstallationCompletionModal({
       handleClose();
     } catch (err) {
       console.error('Error completing installation:', err.response?.data || err.message);
-      setError(err.response?.data?.message || 'Failed to complete installation. Please try again.');
+      const responseData = err.response?.data || {};
+      setError(responseData.message || 'Failed to complete installation. Please try again.');
+      setValidationDetails(Array.isArray(responseData.missingEvidence) ? responseData.missingEvidence : []);
       setIsSubmitting(false);
     }
   };
@@ -490,7 +502,7 @@ export default function InstallationCompletionModal({
     >
       <Modal.Header closeButton>
         <div>
-          <Modal.Title>Installation Completion · {farmer?.beneficiaryName}</Modal.Title>
+          <Modal.Title>{isRework ? 'Complaint Rework' : 'Installation Completion'} · {farmer?.beneficiaryName}</Modal.Title>
           <div className="installation-draft-state">{navigator.onLine ? 'Online' : 'Offline'} · {draftSavedAt ? `Draft saved ${new Date(draftSavedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}` : 'Draft protection active'}</div>
         </div>
         <div className="header-controls">
@@ -517,9 +529,12 @@ export default function InstallationCompletionModal({
       
       <Modal.Body>
         {error && (
-          <div className="alert alert-danger" role="alert">
+          <div className="alert alert-danger installation-validation-alert" role="alert">
             <AlertCircle className="alert-icon" size={20} />
-            <div>{error}</div>
+            <div>
+              <strong>{error}</strong>
+              {validationDetails.length > 0 && <ul>{validationDetails.map(item => <li key={item.id || item.label}>{item.label}{item.stage ? ` · ${String(item.stage).replaceAll('_', ' ')}` : ''}</li>)}</ul>}
+            </div>
           </div>
         )}
         {(finalFarmerPhoto || finalSitePhotos.length > 0) && <div className="installation-upload-summary">Evidence ready · {1 + finalSitePhotos.length} photo{finalSitePhotos.length ? 's' : ''} · {formatBytes(totalFileBytes([finalFarmerPhoto, ...finalSitePhotos].filter(Boolean)))}{optimisingPhotos ? ' · Optimising…' : ''}</div>}
@@ -833,6 +848,14 @@ export default function InstallationCompletionModal({
                   </Button>
                 </div>
 
+                {isRework && <div className="rework-context-card">
+                  <div><span>Existing complaint</span><strong>{farmer?.complaintNumber || 'Complaint record'}</strong></div>
+                  <div><span>Issue</span><strong>{farmer?.complaintIssue || farmer?.issues || 'Issue details not recorded'}</strong></div>
+                  <div><span>Rework instruction</span><strong>{farmer?.reWork || 'Restore the installation and verify pump operation.'}</strong></div>
+                  <div><span>Assigned rework technician</span><strong>{farmer?.reworkAssignTechnician || farmer?.installationAssignedTechnician || 'Current technician'}</strong></div>
+                  <p>Select <b>Installation Completed = Yes</b> and <b>Pump Operating = Yes</b> after the issue is resolved. If the issue remains, keep the failed outcome and update the complaint details below.</p>
+                </div>}
+
                 {/* Installation Status */}
                 <div className="form-section">
                   <h6>Installation Status</h6>
@@ -895,20 +918,11 @@ export default function InstallationCompletionModal({
                 </div>
 
                 {/* Complaint Section */}
-                {pumpNotOperatingYesNo === 'No' && (
+                {requiresComplaint && (
                   <div className="form-section complaint-section">
-                    {!showComplaintSection ? (
-                      <Button
-                        type="button"
-                        onClick={() => setShowComplaintSection(true)}
-                        className="btn-raise-complaint"
-                      >
-                        <AlertTriangle size={20} />
-                        Raise Complaint
-                      </Button>
-                    ) : (
-                      <>
-                        <h6>Complaint Details</h6>
+                    <>
+                        <h6>{isRework ? 'Rework still unresolved' : 'Complaint Details'}</h6>
+                        <p className="complaint-guidance">{isRework ? 'Update the existing complaint only if the pump is still not operating after rework.' : 'A complaint is required because the installation or pump operation is not successful.'}</p>
                         <Row>
                           <Col xs={12} className="mb-3">
                             <Form.Group controlId="complaintIssue">
@@ -955,9 +969,15 @@ export default function InstallationCompletionModal({
                           </Col>
                         </Row>
                       </>
-                    )}
                   </div>
                 )}
+
+                <StageRequirementsPanel
+                  farmerId={farmer?._id}
+                  stages={['INSTALLATION','FINAL_INSPECTION']}
+                  title={isRework ? 'Company rework / final inspection requirements' : 'Company installation / final inspection requirements'}
+                  onStateChange={setRequirementsState}
+                />
 
                 {/* Upload Photos */}
                 <div className="form-section">
@@ -1001,8 +1021,9 @@ export default function InstallationCompletionModal({
                 <div className="form-section">
                   <h6>
                     <PenTool size={20} style={{ marginRight: '8px' }} />
-                    Signatures <span className="text-danger">*</span>
+                    Signatures {!requirementsState.items?.length && <span className="text-danger">*</span>}
                   </h6>
+                  <span className="signature-requirement-note">{requirementsState.items?.length ? 'Capture these when required by the Company checklist above. The governed checklist controls final submission.' : 'Farmer and technician signatures are required for this legacy installation flow.'}</span>
                   <Row>
                     <Col xs={12} sm={6} className="mb-3">
                       <Form.Group>
@@ -1107,7 +1128,7 @@ export default function InstallationCompletionModal({
                   <Button 
                     type="submit" 
                     className={`btn-action btn-submit ${isSubmitting ? 'loading' : ''}`}
-                    disabled={!finalSignature || !finalSurveyorSignature || isSubmitting}
+                    disabled={isSubmitting || requirementsState.loading}
                   >
                     {!isSubmitting && <Save size={16} />}
                     {isSubmitting ? 'Submitting...' : 'Submit Installation'}

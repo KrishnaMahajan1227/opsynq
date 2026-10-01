@@ -20,6 +20,7 @@ import './FieldVerification.css';
 import { API_URL, resolveAssetUrl } from '../config';
 import { deleteFieldDraft, getFieldDraft, saveFieldDraft } from '../offlineStore';
 import { formatBytes, optimiseImageFile, optimiseImageFiles, totalFileBytes } from '../utils/imageFiles';
+import StageRequirementsPanel from '../components/StageRequirementsPanel';
 
 
 // Helper: Convert signature data-URL to File
@@ -66,6 +67,7 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
   const [optimisingPhotos, setOptimisingPhotos] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState(null);
+  const [companyRequirementsState, setCompanyRequirementsState] = useState({ loading: true, items: [], pendingRequired: [], slaItems: [] });
   const skipNextDraftSave = useRef(false);
   const token = localStorage.getItem('token');
   const auth = { headers: { Authorization: `Bearer ${token}` } };
@@ -300,6 +302,15 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
       return;
     }
     if (optimisingPhotos || submitting) return;
+    if (['Done','Completed'].includes(status) && companyRequirementsState.loading) {
+      setToast({ show: true, message: 'Company survey requirements are still loading. Please wait a moment before completing the survey.', variant: 'warning' });
+      return;
+    }
+    if (['Done','Completed'].includes(status) && companyRequirementsState.pendingRequired?.length) {
+      const missing = companyRequirementsState.pendingRequired.map(x => x.requirement?.label).filter(Boolean);
+      setToast({ show: true, message: `Complete the Company survey checklist before marking the survey complete: ${missing.join(', ')}`, variant: 'warning' });
+      return;
+    }
     if (!dataURLtoFile(signatureData, 'sig.png')) {
       setToast({ show: true, message: 'Invalid signature format', variant: 'danger' });
       return;
@@ -710,6 +721,18 @@ export default function FieldVerification({ farmerId, onVerificationComplete }) 
                       </Form.Group>
                     </Col>
                   </Row>
+                </Accordion.Body>
+              </Accordion.Item>
+
+              <Accordion.Item eventKey="4">
+                <Accordion.Header>Company Survey Requirements</Accordion.Header>
+                <Accordion.Body>
+                  <StageRequirementsPanel
+                    farmerId={farmerId}
+                    stages={['SURVEY']}
+                    title="Company survey evidence & SLA"
+                    onStateChange={setCompanyRequirementsState}
+                  />
                 </Accordion.Body>
               </Accordion.Item>
             </Accordion>

@@ -646,6 +646,7 @@ exports.assignTechnician = asyncHandler(async (req, res) => {
   const updated = await Farmer.findByIdAndUpdate(farmerId, { $set: update }, { new: true, runValidators: true }).lean();
   await AdminChangeLog.create({ adminId: req.user._id, changeType: 'technician_assignment', details: { farmerId, assignmentType, technicianId, technician: newTechnician, reason, changes: update } });
   const ctx = await contextForFarmer(farmerId);
+  if (assignmentType === 'REWORK' && updated?.applicationStatus === 'Complaint Raised') await syncComplaintServiceCase({ req, farmer: updated, context: ctx });
   await publishAgencyProgress({ req, farmer: updated || farmer, context: ctx, action: 'AGENCY_TECHNICIAN_ASSIGNED', title: `${assignmentType[0]}${assignmentType.slice(1).toLowerCase()} technician assigned · ${farmer.beneficiaryId || farmer.beneficiaryName || 'Beneficiary'}`, message: `${technician.username} assigned by ${req.user.username || 'Agency superadmin'}.`, type: 'INFO', after: { assignmentType, technician: newTechnician, reason } });
   res.json({ message: `${assignmentType[0]}${assignmentType.slice(1).toLowerCase()} technician assigned successfully.`, assignmentType, technician: newTechnician, update });
 });
@@ -1121,9 +1122,9 @@ exports.approveChangeRequest = async (req, res) => {
     if (assignmentType === 'INSTALLATION') { updateData.installationAssignedAt = new Date(); updateData.installationAssignedBy = user._id; }
     if (assignmentType === 'REWORK') updateData.reworkAssignDate = new Date();
 
-    await Farmer.findByIdAndUpdate(request.farmerId, {
+    const updatedFarmer = await Farmer.findByIdAndUpdate(request.farmerId, {
       $set: updateData,
-    });
+    }, { new: true, runValidators: true }).lean();
 
     // Update request status
     request.status = 'Approved';
@@ -1140,6 +1141,18 @@ exports.approveChangeRequest = async (req, res) => {
         changes: updateData,
         reason: `Approved technician change request ${requestId}`,
       },
+    });
+    const ctx = await contextForFarmer(request.farmerId);
+    if (assignmentType === 'REWORK' && updatedFarmer?.applicationStatus === 'Complaint Raised') await syncComplaintServiceCase({ req, farmer: updatedFarmer, context: ctx });
+    await publishAgencyProgress({
+      req,
+      farmer: updatedFarmer || requestFarmer,
+      context: ctx,
+      action: 'AGENCY_TECHNICIAN_ASSIGNED',
+      title: `${assignmentType[0]}${assignmentType.slice(1).toLowerCase()} technician assigned · ${requestFarmer.beneficiaryId || requestFarmer.beneficiaryName || 'Beneficiary'}`,
+      message: `${request.newTechnician.username} assignment approved by ${user.username || 'Agency superadmin'}.`,
+      type: 'INFO',
+      after: { assignmentType, technician: request.newTechnician, requestId },
     });
 
     res.status(200).json({ message: 'Change request approved successfully' });
@@ -1273,8 +1286,8 @@ exports.getFarmerDetailContext = async (req, res) => {
     const ServiceCase = require('../models/platform/ServiceCase');
     const ComplianceRecord = require('../models/platform/ComplianceRecord');
     const AgencyUserLink = require('../models/platform/AgencyUserLink');
-    const EvidenceRequirement = require('../models/platform/EvidenceRequirement');
-    const EvidenceSubmission = require('../models/platform/EvidenceSubmission');
+    const SLARule = require('../models/platform/SLARule');
+    const { getEvidenceChecklist } = require('../utils/evidenceRuntime');
     const { materialReconciliation } = require('../utils/inventoryTrace');
 
     const farmer = await Farmer.findById(req.params.id).lean();
@@ -1283,7 +1296,7 @@ exports.getFarmerDetailContext = async (req, res) => {
 
     const context = await BeneficiaryContext.findOne({ farmerId: farmer._id })
       .populate('companyId', 'name code contact address')
-      .populate('programId', 'name code authority scheme component financialYear status')
+      .populate('programId', 'name code authority scheme component financialYear status slaConfig milestoneConfig')
       .populate('workOrderId', 'number title status dueDate')
       .populate('workPackageId', 'code name status dueDate geography assignedQuantity')
       .populate('agencyId', 'name code contact address')
@@ -1301,7 +1314,7 @@ exports.getFarmerDetailContext = async (req, res) => {
       }
     }
 
-    const [assets, issues, serviceCases, compliance, evidenceRequirements, evidenceSubmissions] = await Promise.all([
+    const [assets, issues, serviceCases, compliance, evidenceState, slaRules] = await Promise.all([
       InstalledAsset.find({ farmerId: farmer._id })
         .populate('itemId', 'sku name category brand model installationRole')
         .populate('inventorySerialId', 'serialNumber barcodeValue status')
@@ -1318,14 +1331,22 @@ exports.getFarmerDetailContext = async (req, res) => {
         .sort({ openedAt: -1 }).lean(),
       ComplianceRecord.find({ farmerId: farmer._id })
         .sort({ createdAt: -1 }).lean(),
-      context?.companyId?._id ? EvidenceRequirement.find({companyId:context.companyId._id,isActive:true,$or:[{programId:null},{programId:context.programId?._id||context.programId}]}).sort({stage:1,sortOrder:1}).lean() : [],
-      context?.companyId?._id ? EvidenceSubmission.find({companyId:context.companyId._id,farmerId:farmer._id}).lean() : [],
+      context?.companyId?._id ? getEvidenceChecklist({
+        companyId: context.companyId._id,
+        programId: context.programId?._id || context.programId,
+        farmerId: farmer._id,
+        stages: ['SURVEY','INSTALLATION','FINAL_INSPECTION'],
+      }) : { requirements: [], submissions: [], checklist: [] },
+      context?.companyId?._id ? SLARule.find({
+        companyId: context.companyId._id,
+        isActive: true,
+        appliesTo: { $in: ['SURVEY','INSTALLATION','FINAL_INSPECTION'] },
+        $or: [{ programId: null }, { programId: context.programId?._id || context.programId }],
+      }).sort({ appliesTo: 1, createdAt: -1 }).lean() : [],
     ]);
 
     const reconciliation = context?.companyId?._id ? await materialReconciliation({ companyId: context.companyId._id, farmerId: farmer._id, agencyId: context.agencyId?._id || context.agencyId }) : null;
-
-    const submissionByReq=new Map((evidenceSubmissions||[]).map(x=>[String(x.requirementId),x]));
-    const evidenceChecklist=(evidenceRequirements||[]).map(r=>({requirement:r,submission:submissionByReq.get(String(r._id))||null}));
+    const evidenceChecklist=evidenceState?.checklist||[];
     const directAssigner=context?.assignedByPlatformUserId||null;
     const importAssigner=context?.sourceImportBatchId?.uploadedBy||null;
     const assignedBy=directAssigner||importAssigner||null;
@@ -1341,6 +1362,7 @@ exports.getFarmerDetailContext = async (req, res) => {
       serviceCases,
       compliance,
       evidenceChecklist,
+      slaRules,
       materialReconciliation: reconciliation,
     });
   } catch (err) {
@@ -1365,6 +1387,7 @@ exports.submitFarmerEvidence = async (req,res)=>{
     if(link&&String(link.agencyId)!==String(context.agencyId))return res.status(403).json({message:'This beneficiary is assigned to another agency.'});
     const requirement=await EvidenceRequirement.findOne({_id:req.params.requirementId,companyId:context.companyId,isActive:true}).lean();
     if(!requirement)return res.status(404).json({message:'Evidence requirement not found.'});
+    if(requirement.programId&&String(requirement.programId)!==String(context.programId||''))return res.status(403).json({message:'This evidence rule does not belong to the beneficiary Program.'});
     const rawGeo=req.body.geo&&typeof req.body.geo==='object'?req.body.geo:{};
     const validGeo=Number.isFinite(Number(rawGeo.latitude))&&Number.isFinite(Number(rawGeo.longitude));
     const captureGeo=validGeo?{latitude:Number(rawGeo.latitude),longitude:Number(rawGeo.longitude),accuracy:Math.max(0,Number(rawGeo.accuracy||0)),address:String(rawGeo.address||'').slice(0,500),capturedAt:rawGeo.capturedAt?new Date(rawGeo.capturedAt):new Date(),source:'DEVICE',capturedByUserId:req.user._id,capturedByName:req.user.username||req.user.mobile,capturedByRole:req.user.role}:undefined;

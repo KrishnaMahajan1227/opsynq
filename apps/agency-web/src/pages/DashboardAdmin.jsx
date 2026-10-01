@@ -553,68 +553,36 @@ export default function DashboardAdmin() {
   const handleReworkSubmit = async (farmerId) => {
     const data = reworkData[farmerId];
     if (!data?.reWork || !data?.issues || !data?.reworkAssignTechnician) {
-      setToast({ show: true, variant: 'danger', message: 'Please fill all required rework fields' });
+      setToast({ show: true, variant: 'danger', message: 'Add the rework instruction, issue details and technician.' });
       return;
     }
     if (hasPendingTechnicianRequest(farmerId)) {
-      setToast({
-        show: true,
-        variant: 'warning',
-        message: 'A technician update request is pending for this farmer',
-      });
+      setToast({ show: true, variant: 'warning', message: 'A technician assignment request is already pending for this beneficiary.' });
       return;
     }
     try {
       const selectedTechnician = technicians.find((t) => t.username === data.reworkAssignTechnician);
-      if (!selectedTechnician) throw new Error('Invalid technician selected');
-      const updatePayload = {
+      if (!selectedTechnician?._id) throw new Error('Select an active technician from this Agency.');
+      await axios.put(`${API_URL}/api/farmers/${farmerId}`, {
         reWork: data.reWork,
         issues: data.issues,
-        reworkAssignTechnician: data.reworkAssignTechnician,
         reworkAssignDate: data.reworkAssignDate || new Date().toISOString(),
         solutionDate: data.solutionDate || undefined,
-        surveyorMobile: selectedTechnician.mobile,
-        reason: 'Complaint rework assignment',
-      };
-      if (role === 'superadmin') {
-        await axios.put(`${API_URL}/api/farmers/${farmerId}`, updatePayload, auth);
-        setToast({ show: true, variant: 'success', message: 'Complaint updated for rework' });
-      } else {
-        await axios.post(
-          `${API_URL}/api/farmers/bulk-update`,
-          {
-            farmerIds: [farmerId],
-            update: {
-              reworkAssignTechnician: data.reworkAssignTechnician,
-              surveyorMobile: selectedTechnician.mobile,
-            },
-            reason: `Complaint rework: ${data.issues}`,
-          },
-          auth
-        );
-        await axios.put(
-          `${API_URL}/api/farmers/${farmerId}`,
-          {
-            reWork: data.reWork,
-            issues: data.issues,
-            reworkAssignDate: data.reworkAssignDate || new Date().toISOString(),
-            solutionDate: data.solutionDate || undefined,
-          },
-          auth
-        );
-        setToast({
-          show: true,
-          variant: 'success',
-          message: 'Rework technician assignment request submitted',
-        });
-      }
-      await Promise.all([fetchFarmers(), fetchChangeRequests()]);
-    } catch (error) {
+        reason: 'Complaint rework details updated',
+      }, auth);
+      const assignment = await axios.post(`${API_URL}/api/farmers/${farmerId}/assign-technician`, {
+        assignmentType: 'REWORK',
+        technicianId: selectedTechnician._id,
+        reason: `Complaint rework: ${data.issues}`,
+      }, auth);
       setToast({
         show: true,
-        variant: 'danger',
-        message: `Failed to update complaint: ${error.response?.data?.message || error.message}`,
+        variant: assignment.status === 202 ? 'warning' : 'success',
+        message: assignment.data?.message || 'Rework assignment saved.',
       });
+      await Promise.all([fetchFarmers(), fetchChangeRequests()]);
+    } catch (error) {
+      setToast({ show: true, variant: 'danger', message: `Failed to update complaint: ${error.response?.data?.message || error.message}` });
     }
   };
 

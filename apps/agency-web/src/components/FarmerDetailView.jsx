@@ -127,19 +127,38 @@ const EvidenceChecklist = ({ items = [], farmerId, onUpdated }) => {
     finally { setBusyId(''); }
   };
   if (!items.length) return null;
+  const groups = items.reduce((acc, entry) => {
+    const stage = entry.requirement?.stage || 'OTHER';
+    (acc[stage] ||= []).push(entry);
+    return acc;
+  }, {});
   return <Section icon={<FaClipboardCheck />} title="Evidence checklist" full>
     <div className="farmer-evidence-checklist farmer-detail-field--wide">
+      <div className="farmer-evidence-intro">
+        <div><strong>Company evidence control</strong><span>Requirements below come from the mapped Company / Program and stay synced with technician submissions.</span></div>
+        <b>{items.filter(x=>['SUBMITTED','VERIFIED','WAIVED'].includes(x.submission?.status)).length}/{items.length} complete</b>
+      </div>
       {error && <div className="farmer-evidence-error">{error}</div>}
-      {items.map(entry => { const r = entry.requirement || {}, sub = entry.submission; const complete = ['SUBMITTED','VERIFIED','WAIVED'].includes(sub?.status); return <div className="farmer-evidence-item" key={r._id}>
-        <div className="farmer-evidence-copy"><strong>{r.label}</strong><span>{String(r.stage || '').replaceAll('_',' ')} · {r.evidenceType}{r.required ? ' · Required' : ''}</span>{sub?.notes && <small>{sub.notes}</small>}</div>
-        <Badge bg={sub?.status === 'VERIFIED' ? 'success' : sub?.status === 'REJECTED' ? 'danger' : complete ? 'warning' : 'secondary'}>{sub?.status || 'PENDING'}</Badge>
-        {['PHOTO','DOCUMENT','SIGNATURE'].includes(r.evidenceType) && <label className="farmer-evidence-upload btn btn-sm btn-outline-secondary mb-0"><FaUpload className="me-1" />{busyId===r._id?'Uploading…':sub?'Replace':'Upload'}<input type="file" accept="image/*" multiple={Number(r.minFiles||1)>1} disabled={busyId===r._id} onChange={e=>upload(entry,e.target.files)} /></label>}
-        {r.evidenceType === 'BOOLEAN' && <Button size="sm" variant="outline-secondary" disabled={busyId===r._id} onClick={()=>submitValue(entry,true,[])}>{busyId===r._id?'Saving…':'Confirm'}</Button>}
-        {sub?.files?.length>0 && <div className="farmer-evidence-files">{sub.files.map((f,i)=><EvidenceFilePreview key={`${f.url}-${i}`} file={f} index={i} evidenceType={r.evidenceType} geo={sub.captureGeo} />)}</div>}
-      </div>})}
+      {Object.entries(groups).map(([stage, entries]) => {
+        const completeCount=entries.filter(x=>['SUBMITTED','VERIFIED','WAIVED'].includes(x.submission?.status)).length;
+        return <section className="farmer-evidence-stage" key={stage}>
+          <div className="farmer-evidence-stage__head"><div><span>{String(stage).replaceAll('_',' ')}</span><strong>{completeCount}/{entries.length} complete</strong></div></div>
+          <div className="farmer-evidence-stage__items">
+          {entries.map(entry => { const r = entry.requirement || {}, sub = entry.submission; const complete = ['SUBMITTED','VERIFIED','WAIVED'].includes(sub?.status); const accept=r.evidenceType==='DOCUMENT'?'application/pdf,image/*':'image/*'; return <article className={`farmer-evidence-item ${complete?'is-complete':'is-pending'}`} key={r._id}>
+            <div className="farmer-evidence-type">{r.evidenceType}</div>
+            <div className="farmer-evidence-copy"><strong>{r.label}</strong><span>{r.required ? 'Required' : 'Optional'}{Number(r.minFiles||0)>1?` · minimum ${r.minFiles} files`:''}</span>{sub?.notes && <small>{sub.notes}</small>}</div>
+            <Badge bg={sub?.status === 'VERIFIED' ? 'success' : sub?.status === 'REJECTED' ? 'danger' : complete ? 'success' : 'secondary'}>{sub?.status || 'PENDING'}</Badge>
+            {['PHOTO','DOCUMENT','SIGNATURE'].includes(r.evidenceType) && <label className="farmer-evidence-upload"><FaUpload />{busyId===r._id?'Uploading…':sub?'Replace evidence':'Upload evidence'}<input type="file" accept={accept} multiple={Number(r.minFiles||1)>1} disabled={busyId===r._id} onChange={e=>upload(entry,e.target.files)} /></label>}
+            {r.evidenceType === 'BOOLEAN' && <Button size="sm" variant="outline-success" disabled={busyId===r._id} onClick={()=>submitValue(entry,true,[])}>{busyId===r._id?'Saving…':'Confirm'}</Button>}
+            {sub?.files?.length>0 && <div className="farmer-evidence-files">{sub.files.map((f,i)=><EvidenceFilePreview key={`${f.url}-${i}`} file={f} index={i} evidenceType={r.evidenceType} geo={sub.captureGeo} />)}</div>}
+          </article>})}
+          </div>
+        </section>
+      })}
     </div>
   </Section>;
 };
+
 
 export default function FarmerDetailView({ farmer, onBack }) {
   const [context, setContext] = useState(null);

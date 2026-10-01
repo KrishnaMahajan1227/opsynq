@@ -688,27 +688,29 @@ export default function DashboardSuperAdmin() {
   const handleReworkSubmit = async (farmerId) => {
     const data = reworkData[farmerId];
     if (!data?.reWork || !data?.issues || !data?.reworkAssignTechnician) {
-      setToast({
-        show: true,
-        variant: 'danger',
-        message: 'Please fill all required rework fields',
-      });
+      setToast({ show: true, variant: 'danger', message: 'Add the rework instruction, issue details and technician.' });
       return;
     }
     try {
-      const updatePayload = {
+      const selectedTechnician = technicians.find((t) => t.username === data.reworkAssignTechnician);
+      if (!selectedTechnician?._id) throw new Error('Select an active technician from this Agency.');
+      await axios.put(`${API_URL}/api/farmers/${farmerId}`, {
         reWork: data.reWork,
         issues: data.issues,
-        reworkAssignTechnician: data.reworkAssignTechnician,
-        reworkAssignDate: new Date().toISOString(),
-        solutionDate: data.solutionDate || '',
-      };
-      await axios.put(`${API_URL}/api/farmers/${farmerId}`, updatePayload, auth);
+        reworkAssignDate: data.reworkAssignDate || new Date().toISOString(),
+        solutionDate: data.solutionDate || undefined,
+        reason: 'Complaint rework details updated',
+      }, auth);
+      const assignment = await axios.post(`${API_URL}/api/farmers/${farmerId}/assign-technician`, {
+        assignmentType: 'REWORK',
+        technicianId: selectedTechnician._id,
+        reason: `Complaint rework: ${data.issues}`,
+      }, auth);
       await fetchFarmers();
-      setToast({ show: true, variant: 'success', message: 'Complaint updated for rework' });
+      setToast({ show: true, variant: 'success', message: assignment.data?.message || 'Rework technician assigned successfully.' });
     } catch (error) {
       console.error('Failed to update complaint:', error);
-      setToast({ show: true, variant: 'danger', message: 'Failed to update complaint' });
+      setToast({ show: true, variant: 'danger', message: error.response?.data?.message || error.message || 'Failed to update complaint' });
     }
   };
 

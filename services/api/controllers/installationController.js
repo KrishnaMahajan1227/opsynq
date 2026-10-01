@@ -8,6 +8,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { getIssuedInventory, resolveIssuedScan, prepareInstallation, finalizeInstallation } = require('../utils/assetLifecycle');
 const { canAccessFarmer } = require('../utils/agencyScope');
 const { contextForFarmer, publishAgencyProgress, syncComplaintServiceCase } = require('../utils/agencyLifecycle');
+const { syncConfiguredEvidence, requiredEvidenceState } = require('../utils/evidenceRuntime');
 
 /**
  * completeInstallation
@@ -19,7 +20,7 @@ const { contextForFarmer, publishAgencyProgress, syncComplaintServiceCase } = re
  *  - Records complaint details and who raised them
  *  - Uploads final photos and signatures to Cloudinary
  *  - Updates applicationStatus to "Installation Completed" (if successful) or "Complaint Raised"
- *  - For rework: If installation completes successfully, clears rework-related fields
+ *  - For rework: preserves complaint/rework history and closes it only after successful validation
  *  - Saves the technician who completed the installation
  */
 exports.completeInstallation = [
@@ -84,8 +85,9 @@ exports.completeInstallation = [
         additionalItemsArray = additionalItemsArray.map(x => String(x || '').trim()).filter(Boolean);
       }
 
-      // Validate complaint fields if pump is not operating
-      const hasComplaint = pumpNotOperatingYesNo === 'No';
+      // Any failed installation outcome becomes a complaint/rework case. A normal
+      // successful path must not be blocked by stale complaint state.
+      const hasComplaint = pumpNotOperatingYesNo === 'No' || installationDoneYesNo === 'No';
       if (hasComplaint && (!complaintIssue || !complaintRaisedDate || !complaintNumber)) {
         console.log('Validation failed: Complaint fields missing', {
           complaintIssue,
@@ -130,7 +132,7 @@ exports.completeInstallation = [
 
       // Determine new applicationStatus and complaintStatus
       const applicationStatus = hasComplaint ? 'Complaint Raised' : 'Installation Completed';
-      const complaintStatus = hasComplaint ? 'Open' : '';
+      const complaintStatus = hasComplaint ? (isRework ? 'In Progress' : 'Open') : '';
 
       // Prepare the update object with all fields
       const updateData = {
@@ -147,13 +149,10 @@ exports.completeInstallation = [
         installedByTechnicianName: completedByTechnician, // Save the technician who completed the installation
       };
 
-      // If this is a rework and installation is successful (no new complaint), clear rework fields
+      // If rework succeeds, preserve the rework assignment/history and stamp the
+      // resolution time instead of deleting who did the work.
       if (isRework && !hasComplaint) {
-        updateData.reWork = '';
-        updateData.issues = '';
-        updateData.reworkAssignTechnician = '';
-        updateData.reworkAssignDate = null;
-        updateData.solutionDate = new Date(); // Set solutionDate to current date
+        updateData.solutionDate = new Date();
       }
 
       // Add complaint fields if applicable
@@ -194,6 +193,47 @@ exports.completeInstallation = [
         updateData.finalsurveyorsignatureUrl = req.files.finalSurveyorSignature[0].path;
       }
 
+      // Company evidence requirements are the governed completion gate. Agency
+      // uploads are mirrored to matching configured requirements; additional
+      // Company-defined requirements can be fulfilled independently from the
+      // Technician checklist before final submission.
+      let governedEvidenceConfigured = false;
+      if (ctx?.companyId) {
+        await syncConfiguredEvidence({
+          context: ctx,
+          farmerId,
+          user: req.user,
+          stages: ['INSTALLATION', 'FINAL_INSPECTION'],
+          proofs: {
+            beneficiaryPhoto: req.files?.finalFarmerPhoto || [],
+            sitePhotos: req.files?.finalSitePhotos || [],
+            beneficiarySignature: req.files?.finalSignature || [],
+            technicianSignature: req.files?.finalSurveyorSignature || [],
+          },
+          notes: `Submitted from Agency ${isRework ? 'rework' : 'installation'} by ${completedByTechnician}.`,
+        });
+        if (!hasComplaint) {
+          const evidenceState = await requiredEvidenceState({ context: ctx, farmerId, stages: ['INSTALLATION', 'FINAL_INSPECTION'] });
+          governedEvidenceConfigured = evidenceState.configured;
+          if (evidenceState.configured && evidenceState.missing.length) {
+            return res.status(409).json({
+              message: `${evidenceState.missing.length} Company evidence requirement(s) are still pending. Complete the Installation / Final Inspection checklist before final submission.`,
+              code: 'INSTALLATION_EVIDENCE_PENDING',
+              missingEvidence: evidenceState.missing.map(x => ({ id: x._id, label: x.label, stage: x.stage, type: x.evidenceType, minFiles: x.minFiles })),
+            });
+          }
+        }
+      }
+      // Legacy/unmapped installations retain the existing two-signature safety
+      // gate. Once the Company has configured governed evidence, those rules are
+      // authoritative and signatures are required only when the Company says so.
+      if (!hasComplaint && !governedEvidenceConfigured && (!req.files?.finalSignature?.[0] || !req.files?.finalSurveyorSignature?.[0])) {
+        return res.status(400).json({
+          message: 'Farmer and technician signatures are required before installation completion.',
+          code: 'LEGACY_INSTALLATION_SIGNATURES_REQUIRED',
+        });
+      }
+
       let installedAssets = [];
       const shouldCloseInventory = !hasComplaint && installationDoneYesNo === 'Yes' && inventoryPrepared.linked;
       if (shouldCloseInventory) {
@@ -217,7 +257,18 @@ exports.completeInstallation = [
       const updatedFarmer = await Farmer.findById(farmerId);
       if (hasComplaint) {
         await syncComplaintServiceCase({ req, farmer: updatedFarmer, context: ctx });
-        await publishAgencyProgress({ req, farmer: updatedFarmer, context: ctx, action: 'AGENCY_COMPLAINT_RAISED', title: `Installation issue · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`, message: `${completedByTechnician} reported a non-operating pump and opened complaint ${updatedFarmer.complaintNumber || ''}.`, type: 'WARNING', after: { applicationStatus: updatedFarmer.applicationStatus, complaintNumber: updatedFarmer.complaintNumber, complaintIssue: updatedFarmer.complaintIssue } });
+        await publishAgencyProgress({
+          req,
+          farmer: updatedFarmer,
+          context: ctx,
+          action: isRework ? 'AGENCY_REWORK_STILL_OPEN' : 'AGENCY_COMPLAINT_RAISED',
+          title: `${isRework ? 'Rework still open' : 'Installation issue'} · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`,
+          message: isRework
+            ? `${completedByTechnician} completed a rework attempt, but the installation is still not operating. Complaint ${updatedFarmer.complaintNumber || ''} remains open.`
+            : `${completedByTechnician} reported an installation issue and opened complaint ${updatedFarmer.complaintNumber || ''}.`,
+          type: 'WARNING',
+          after: { applicationStatus: updatedFarmer.applicationStatus, complaintStatus: updatedFarmer.complaintStatus, complaintNumber: updatedFarmer.complaintNumber, complaintIssue: updatedFarmer.complaintIssue },
+        });
       } else {
         if (isRework) await syncComplaintServiceCase({ req, farmer: updatedFarmer, context: ctx, resolved: true });
         await publishAgencyProgress({ req, farmer: updatedFarmer, context: ctx, action: isRework ? 'AGENCY_REWORK_COMPLETED' : 'AGENCY_INSTALLATION_COMPLETED', title: `${isRework ? 'Rework' : 'Installation'} completed · ${updatedFarmer.beneficiaryId || updatedFarmer.beneficiaryName || 'Beneficiary'}`, message: `${completedByTechnician} completed ${isRework ? 'rework' : 'installation'} and submitted final evidence.`, type: 'SUCCESS', after: { applicationStatus: updatedFarmer.applicationStatus, installationDoneYesNo: updatedFarmer.installationDoneYesNo, installationCompletionDate: updatedFarmer.installationCompletionDate } });

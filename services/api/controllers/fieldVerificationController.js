@@ -5,6 +5,7 @@ const BeneficiaryContext = require('../models/platform/BeneficiaryContext');
 const EvidenceRequirement = require('../models/platform/EvidenceRequirement');
 const EvidenceSubmission = require('../models/platform/EvidenceSubmission');
 const { publishAgencyProgress } = require('../utils/agencyLifecycle');
+const { getStageRequirements, syncConfiguredEvidence, requiredEvidenceState } = require('../utils/evidenceRuntime');
 
 exports.submitFieldVerification = async (req, res) => {
   try {
@@ -68,8 +69,9 @@ exports.submitFieldVerification = async (req, res) => {
       return res.status(404).json({ message: 'Farmer record not found.' });
     }
 
-    // Mirror agency survey uploads into the company evidence ledger so company users
-    // see the same proof with clear provenance instead of relying only on legacy Farmer URLs.
+    // Mirror Agency survey uploads into the Company's configured evidence ledger.
+    // Do not create duplicate requirements when the Company has already defined its
+    // own checklist. Legacy defaults are created only when no SURVEY rules exist.
     const ctx = await BeneficiaryContext.findOne({ farmerId }).lean();
     if (ctx?.companyId) {
       const geo = lat && lng ? {
@@ -78,26 +80,47 @@ exports.submitFieldVerification = async (req, res) => {
         capturedByName: req.user?.username || req.user?.name || req.user?.mobile || 'Agency surveyor',
         capturedByRole: req.user?.role || 'surveyor'
       } : undefined;
-      const proofSets = [
-        { key: 'agency-beneficiary-photo', label: 'Beneficiary photo', files: req.files?.farmerPhoto || [] },
-        { key: 'agency-site-survey-photos', label: 'Site survey photos', files: req.files?.sitePhotos || [] },
-        { key: 'agency-beneficiary-signature', label: 'Beneficiary signature', files: req.files?.signature || [] },
-      ];
-      for (const proof of proofSets) {
-        if (!proof.files.length) continue;
-        const requirement = await EvidenceRequirement.findOneAndUpdate(
-          { companyId: ctx.companyId, programId: ctx.programId || null, stage: 'SURVEY', key: proof.key },
-          { $setOnInsert: { label: proof.label, evidenceType: proof.key.includes('signature') ? 'SIGNATURE' : 'PHOTO', required: true, minFiles: 1, sortOrder: proof.key.includes('site') ? 20 : 10, isActive: true } },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-        const files = proof.files.map((file, index) => ({
-          url: file.path, name: file.originalname || `${proof.key}-${index + 1}`, mimeType: file.mimetype || 'image/*', geo
-        }));
-        await EvidenceSubmission.findOneAndUpdate(
-          { companyId: ctx.companyId, farmerId, requirementId: requirement._id },
-          { $set: { workPackageId: ctx.workPackageId, agencyId: ctx.agencyId, stage: 'SURVEY', status: 'SUBMITTED', files, captureGeo: geo, submittedByLegacyUser: req.user?._id, value: { source: 'AGENCY_FIELD_SURVEY', inspectionStatus, surveyDate: surveyDate || new Date().toISOString() }, notes: `Submitted from Agency field verification by ${req.user?.username || req.user?.name || req.user?.mobile || 'surveyor'}.` } },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
+      let configured = await getStageRequirements({ companyId: ctx.companyId, programId: ctx.programId, stages: ['SURVEY'] });
+      if (!configured.length) {
+        const defaults = [
+          { key: 'agency-beneficiary-photo', label: 'Beneficiary photo', evidenceType: 'PHOTO', sortOrder: 10 },
+          { key: 'agency-site-survey-photos', label: 'Site survey photos', evidenceType: 'PHOTO', sortOrder: 20 },
+          { key: 'agency-beneficiary-signature', label: 'Beneficiary signature', evidenceType: 'SIGNATURE', sortOrder: 30 },
+        ];
+        for (const row of defaults) {
+          await EvidenceRequirement.findOneAndUpdate(
+            { companyId: ctx.companyId, programId: ctx.programId || null, stage: 'SURVEY', key: row.key },
+            { $setOnInsert: { ...row, required: true, minFiles: 1, isActive: true } },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          );
+        }
+      }
+      await syncConfiguredEvidence({
+        context: ctx,
+        farmerId,
+        user: req.user,
+        stages: ['SURVEY'],
+        geo,
+        proofs: {
+          beneficiaryPhoto: req.files?.farmerPhoto || [],
+          sitePhotos: req.files?.sitePhotos || [],
+          beneficiarySignature: req.files?.signature || [],
+        },
+        notes: `Submitted from Agency field verification by ${req.user?.username || req.user?.name || req.user?.mobile || 'surveyor'}.`,
+      });
+
+      if (inspectionStatus === 'Completed') {
+        const evidenceState = await requiredEvidenceState({ context: ctx, farmerId, stages: ['SURVEY'] });
+        if (evidenceState.configured && evidenceState.missing.length) {
+          await Farmer.updateOne({ _id: farmerId }, { $set: { inspectionStatus: 'In Progress' } });
+          updatedFarmer.inspectionStatus = 'In Progress';
+          return res.status(409).json({
+            message: `Survey draft is saved, but ${evidenceState.missing.length} Company evidence requirement(s) are still pending. Complete the checklist before marking the survey complete.`,
+            code: 'SURVEY_EVIDENCE_PENDING',
+            missingEvidence: evidenceState.missing.map(x => ({ id: x._id, label: x.label, type: x.evidenceType, minFiles: x.minFiles })),
+            farmer: updatedFarmer,
+          });
+        }
       }
     }
 
