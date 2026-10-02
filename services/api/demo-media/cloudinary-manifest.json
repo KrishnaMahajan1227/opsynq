@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-02T09:52:27.260Z",
+  "provider": "cloudinary",
+  "beneficiaries": {
+    "OPS-DM-001": {
+      "stage": "NEW",
+      "reason": "Early-stage record using the available registration portrait and fictional DEMO identity card.",
+      "assets": {
+        "beneficiary": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934748/Opsynq/Demo/OPS-DM-001/ops-dm-001-beneficiary.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-001/ops-dm-001-beneficiary",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 549882,
+          "format": "jpg",
+          "localFile": "OPS-DM-001/beneficiary.jpg",
+          "sha256": "bbfb70e6fbac32d62e42c3836fae2ad9b36a2f3efa40eb9e0a257827e4c7915a"
+        },
+        "id-proof": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934751/Opsynq/Demo/OPS-DM-001/ops-dm-001-id-proof.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-001/ops-dm-001-id-proof",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 703194,
+          "format": "jpg",
+          "localFile": "OPS-DM-001/id-proof.jpg",
+          "sha256": "6f10ebe80e5eacbd423b1ffe9fa9082ccaff53280b26963be4eb433142f04931"
+        }
+      }
+    },
+    "OPS-DM-003": {
+      "stage": "PROCESSING",
+      "reason": "Processing-stage example using the available survey, consent, identity, signature and LR evidence.",
+      "assets": {
+        "beneficiary": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934754/Opsynq/Demo/OPS-DM-003/ops-dm-003-beneficiary.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-003/ops-dm-003-beneficiary",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 797710,
+          "format": "jpg",
+          "localFile": "OPS-DM-003/beneficiary.jpg",
+          "sha256": "5da7a27166a7038bf75846802fdc40b8e0740ab5789389bf78553a89fe077fcb"
+        },
+        "survey-site": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934758/Opsynq/Demo/OPS-DM-003/ops-dm-003-survey-site.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-003/ops-dm-003-survey-site",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 947798,
+          "format": "jpg",
+          "localFile": "OPS-DM-003/survey-site.jpg",
+          "sha256": "b4c5bd5e98e7b15574f04b78b2289c10156902b082458d359985d9d58bdb1751"
+        },
+        "water-source": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934761/Opsynq/Demo/OPS-DM-003/ops-dm-003-water-source.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-003/ops-dm-003-water-source",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 783368,
+          "format": "jpg",
+          "localFile": "OPS-DM-003/water-source.jpg",
+          "sha256": "e98888d571d58bc916b463b4be1c9b31ca00058addfdefa9a713659d80e9822d"
+        },
+        "id-proof": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934763/Opsynq/Demo/OPS-DM-003/ops-dm-003-id-proof.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-003/ops-dm-003-id-proof",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 460284,
+          "format": "jpg",
+          "localFile": "OPS-DM-003/id-proof.jpg",
+          "sha256": "bbf5c186c6211d708945340b180fc1f59795f5aa5a63b204bc697d1e3bce434b"
+        },
+        "consent": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934765/Opsynq/Demo/OPS-DM-003/ops-dm-003-consent.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-003/ops-dm-003-consent",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 503981,
+          "format": "jpg",
+          "localFile": "OPS-DM-003/consent.jpg",
+          "sha256": "3baa644252b962a565ab4fa0489993c33cb0a5e0856db204a7a265d7027a4e4d"
+        },
+        "signature": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934767/Opsynq/Demo/OPS-DM-003/ops-dm-003-signature.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-003/ops-dm-003-signature",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 550365,
+          "format": "jpg",
+          "localFile": "OPS-DM-003/signature.jpg",
+          "sha256": "4961f9a33fb9e4a51595b98e16b967bf77f9d0d0d07306de25244499fcbf40a7"
+        },
+        "lr": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934770/Opsynq/Demo/OPS-DM-003/ops-dm-003-lr.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-003/ops-dm-003-lr",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 637087,
+          "format": "jpg",
+          "localFile": "OPS-DM-003/lr.jpg",
+          "sha256": "e1900396ce822d52e7ba3f337f6a2cc116663a226f12e6c4ba031ff329b0d465"
+        }
+      }
+    },
+    "OPS-DM-014": {
+      "stage": "PROCESSING",
+      "reason": "Installation-in-progress example using the available survey/material and installation evidence.",
+      "assets": {
+        "beneficiary": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934772/Opsynq/Demo/OPS-DM-014/ops-dm-014-beneficiary.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-beneficiary",
+          "width": 1200,
+          "height": 1790,
+          "bytes": 564715,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/beneficiary.jpg",
+          "sha256": "3931476571c63570480ccc9ec3dd96ab30417db402b2da5b839d761c62da9bc5"
+        },
+        "survey-site": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934774/Opsynq/Demo/OPS-DM-014/ops-dm-014-survey-site.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-survey-site",
+          "width": 1200,
+          "height": 1802,
+          "bytes": 681301,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/survey-site.jpg",
+          "sha256": "023ed0fa0c8bcc038fee6e67d44a009aec3867c81d662d51bd6beb83b319348a"
+        },
+        "water-source": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934777/Opsynq/Demo/OPS-DM-014/ops-dm-014-water-source.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-water-source",
+          "width": 1200,
+          "height": 1808,
+          "bytes": 628958,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/water-source.jpg",
+          "sha256": "465eec4afc759cb1c712caf05f7f263f9b0bca2ced257116a2b90f9afb445b0a"
+        },
+        "id-proof": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934779/Opsynq/Demo/OPS-DM-014/ops-dm-014-id-proof.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-id-proof",
+          "width": 1200,
+          "height": 1808,
+          "bytes": 539616,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/id-proof.jpg",
+          "sha256": "4f0b9fb81369e161520c224ca0fd4062294e65afeaec973e1878b61e55912dd8"
+        },
+        "consent": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934781/Opsynq/Demo/OPS-DM-014/ops-dm-014-consent.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-consent",
+          "width": 1200,
+          "height": 1808,
+          "bytes": 433422,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/consent.jpg",
+          "sha256": "b431d17bd601291316426f21fa86dbe01ea11e771ebceec95e457270e9e45900"
+        },
+        "signature": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934783/Opsynq/Demo/OPS-DM-014/ops-dm-014-signature.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-signature",
+          "width": 1200,
+          "height": 1790,
+          "bytes": 483983,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/signature.jpg",
+          "sha256": "3d1cddacd6d8bf80efed83b5413249f27cc4dcb05d84d294ce1eed811186e08b"
+        },
+        "lr": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934785/Opsynq/Demo/OPS-DM-014/ops-dm-014-lr.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-lr",
+          "width": 1200,
+          "height": 1802,
+          "bytes": 542065,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/lr.jpg",
+          "sha256": "452de57b61fd2e82cd1bc9ff72e45e73db7a1fbc4f021250b84242c395817ef7"
+        },
+        "install-before": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934788/Opsynq/Demo/OPS-DM-014/ops-dm-014-install-before.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-install-before",
+          "width": 1200,
+          "height": 1808,
+          "bytes": 676266,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/install-before.jpg",
+          "sha256": "86f5c8cae36cb8a2b221ffe63ae16cedbdc5188a61a2c2fc7da1089e7a3addb4"
+        },
+        "install-during": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934791/Opsynq/Demo/OPS-DM-014/ops-dm-014-install-during.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-install-during",
+          "width": 1200,
+          "height": 1808,
+          "bytes": 683669,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/install-during.jpg",
+          "sha256": "01647cc9d26864c4e4a57155305c717fafb5120d6db72a6402b53cde7db98a75"
+        },
+        "serial-plate": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1790934794/Opsynq/Demo/OPS-DM-014/ops-dm-014-serial-plate.jpg",
+          "publicId": "Opsynq/Demo/OPS-DM-014/ops-dm-014-serial-plate",
+          "width": 1200,
+          "height": 1808,
+          "bytes": 465150,
+          "format": "jpg",
+          "localFile": "OPS-DM-014/serial-plate.jpg",
+          "sha256": "992333ba9d4f48b1a619b671e5250e8a01f87713cb95e926eef3a9785d0fcc98"
+        }
+      }
+    }
+  }
+}

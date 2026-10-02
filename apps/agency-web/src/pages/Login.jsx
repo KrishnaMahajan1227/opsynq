@@ -30,7 +30,7 @@ const Login = () => {
 
   const useDemoAccount = (account) => {
     setMobile(account.mobile);
-    setPassword('Demo@1234');
+    setPassword('');
     setMobileError('');
     setPasswordError('');
     setError('');
@@ -184,7 +184,7 @@ const Login = () => {
             <div className="demo-access-panel" aria-label="Demo agency accounts">
               <div className="demo-access-panel__head">
                 <div><strong>Demo access</strong><span>Use a seeded Agency Operations role</span></div>
-                <span className="demo-password">Demo@1234</span>
+                <span className="demo-password">Existing password</span>
               </div>
               <div className="demo-access-grid">
                 {demoAccounts.map((account) => (

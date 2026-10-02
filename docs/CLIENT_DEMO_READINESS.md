@@ -1,4 +1,4 @@
-# Opsynq Client Demo Readiness — 30 Sep 2026
+# Opsynq Client Demo Readiness — updated 02 Oct 2026
 
 ## Supported local runtime
 
@@ -9,33 +9,22 @@
 - Agency UI (normally reached through unified sign-in): `http://localhost:5174`
 - API: `http://localhost:3000`
 
-## One-time preparation
+## One-time preparation / fresh seed
 
 From the repository root:
 
-```bash
-npm run env:fix-ai
-npm run clean:install
+```powershell
 npm ci
-npm run demo:preflight
-npm run db:test
+# Restore the existing private .env files unchanged.
+$env:OPSYNQ_DB_PURPOSE="demo"  # set only after personally confirming the target is demo/dev
+npm run demo:db-check
+# Add the 58 real JPG files listed in services/api/demo-media/FILE_TREE.txt
+npm run demo:seed-ready
 ```
 
-`env:fix-ai` moves server-only Gemini configuration out of the Platform frontend env and into `services/api/.env` without printing the secret.
+`demo:db-check` is read-only. Unexpected accounts, organizations, mappings or business data block the operation; nothing is automatically deleted. `demo:seed-ready` uploads the 58 real assets to Cloudinary, verifies their URLs, seeds exactly 18 beneficiaries, then runs the database sanity checks. Existing credentials are required and are never created/reset by this seed.
 
-## Reset / seed the demo data
-
-```bash
-npm run seed:full-demo
-```
-
-Default demo password unless `DEMO_DEFAULT_PASSWORD` is overridden:
-
-```text
-Demo@1234
-```
-
-The seeded demo includes two companies, three agencies, Company users across multiple roles, Agency Superadmin/Admin/Technician users, beneficiaries, work packages, inventory, serialized hardware, procurement/GRN, shipments, installed assets, service cases, claims, PDI/insurance/compliance, RMS data and 18 field-evidence images.
+The seeded demo includes two companies, three agencies, Company users across multiple roles, Agency Superadmin/Admin/Technician users, 18 beneficiaries, work packages, inventory, serialized hardware, procurement/GRN, shipments, installed assets, service cases, claims, PDI/insurance/compliance, audit data and six media-rich beneficiary records (58 unique real-photo/document slots).
 
 ## Start the demo
 
@@ -84,28 +73,9 @@ These cover syntax, module imports/exports, React effect cleanup, permissions, r
 
 ## Demo login examples
 
-Company Admin:
+Use the account identifiers in `docs/DEMO_ACCOUNTS.md`. Passwords remain the pre-existing environment/account values and are intentionally not printed or embedded in source. The quick-select buttons in Agency login fill only the mobile number; the operator enters the existing password.
 
-```text
-9000000002
-Demo@1234
-```
-
-Nagpur Agency Superadmin:
-
-```text
-9200000001
-Demo@1234
-```
-
-Nagpur Technician:
-
-```text
-9200000003
-Demo@1234
-```
-
-Use the same Platform sign-in page for all three. Agency users are transferred through the one-time secure handoff.
+For `npm run demo:verify`, supply that existing password only as a temporary process/session variable named `DEMO_LOGIN_PASSWORD`; do not commit it or add it to documentation.
 
 ## Client data injection rule
 

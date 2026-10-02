@@ -1,9 +1,8 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
-const connectDB = require('../config/db');
+const { validateTarget } = require('../scripts/demoDbGuard');
 
 const Organization = require('../models/platform/Organization');
 const PlatformUser = require('../models/platform/PlatformUser');
@@ -45,12 +44,12 @@ const PDIRecord = require('../models/platform/PDIRecord');
 const Farmer = require('../models/Farmer');
 const User = require('../models/User');
 
-const DEMO_MEDIA_BASE_URL = String(process.env.DEMO_MEDIA_BASE_URL || '').replace(/\/$/, '');
-const DEMO_PASSWORD = process.env.DEMO_DEFAULT_PASSWORD || 'Demo@1234';
-
-const media = (name) => `${DEMO_MEDIA_BASE_URL}/demo-media/${name}`;
-const demoMedia = (beneficiaryId, kind) => media(`${beneficiaryId}-${kind}.png`);
-const entityMedia = (key) => media(`entity-${key}.png`);
+const { loadManifest, assetUrl, publicIdMap } = require('./demoMediaSpec');
+// Fail before any database write when the real-photo bundle has not been uploaded.
+// This prevents the previous synthetic/broken /demo-media URL behavior.
+const DEMO_MEDIA = loadManifest({ required: true });
+const demoMedia = (beneficiaryId, kind) => assetUrl(DEMO_MEDIA, beneficiaryId, kind);
+const entityMedia = () => '';
 const daysFromNow = (days) => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 const daysAgo = (days) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 const money = (n) => Math.round(n * 100) / 100;
@@ -86,174 +85,73 @@ const DEMO_AGENCY_USERS = [
   { key: 'pune_tech_1', username: 'pune.tech01', email: 'pune.tech01@opsynq.demo', mobile: '9400000003', role: 'field_technician' },
 ];
 
-async function upsertOrganization(payload) {
-  return Organization.findOneAndUpdate(
-    { code: payload.code },
-    { $set: payload },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
-}
-
-async function upsertPlatformUser(payload) {
-  // Demo credentials are immutable once created. Re-seeding must never rotate
-  // password hashes, IDs, roles, emails or tenant mappings for existing logins.
-  const existing = await PlatformUser.findOne({ mobile: payload.mobile });
-  if (existing) return existing;
-  const hashed = await bcrypt.hash(payload.password || DEMO_PASSWORD, 12);
-  return PlatformUser.create({
-    name: payload.name,
-    email: payload.email?.toLowerCase(),
-    mobile: payload.mobile,
-    password: hashed,
-    role: payload.role,
-    organizationId: payload.organizationId,
-    approvalStatus: 'APPROVED',
-    isActive: true,
-    lastLocation: payload.lastLocation || undefined,
-    lastLoginAt: daysAgo(1),
-  });
-}
-
-async function upsertLegacyUser(payload) {
-  const existing = await User.findOne({ mobile: payload.mobile });
-  if (existing) return existing;
-  const hashed = await bcrypt.hash(payload.password || DEMO_PASSWORD, 12);
-  return User.create({
-    username: payload.username,
-    email: payload.email,
-    mobile: payload.mobile,
-    password: hashed,
-    role: payload.role,
-    isActive: true,
-    lastLocation: payload.lastLocation || undefined,
-  });
-}
-
-async function clearDemoData(companyIds) {
-  const companyFilter = { companyId: { $in: companyIds } };
-  const companyScopedModels = [
-    Program,
-    Contract,
-    WorkOrder,
-    WorkPackage,
-    BeneficiaryContext,
-    ImportBatch,
-    ItemMaster,
-    Warehouse,
-    InventorySerial,
-    InventoryBalance,
-    PurchaseOrder,
-    GoodsReceipt,
-    StockMovement,
-    Driver,
-    Vehicle,
-    Shipment,
-    TrackingEvent,
-    MaterialIssue,
-    InstalledAsset,
-    AssetServicePlan,
-    ServiceCase,
-    CommercialClaim,
-    ComplianceRecord,
-    ApprovalRequest,
-    Notification,
-    DocumentRecord,
-    SLARule,
-    MasterDataEntry,
-    EvidenceRequirement,
-    EvidenceSubmission,
-    InsurancePolicy,
-    PDIRecord,
-    AuditLog,
-  ];
-  for (const Model of companyScopedModels) {
-    await Model.deleteMany(companyFilter);
+async function requireOrganization({ code, type, parentOrganization = null }) {
+  const existing = await Organization.findOne({ code });
+  if (!existing) throw new Error(`Required existing demo organization is missing (${code}). No tenant was created by the demo seed.`);
+  if (String(existing.type) !== String(type)) throw new Error(`Organization ${code} type mismatch (${existing.type} != ${type}). Refusing to change tenant identity.`);
+  if (parentOrganization && String(existing.parentOrganization || '') !== String(parentOrganization)) {
+    throw new Error(`Organization ${code} parent mapping mismatch. Refusing to change tenant hierarchy.`);
   }
-  await Farmer.deleteMany({ beneficiaryId: /^OPS-DM-/ });
+  return existing;
+}
+
+async function requirePlatformUser(payload) {
+  const existing = await PlatformUser.findOne({ mobile: payload.mobile });
+  if (!existing) throw new Error(`Required existing demo platform account is missing (${payload.mobile}, ${payload.role}). No login was created; restore/approve the demo account before seeding.`);
+  const expectedEmail = String(payload.email || '').toLowerCase();
+  if (String(existing.role) !== String(payload.role) || String(existing.email || '').toLowerCase() !== expectedEmail || String(existing.organizationId || '') !== String(payload.organizationId || '')) {
+    throw new Error(`Existing demo platform account mapping does not match the seed contract (${payload.mobile}). Refusing to change role/email/tenant mapping.`);
+  }
+  return existing;
+}
+
+async function requireLegacyUser(payload) {
+  const existing = await User.findOne({ mobile: payload.mobile });
+  if (!existing) throw new Error(`Required existing Agency/Technician demo account is missing (${payload.mobile}, ${payload.role}). No login was created; restore/approve the demo account before seeding.`);
+  if (String(existing.role) !== String(payload.role) || String(existing.email || '').toLowerCase() !== String(payload.email || '').toLowerCase() || String(existing.username || '') !== String(payload.username || '')) {
+    throw new Error(`Existing Agency/Technician demo account identity does not match the seed contract (${payload.mobile}). Refusing to change credentials or role.`);
+  }
+  return existing;
 }
 
 (async () => {
   try {
-    await connectDB();
+    // Read-only safety gate first: seed is allowed only after a clean demo/dev target
+    // with the complete protected account + tenant set has been verified.
+    await validateTarget({ destructive: false, write: true, requireClean: true });
 
-    let platformOrg = await Organization.findOne({ type: 'PLATFORM', code: 'OPSYNQ' });
-    if (!platformOrg) {
-      platformOrg = await Organization.create({
-        name: 'Opsynq Platform',
-        code: 'OPSYNQ',
-        type: 'PLATFORM',
-        status: 'ACTIVE',
-        country: 'Global',
-        metadata: { product: 'Opsynq', phase: 19 },
-      });
-    }
+    const platformOrg = await requireOrganization({ code: 'OPSYNQ', type: 'PLATFORM' });
 
-    const companyOne = await upsertOrganization({
-      name: 'SuryaKisan Energy Private Limited',
+    const companyOne = await requireOrganization({
       code: 'SKEPL',
       type: 'COMPANY',
       parentOrganization: platformOrg._id,
-      country: 'India',
-      state: 'Maharashtra',
-      status: 'ACTIVE',
-      contact: { name: 'Rohan Kulkarni', email: 'rohan.kulkarni@opsynq.demo', mobile: '9000000001' },
-      address: { line1: 'IT Park Road', city: 'Nagpur', district: 'Nagpur', state: 'Maharashtra', country: 'India', pincode: '440022' },
-      metadata: { theme: 'demo', segment: 'solar-irrigation' },
     });
 
-    const companyTwo = await upsertOrganization({
-      name: 'AgriVolt Solar Infra Limited',
+    const companyTwo = await requireOrganization({
       code: 'AVSIL',
       type: 'COMPANY',
       parentOrganization: platformOrg._id,
-      country: 'India',
-      state: 'Maharashtra',
-      status: 'ACTIVE',
-      contact: { name: 'Sanjay Borse', email: 'sanjay.borse@opsynq.demo', mobile: '9100000001' },
-      address: { line1: 'Baner Link Road', city: 'Pune', district: 'Pune', state: 'Maharashtra', country: 'India', pincode: '411045' },
-      metadata: { theme: 'demo', segment: 'distributed-energy' },
     });
 
-    const nagpurAgency = await upsertOrganization({
-      name: 'Nagpur Field Ops Agency',
+    const nagpurAgency = await requireOrganization({
       code: 'NAGFOPS',
       type: 'AGENCY',
       parentOrganization: companyOne._id,
-      country: 'India',
-      state: 'Maharashtra',
-      status: 'ACTIVE',
-      contact: { name: 'Prashant Wankhede', email: 'nagpur.agency@opsynq.demo', mobile: '9200000001' },
-      address: { line1: 'Hingna MIDC', city: 'Nagpur', district: 'Nagpur', state: 'Maharashtra', country: 'India', pincode: '440016' },
-      metadata: { demo: true },
     });
 
-    const nashikAgency = await upsertOrganization({
-      name: 'Nashik Rural Installations',
+    const nashikAgency = await requireOrganization({
       code: 'NASRINS',
       type: 'AGENCY',
       parentOrganization: companyOne._id,
-      country: 'India',
-      state: 'Maharashtra',
-      status: 'ACTIVE',
-      contact: { name: 'Sachin Mahajan', email: 'nashik.agency@opsynq.demo', mobile: '9300000001' },
-      address: { line1: 'Satpur Road', city: 'Nashik', district: 'Nashik', state: 'Maharashtra', country: 'India', pincode: '422007' },
-      metadata: { demo: true },
     });
 
-    const puneAgency = await upsertOrganization({
-      name: 'Pune Energy Services',
+    const puneAgency = await requireOrganization({
       code: 'PUNESVC',
       type: 'AGENCY',
       parentOrganization: companyTwo._id,
-      country: 'India',
-      state: 'Maharashtra',
-      status: 'ACTIVE',
-      contact: { name: 'Nilesh Patne', email: 'pune.agency@opsynq.demo', mobile: '9400000001' },
-      address: { line1: 'Hadapsar Industrial Estate', city: 'Pune', district: 'Pune', state: 'Maharashtra', country: 'India', pincode: '411028' },
-      metadata: { demo: true },
     });
 
-    await clearDemoData([companyOne._id, companyTwo._id]);
 
     const companyUsers = {};
     for (const definition of DEMO_PLATFORM_USERS) {
@@ -261,7 +159,7 @@ async function clearDemoData(companyIds) {
       const lastLocation = definition.key.startsWith('c1_')
         ? geo(21.1458, 79.0882, 'Nagpur HQ')
         : geo(18.5204, 73.8567, 'Pune HQ');
-      companyUsers[definition.key] = await upsertPlatformUser({ ...definition, organizationId, lastLocation });
+      companyUsers[definition.key] = await requirePlatformUser({ ...definition, organizationId, lastLocation });
     }
 
     const agencyUsers = {};
@@ -269,7 +167,7 @@ async function clearDemoData(companyIds) {
       let lastLocation = geo(21.1458, 79.0882, 'Nagpur district');
       if (definition.key.startsWith('nashik_')) lastLocation = geo(20.0110, 73.7903, 'Nashik district');
       if (definition.key.startsWith('pune_')) lastLocation = geo(18.5204, 73.8567, 'Pune district');
-      agencyUsers[definition.key] = await upsertLegacyUser({ ...definition, lastLocation });
+      agencyUsers[definition.key] = await requireLegacyUser({ ...definition, lastLocation });
     }
 
     const agencyLinks = [
@@ -279,16 +177,9 @@ async function clearDemoData(companyIds) {
     ];
     for (const [agency, userKey] of agencyLinks) {
       const companyId = String(agency.parentOrganization) === String(companyTwo._id) ? companyTwo._id : companyOne._id;
-      const existingLink = await AgencyUserLink.findOne({ legacyUserId: agencyUsers[userKey]._id, agencyId: agency._id });
-      if (!existingLink) {
-        await AgencyUserLink.create({
-          companyId,
-          agencyId: agency._id,
-          legacyUserId: agencyUsers[userKey]._id,
-          role: agencyUsers[userKey].role,
-          isActive: true,
-          linkedBy: companyId.equals(companyOne._id) ? companyUsers.c1_admin._id : companyUsers.c2_admin._id,
-        });
+      const existingLink = await AgencyUserLink.findOne({ legacyUserId: agencyUsers[userKey]._id, agencyId: agency._id, companyId });
+      if (!existingLink || !existingLink.isActive || String(existingLink.role) !== String(agencyUsers[userKey].role)) {
+        throw new Error(`Required existing Agency tenant mapping is missing or inconsistent for ${agencyUsers[userKey].mobile}. Refusing to create/change account mapping during demo seed.`);
       }
     }
 
@@ -477,19 +368,19 @@ async function clearDemoData(companyIds) {
 
     const farmersPayload = [
       ['OPS-DM-001', 'Bharat Wankhede', '9823011001', 'Nagpur', 'Hingna', 'Wanadongri', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Pending', 'Pending', ''],
-      ['OPS-DM-002', 'Suresh Meshram', '9823011002', 'Nagpur', 'Hingna', 'Gumgaon', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Ordered', 'In Progress', ''],
-      ['OPS-DM-003', 'Lata Gaikwad', '9823011003', 'Nagpur', 'Hingna', 'Dhamna', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Ready for Installation', 'Completed', ''],
+      ['OPS-DM-002', 'Suresh Meshram', '9823011002', 'Nagpur', 'Hingna', 'Gumgaon', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Pending', 'In Progress', 'Survey visit in progress'],
+      ['OPS-DM-003', 'Lata Gaikwad', '9823011003', 'Nagpur', 'Hingna', 'Dhamna', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Ordered', 'Completed', ''],
       ['OPS-DM-004', 'Ramesh Atram', '9823011004', 'Nagpur', 'Katol', 'Kalmeshwar', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Installation Completed', 'Completed', ''],
-      ['OPS-DM-005', 'Savita Dhoble', '9823011005', 'Nagpur', 'Saoner', 'Kandri', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Complaint Raised', 'Completed', 'Motor tripping frequently'],
+      ['OPS-DM-005', 'Savita Dhoble', '9823011005', 'Nagpur', 'Saoner', 'Kandri', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Installation Completed', 'Completed', 'Motor tripping frequently'],
       ['OPS-DM-006', 'Dilip Khandekar', '9823011006', 'Nashik', 'Sinnar', 'Nandur Shingote', wpNashik, nashikAgency, companyOne, programOne, workOrderOne, 'Closed', 'Completed', ''],
-      ['OPS-DM-007', 'Geeta Ahire', '9823011007', 'Nashik', 'Sinnar', 'Pangri', wpNashik, nashikAgency, companyOne, programOne, workOrderOne, 'Pending Installation', 'Completed', ''],
+      ['OPS-DM-007', 'Geeta Ahire', '9823011007', 'Nashik', 'Sinnar', 'Pangri', wpNashik, nashikAgency, companyOne, programOne, workOrderOne, 'Pending', 'Completed', ''],
       ['OPS-DM-008', 'Mahesh Sonawane', '9823011008', 'Nashik', 'Sinnar', 'Dubere', wpNashik, nashikAgency, companyOne, programOne, workOrderOne, 'Dispatch Completed', 'Completed', ''],
       ['OPS-DM-009', 'Shobha Chavan', '9823011009', 'Pune', 'Baramati', 'Morgaon', wpPune, puneAgency, companyTwo, programTwo, workOrderTwo, 'Pending', 'Pending', ''],
-      ['OPS-DM-010', 'Vishal Jagtap', '9823011010', 'Pune', 'Baramati', 'Katewadi', wpPune, puneAgency, companyTwo, programTwo, workOrderTwo, 'Ordered', 'In Progress', ''],
+      ['OPS-DM-010', 'Vishal Jagtap', '9823011010', 'Pune', 'Baramati', 'Katewadi', wpPune, puneAgency, companyTwo, programTwo, workOrderTwo, 'Pending', 'Completed', ''],
       ['OPS-DM-011', 'Anita More', '9823011011', 'Pune', 'Baramati', 'Pandharewadi', wpPune, puneAgency, companyTwo, programTwo, workOrderTwo, 'Ready for Installation', 'Completed', ''],
-      ['OPS-DM-012', 'Prakash Bawane', '9823011012', 'Nagpur', 'Hingna', 'Isasani', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Pending Installation', 'Completed', 'Consent document pending'],
+      ['OPS-DM-012', 'Prakash Bawane', '9823011012', 'Nagpur', 'Hingna', 'Isasani', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Pending', 'Pending', 'Registration documents under review'],
       ['OPS-DM-013', 'Meena Khobragade', '9823011013', 'Nagpur', 'Kalmeshwar', 'Borgaon', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Move to Installation', 'Completed', ''],
-      ['OPS-DM-014', 'Nitin Uikey', '9823011014', 'Nagpur', 'Saoner', 'Khapa', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Dispatch Completed', 'Completed', ''],
+      ['OPS-DM-014', 'Nitin Uikey', '9823011014', 'Nagpur', 'Saoner', 'Khapa', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Ready for Installation', 'Completed', 'Installation crew mobilized'],
       ['OPS-DM-015', 'Sunanda Raut', '9823011015', 'Nagpur', 'Katol', 'Yenwa', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Installation Completed', 'Completed', ''],
       ['OPS-DM-016', 'Arun Shende', '9823011016', 'Nagpur', 'Ramtek', 'Mansar', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Closed', 'Completed', ''],
       ['OPS-DM-017', 'Kalpana Pawar', '9823011017', 'Nashik', 'Sinnar', 'Musalgaon', wpNashik, nashikAgency, companyOne, programOne, workOrderOne, 'Pending', 'Pending', 'Land document pending'],
@@ -502,6 +393,13 @@ async function clearDemoData(companyIds) {
       'WP-NAS-001':{technicians:[{username:'nashik.tech01',mobile:'9300000003'},{username:'nashik.tech02',mobile:'9300000004'}],admin:'nashik.admin'},
       'WP-PUN-001':{technicians:[{username:'pune.tech01',mobile:'9400000003'}],admin:'pune.admin'},
     };
+    const stageGroupById = {
+      'OPS-DM-001':'NEW','OPS-DM-009':'NEW','OPS-DM-012':'NEW',
+      'OPS-DM-002':'SURVEY','OPS-DM-007':'SURVEY','OPS-DM-010':'SURVEY',
+      'OPS-DM-003':'PROCESSING','OPS-DM-008':'PROCESSING','OPS-DM-011':'PROCESSING','OPS-DM-013':'PROCESSING','OPS-DM-014':'PROCESSING',
+      'OPS-DM-004':'COMPLETED','OPS-DM-005':'COMPLETED','OPS-DM-006':'COMPLETED','OPS-DM-015':'COMPLETED','OPS-DM-016':'COMPLETED',
+      'OPS-DM-017':'ON_HOLD','OPS-DM-018':'REJECTED',
+    };
     const farmers = [];
     for (let i = 0; i < farmersPayload.length; i += 1) {
       const [beneficiaryId, beneficiaryName, mobile, district, taluka, village, wp, agency, company, program, workOrder, applicationStatus, inspectionStatus, issue] = farmersPayload[i];
@@ -513,7 +411,15 @@ async function clearDemoData(companyIds) {
         finalBeneficiary:demoMedia(beneficiaryId,'final-beneficiary'),finalSignature:demoMedia(beneficiaryId,'final-signature'),
         surveyorSignature:demoMedia(beneficiaryId,'surveyor-signature'),lr:demoMedia(beneficiaryId,'lr'),service:demoMedia(beneficiaryId,'service')
       };
-      const hasSurvey=inspectionStatus!=='Pending',hasInstalled=['Installation Completed','Complaint Raised','Closed'].includes(applicationStatus);
+      const stageGroup=stageGroupById[beneficiaryId]||'PROCESSING';
+      const hasSurveyStarted=inspectionStatus!=='Pending';
+      const hasSurvey=inspectionStatus==='Completed';
+      const hasOrder=['Ordered','Dispatch Completed','Move to Installation','Ready for Installation','Installation Completed','Complaint Raised','Closed'].includes(applicationStatus);
+      const hasMaterial=['Dispatch Completed','Move to Installation','Ready for Installation','Installation Completed','Complaint Raised','Closed'].includes(applicationStatus);
+      const hasInstalled=['Installation Completed','Complaint Raised','Closed'].includes(applicationStatus);
+      const installationEvidenceAllowed=hasInstalled||beneficiaryId==='OPS-DM-014';
+      const installationAssigned=['PROCESSING','COMPLETED'].includes(stageGroup);
+      const isComplaintDemo=beneficiaryId==='OPS-DM-005';
       const baseGeo=demoCoordinates[district]||[20.5,78.9],latitude=Number((baseGeo[0]+((i%5)-2)*0.018).toFixed(6)),longitude=Number((baseGeo[1]+((i%4)-1.5)*0.021).toFixed(6));
       const fieldTeam=demoFieldTeamByPackage[wp.code]||demoFieldTeamByPackage['WP-NAG-001'];
       const assignedTech=fieldTeam.technicians[i%fieldTeam.technicians.length];
@@ -533,11 +439,9 @@ async function clearDemoData(companyIds) {
         divisionName: district === 'Pune' ? 'Pune' : district,
         circleName: `${district} Circle`,
         zoneName: `${district} Zone`,
-        siteDepth: `${120 + i * 5}`,
+        siteDepth: hasSurveyStarted ? `${120 + i * 5}` : '',
         inspectionStatus,
-        inspectionStatusFinal: ['Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus)
-          ? 'SYSTEM DETAILS SUBMITTED'
-          : 'VENDOR INFORMATION RECEIVED',
+        inspectionStatusFinal: hasInstalled ? 'SYSTEM DETAILS SUBMITTED' : hasSurveyStarted ? 'VENDOR INFORMATION RECEIVED' : '',
         applicationStatus,
         siteLocation: `${latitude},${longitude}`,
         pumpType: i % 2 === 0 ? 'AC Solar Pump' : 'DC Solar Pump',
@@ -547,37 +451,37 @@ async function clearDemoData(companyIds) {
         vendorAssignmentDate: daysAgo(55 - i),
         surveyorName: assignedTech.username,
         surveyorMobile: assignedTech.mobile,
-        sourceType: 'Borewell',
+        sourceType: hasSurveyStarted ? 'Borewell' : '',
         landHoldingAcre: `${3 + (i % 4)}`,
         landOwnershipType: 'Self Owned',
-        actualHeadM: `${20 + i}`,
-        sourceDepthFeet: `${180 + i * 3}`,
+        actualHeadM: hasSurveyStarted ? `${20 + i}` : '',
+        sourceDepthFeet: hasSurveyStarted ? `${180 + i * 3}` : '',
         jsrDeviationYesNo: inspectionStatus==='Pending'?'':inspectionStatus==='In Progress'?'VENDOR INFORMATION RECEIVED':'JSR SUBMITTED',
         deviationRemarks: issue&&inspectionStatus!=='Completed'?issue:'',
-        surveyDate: hasSurvey?daysAgo(Math.max(2,50-i)):null,
-        jsrTechnician: assignedTech.username,
-        materialOnSiteOrWarehouse: ['Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed', 'Dispatch Completed'].includes(applicationStatus) ? 'On Site' : 'Warehouse',
-        warehouseInwardDate: daysAgo(30 - i),
-        vehicleNo: district === 'Nagpur' ? 'MH31AB1234' : district === 'Nashik' ? 'MH15ZX4578' : 'MH12PQ9012',
-        lotNo: `LOT-${district.slice(0, 3).toUpperCase()}-${i + 1}`,
-        fullSetOrPartialSet: 'Full Set',
-        invoiceNo: `INV-${beneficiaryId}`,
-        waybillNoFromCompany: `WB-${beneficiaryId}`,
-        lot: `LOT-${i + 1}`,
-        materialDispatchDate: daysAgo(20 - i),
-        transporterName: 'Opsynq Logistics Demo',
-        transporterVehicleNo: district === 'Pune' ? 'MH12DD4455' : 'MH31CC7788',
-        materialReceivedConfirmationYesNo: ['Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed', 'Dispatch Completed'].includes(applicationStatus) ? 'Yes' : 'No',
+        surveyDate: hasSurveyStarted?daysAgo(Math.max(2,50-i)):null,
+        jsrTechnician: hasSurveyStarted ? assignedTech.username : '',
+        materialOnSiteOrWarehouse: hasMaterial ? 'On Site' : hasOrder ? 'Warehouse' : '',
+        warehouseInwardDate: hasOrder ? daysAgo(Math.max(2, 30 - i)) : null,
+        vehicleNo: hasMaterial ? (district === 'Nagpur' ? 'MH31AB1234' : district === 'Nashik' ? 'MH15ZX4578' : 'MH12PQ9012') : '',
+        lotNo: hasOrder ? `LOT-${district.slice(0, 3).toUpperCase()}-${i + 1}` : '',
+        fullSetOrPartialSet: hasMaterial ? 'Full Set' : '',
+        invoiceNo: hasOrder ? `INV-${beneficiaryId}` : '',
+        waybillNoFromCompany: hasMaterial ? `WB-${beneficiaryId}` : '',
+        lot: hasOrder ? `LOT-${i + 1}` : '',
+        materialDispatchDate: hasMaterial ? daysAgo(Math.max(1, 20 - i)) : null,
+        transporterName: hasMaterial ? 'Opsynq Logistics Demo' : '',
+        transporterVehicleNo: hasMaterial ? (district === 'Pune' ? 'MH12DD4455' : 'MH31CC7788') : '',
+        materialReceivedConfirmationYesNo: hasMaterial ? 'Yes' : hasOrder ? 'No' : '',
         shortageDamagedRemarks: beneficiaryId==='OPS-DM-014'?'One outer carton received dented; contents verified intact.':'',
-        invoiceDate: daysAgo(25 - i),
-        waybillNo: `WYB-${beneficiaryId}`,
-        deliveryChallanNo: `DC-${beneficiaryId}`,
+        invoiceDate: hasOrder ? daysAgo(Math.max(2, 25 - i)) : null,
+        waybillNo: hasMaterial ? `WYB-${beneficiaryId}` : '',
+        deliveryChallanNo: hasMaterial ? `DC-${beneficiaryId}` : '',
         installationDate: ['Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(10 + i) : null,
         installationCompletionDate: ['Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(8 + i) : null,
         installedByTechnicianName: hasInstalled ? assignedTech.username : '',
-        installationAssignedTechnician: assignedTech.username,
-        installationAssignedTechnicianMobile: assignedTech.mobile,
-        installationAssignedAt: daysAgo(Math.max(1, 24 - i)),
+        installationAssignedTechnician: installationAssigned ? assignedTech.username : '',
+        installationAssignedTechnicianMobile: installationAssigned ? assignedTech.mobile : '',
+        installationAssignedAt: installationAssigned ? daysAgo(Math.max(1, 24 - i)) : null,
         commissioningDate: ['Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(7 + i) : null,
         installedPhotoUpload: hasInstalled?mediaSet.installOverview:'',
         panels: hasInstalled ? [`PNL-${beneficiaryId}-01`, `PNL-${beneficiaryId}-02`, `PNL-${beneficiaryId}-03`] : [],
@@ -585,45 +489,47 @@ async function clearDemoData(companyIds) {
         motorNoUnique: hasInstalled ? `MOTOR-${beneficiaryId}` : '',
         controllerNoUnique: hasInstalled ? `CTRL-${beneficiaryId}` : '',
         imeiNoUnique: hasInstalled ? `IMEI-${beneficiaryId}` : '',
-        installationDoneYesNo: ['Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? 'Yes' : 'No',
-        pumpNotOperatingYesNo: applicationStatus === 'Complaint Raised' ? 'Yes' : 'No',
+        installationDoneYesNo: hasInstalled ? 'Yes' : installationAssigned ? 'No' : '',
+        pumpNotOperatingYesNo: isComplaintDemo ? 'Yes' : hasInstalled ? 'No' : '',
         companyAssignedPersonName: company.contact?.name,
-        complaintIssue: applicationStatus === 'Complaint Raised' ? issue : '',
-        complaintRaisedDate: applicationStatus === 'Complaint Raised' ? daysAgo(2) : null,
-        complaintNumber: applicationStatus === 'Complaint Raised' ? `CMP-2026-${String(i+1).padStart(3,'0')}` : '',
-        complaintRaisedByName: applicationStatus === 'Complaint Raised' ? beneficiaryName : '',
-        complaintRaisedById: applicationStatus === 'Complaint Raised' ? beneficiaryId : '',
-        complaintStatus: applicationStatus === 'Complaint Raised' ? 'Open' : applicationStatus === 'Closed' ? 'Resolved' : '',
-        farmerPhotoUrl: mediaSet.beneficiary,
-        sitePhotosUrls: hasSurvey?[mediaSet.site,mediaSet.water]:[mediaSet.site],
-        signatureUrl: hasSurvey?mediaSet.signature:'',
+        complaintIssue: isComplaintDemo ? issue : '',
+        complaintRaisedDate: isComplaintDemo ? daysAgo(2) : null,
+        complaintNumber: isComplaintDemo ? 'CMP-2026-005' : '',
+        complaintRaisedByName: isComplaintDemo ? beneficiaryName : '',
+        complaintRaisedById: isComplaintDemo ? beneficiaryId : '',
+        complaintStatus: isComplaintDemo ? 'Open' : applicationStatus === 'Closed' ? 'Resolved' : '',
+        farmerPhotoUrl: mediaSet.beneficiary || '',
+        sitePhotosUrls: hasSurveyStarted ? [mediaSet.site,mediaSet.water].filter(Boolean) : [],
+        signatureUrl: hasSurvey ? mediaSet.signature : '',
         finalfarmerPhotoUrl: hasInstalled?mediaSet.finalBeneficiary:'',
-        finalsitePhotosUrls: hasInstalled?[mediaSet.before,mediaSet.during,mediaSet.after,mediaSet.serialPlate]:[],
+        finalsitePhotosUrls: hasInstalled ? [mediaSet.before,mediaSet.during,mediaSet.after,mediaSet.serialPlate].filter(Boolean) : [],
         finalsignatureUrl: hasInstalled?mediaSet.finalSignature:'',
         finalsurveyorsignatureUrl: hasInstalled?mediaSet.surveyorSignature:'',
         excelFileName: `${district.toLowerCase()}-demo-import.xlsx`,
         excelUploadDate: daysAgo(58 - i),
-        orderReceivedByTechnician: assignedTech.username,
-        orderReceivedConfirmationYesNo: ['Ordered', 'Dispatch Completed', 'Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? 'Yes' : 'No',
-        orderReceivedDate: ['Ordered', 'Dispatch Completed', 'Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(18 - i) : null,
-        orderReceivedRemarks: 'Demo seeded order acknowledgement',
-        orderReceivedYesNo: ['Ordered', 'Dispatch Completed', 'Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? 'Yes' : 'No',
-        materialReceivedDate: ['Dispatch Completed', 'Ready for Installation', 'Installation Completed', 'Complaint Raised', 'Closed'].includes(applicationStatus) ? daysAgo(14 - i) : null,
+        orderReceivedByTechnician: hasOrder ? assignedTech.username : '',
+        orderReceivedConfirmationYesNo: hasOrder ? 'Yes' : '',
+        orderReceivedDate: hasOrder ? daysAgo(Math.max(1, 18 - i)) : null,
+        orderReceivedRemarks: hasOrder ? 'Demo seeded order acknowledgement' : '',
+        orderReceivedYesNo: hasOrder ? 'Yes' : '',
+        materialReceivedDate: hasMaterial ? daysAgo(Math.max(1, 14 - i)) : null,
         remarks: issue||'Demo beneficiary record seeded for workflow presentation.',
         confirmedBy: fieldTeam.admin,
-        confirmationDate: daysAgo(12 - i),
-        lrPhotoUrls: ['Dispatch Completed','Ready for Installation','Installation Completed','Complaint Raised','Closed'].includes(applicationStatus)?[mediaSet.lr]:[],
+        confirmationDate: daysAgo(Math.max(1, 12 - i)),
+        lrPhotoUrls: hasMaterial ? [mediaSet.lr].filter(Boolean) : [],
         customFields: {
           demoLifecycleStatus: lifecycleEdge || 'ACTIVE',
+          demoStageGroup: stageGroup,
+          demoMediaPublicIds: publicIdMap(DEMO_MEDIA, beneficiaryId),
           holdOrRejectReason: lifecycleEdge ? issue : '',
           idProofUrl: mediaSet.idProof,
           consentDocumentUrl: hasSurvey ? mediaSet.consent : '',
-          waterSourcePhotoUrl: hasSurvey ? mediaSet.water : '',
-          installationBeforeUrl: hasInstalled ? mediaSet.before : '',
-          installationDuringUrl: hasInstalled ? mediaSet.during : '',
-          serialPlateUrl: hasInstalled ? mediaSet.serialPlate : '',
+          waterSourcePhotoUrl: hasSurveyStarted ? mediaSet.water : '',
+          installationBeforeUrl: installationEvidenceAllowed ? mediaSet.before : '',
+          installationDuringUrl: installationEvidenceAllowed ? mediaSet.during : '',
+          serialPlateUrl: installationEvidenceAllowed ? mediaSet.serialPlate : '',
           completionCertificateUrl: hasInstalled ? mediaSet.completion : '',
-          serviceEvidenceUrl: applicationStatus === 'Complaint Raised' ? mediaSet.service : ''
+          serviceEvidenceUrl: isComplaintDemo ? mediaSet.service : ''
         },
       });
       farmers.push({ farmer, wp, agency, company, program, workOrder, importBatch: wp.code === 'WP-NAG-001' ? importBatches[0] : wp.code === 'WP-NAS-001' ? importBatches[1] : importBatches[2] });
@@ -649,13 +555,13 @@ async function clearDemoData(companyIds) {
     );
 
     const items = await ItemMaster.insertMany([
-      { companyId: companyOne._id, sku: 'PUMP-5HP', name: 'Solar Pump 5HP', category: 'Pump', brand: 'HelioFlow', manufacturer: 'HelioFlow', model: 'HF-5', serialTracked: true, minStock: 5, reorderLevel: 10, warrantyMonths: 24, installationRole: 'PUMP' },
-      { companyId: companyOne._id, sku: 'MOTOR-5HP', name: 'Submersible Motor 5HP', category: 'Motor', brand: 'HelioFlow', manufacturer: 'HelioFlow', model: 'HM-5', serialTracked: true, minStock: 5, reorderLevel: 10, warrantyMonths: 24, installationRole: 'MOTOR' },
-      { companyId: companyOne._id, sku: 'CTRL-SMART', name: 'Smart Controller', category: 'Controller', brand: 'SunMesh', manufacturer: 'SunMesh', model: 'SM-CTRL', serialTracked: true, minStock: 5, reorderLevel: 10, warrantyMonths: 24, installationRole: 'CONTROLLER' },
-      { companyId: companyOne._id, sku: 'PNL-550', name: 'Solar Panel 550W', category: 'Panel', brand: 'PhotonOne', manufacturer: 'PhotonOne', model: 'P550', serialTracked: true, minStock: 20, reorderLevel: 50, warrantyMonths: 120, installationRole: 'PANEL' },
-      { companyId: companyTwo._id, sku: 'PUMP-7HP', name: 'Solar Pump 7.5HP', category: 'Pump', brand: 'AquaVolt', manufacturer: 'AquaVolt', model: 'AV-75', serialTracked: true, minStock: 4, reorderLevel: 8, warrantyMonths: 24, installationRole: 'PUMP' },
-      { companyId: companyTwo._id, sku: 'CTRL-FIELD', name: 'Field Controller', category: 'Controller', brand: 'AquaVolt', manufacturer: 'AquaVolt', model: 'FC-200', serialTracked: true, minStock: 4, reorderLevel: 8, warrantyMonths: 24, installationRole: 'CONTROLLER' },
-      { companyId: companyTwo._id, sku: 'PNL-540', name: 'Solar Panel 540W', category: 'Panel', brand: 'PhotonOne', manufacturer: 'PhotonOne', model: 'P540', serialTracked: true, minStock: 20, reorderLevel: 40, warrantyMonths: 120, installationRole: 'PANEL' },
+      { companyId: companyOne._id, sku: 'PUMP-5HP', name: 'Solar Pump 5HP', category: 'Pump', brand: 'HelioFlow', manufacturer: 'HelioFlow', model: 'HF-5', uom:'EA', serialTracked: true, batchTracked:true, minStock: 5, reorderLevel: 10, warrantyMonths: 24, installationRole: 'PUMP', metadata:{supplier:'HelioFlow Manufacturing',unitRate:118000,currency:'INR',batch:'HF-NAG-2608'} },
+      { companyId: companyOne._id, sku: 'MOTOR-5HP', name: 'Submersible Motor 5HP', category: 'Motor', brand: 'HelioFlow', manufacturer: 'HelioFlow', model: 'HM-5', uom:'EA', serialTracked: true, batchTracked:true, minStock: 5, reorderLevel: 10, warrantyMonths: 24, installationRole: 'MOTOR', metadata:{supplier:'HelioFlow Manufacturing',unitRate:82000,currency:'INR',batch:'HM-NAG-2608'} },
+      { companyId: companyOne._id, sku: 'CTRL-SMART', name: 'Smart Controller', category: 'Controller', brand: 'SunMesh', manufacturer: 'SunMesh', model: 'SM-CTRL', uom:'EA', serialTracked: true, batchTracked:true, minStock: 5, reorderLevel: 10, warrantyMonths: 24, installationRole: 'CONTROLLER', metadata:{supplier:'SunMesh Controls',unitRate:46000,currency:'INR',batch:'SM-NAG-2608'} },
+      { companyId: companyOne._id, sku: 'PNL-550', name: 'Solar Panel 550W', category: 'Panel', brand: 'PhotonOne', manufacturer: 'PhotonOne', model: 'P550', uom:'EA', serialTracked: true, batchTracked:true, minStock: 20, reorderLevel: 50, warrantyMonths: 120, installationRole: 'PANEL', metadata:{supplier:'PhotonOne Solar',unitRate:13800,currency:'INR',batch:'P550-NAG-2608'} },
+      { companyId: companyTwo._id, sku: 'PUMP-7HP', name: 'Solar Pump 7.5HP', category: 'Pump', brand: 'AquaVolt', manufacturer: 'AquaVolt', model: 'AV-75', uom:'EA', serialTracked: true, batchTracked:true, minStock: 4, reorderLevel: 8, warrantyMonths: 24, installationRole: 'PUMP', metadata:{supplier:'AquaVolt Systems',unitRate:126000,currency:'INR',batch:'AV75-PUN-2609'} },
+      { companyId: companyTwo._id, sku: 'CTRL-FIELD', name: 'Field Controller', category: 'Controller', brand: 'AquaVolt', manufacturer: 'AquaVolt', model: 'FC-200', uom:'EA', serialTracked: true, batchTracked:true, minStock: 4, reorderLevel: 8, warrantyMonths: 24, installationRole: 'CONTROLLER', metadata:{supplier:'AquaVolt Systems',unitRate:51000,currency:'INR',batch:'FC200-PUN-2609'} },
+      { companyId: companyTwo._id, sku: 'PNL-540', name: 'Solar Panel 540W', category: 'Panel', brand: 'PhotonOne', manufacturer: 'PhotonOne', model: 'P540', uom:'EA', serialTracked: true, batchTracked:true, minStock: 20, reorderLevel: 40, warrantyMonths: 120, installationRole: 'PANEL', metadata:{supplier:'PhotonOne Solar',unitRate:13200,currency:'INR',batch:'P540-PUN-2609'} },
     ]);
 
     const itemMap = Object.fromEntries(items.map((item) => [item.sku, item]));
@@ -677,6 +583,7 @@ async function clearDemoData(companyIds) {
           itemId: item._id,
           serialNumber: `${prefix}-${String(idx).padStart(3, '0')}`,
           barcodeValue: `${prefix}-BC-${String(idx).padStart(3, '0')}`,
+          batchNo: item.metadata?.batch || `${prefix}-BATCH`,
           status,
           warehouseId,
           agencyId,
@@ -800,7 +707,7 @@ async function clearDemoData(companyIds) {
       status: 'DELIVERED',
       dispatchedAt: daysAgo(18),
       deliveredAt: daysAgo(16),
-      proofOfDelivery: { receiverName: 'Prashant Wankhede', receivedAt: daysAgo(16), notes: 'Received in good condition', photoUrls: [entityMedia('shipment-skepl-001-pod')] },
+      proofOfDelivery: { receiverName: 'Prashant Wankhede', receivedAt: daysAgo(16), notes: 'Received in good condition', photoUrls: [] },
     });
 
     const shipmentTwo = await Shipment.create({
@@ -840,7 +747,7 @@ async function clearDemoData(companyIds) {
       status: 'DELIVERED',
       dispatchedAt: daysAgo(14),
       deliveredAt: daysAgo(12),
-      proofOfDelivery: { receiverName: 'Nilesh Patne', receivedAt: daysAgo(12), notes: 'Agency receipt confirmed', photoUrls: [entityMedia('shipment-avsil-001-pod')] },
+      proofOfDelivery: { receiverName: 'Nilesh Patne', receivedAt: daysAgo(12), notes: 'Agency receipt confirmed', photoUrls: [] },
     });
 
     const setSerialState = async (serialNumbers, { status, warehouseId = null, agencyId = null, farmerId = null }) => {
@@ -951,6 +858,7 @@ async function clearDemoData(companyIds) {
         { itemId: itemMap['PUMP-5HP']._id, quantity: 1, serialIds: [serialMap['P5-NAG-001']._id] },
         { itemId: itemMap['MOTOR-5HP']._id, quantity: 1, serialIds: [serialMap['M5-NAG-001']._id] },
         { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-001']._id] },
+        { itemId: itemMap['PNL-550']._id, quantity: 1, serialIds: [serialMap['PNL-NAG-001']._id] },
       ],
       status: 'CONSUMED',
       issuedAt: daysAgo(10),
@@ -969,8 +877,10 @@ async function clearDemoData(companyIds) {
       items: [
         { itemId: itemMap['PUMP-5HP']._id, quantity: 1, serialIds: [serialMap['P5-NAG-002']._id] },
         { itemId: itemMap['MOTOR-5HP']._id, quantity: 1, serialIds: [serialMap['M5-NAG-002']._id] },
+        { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-002']._id] },
+        { itemId: itemMap['PNL-550']._id, quantity: 1, serialIds: [serialMap['PNL-NAG-004']._id] },
       ],
-      status: 'ISSUED',
+      status: 'CONSUMED',
       issuedAt: daysAgo(9),
       issuedBy: companyUsers.c1_inventory._id,
       notes: 'Issued, later complaint opened for demo case.',
@@ -982,7 +892,8 @@ async function clearDemoData(companyIds) {
       issueNo: 'MI-NAS-001', items: [
         { itemId: itemMap['PUMP-5HP']._id, quantity: 1, serialIds: [serialMap['P5-NAG-004']._id] },
         { itemId: itemMap['MOTOR-5HP']._id, quantity: 1, serialIds: [serialMap['M5-NAG-004']._id] },
-        { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-004']._id] }
+        { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-004']._id] },
+        { itemId: itemMap['PNL-550']._id, quantity: 1, serialIds: [serialMap['PNL-NAG-008']._id] }
       ], status: 'CONSUMED', issuedAt: daysAgo(12), issuedBy: companyUsers.c1_inventory._id, notes: 'Nashik completed installation material custody.'
     });
     const issueFour = await MaterialIssue.create({
@@ -991,7 +902,8 @@ async function clearDemoData(companyIds) {
       issueNo: 'MI-NAG-003', items: [
         { itemId: itemMap['PUMP-5HP']._id, quantity: 1, serialIds: [serialMap['P5-NAG-006']._id] },
         { itemId: itemMap['MOTOR-5HP']._id, quantity: 1, serialIds: [serialMap['M5-NAG-006']._id] },
-        { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-006']._id] }
+        { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-006']._id] },
+        { itemId: itemMap['PNL-550']._id, quantity: 1, serialIds: [serialMap['PNL-NAG-009']._id] }
       ], status: 'CONSUMED', issuedAt: daysAgo(11), issuedBy: companyUsers.c1_inventory._id, notes: 'Completed installation material custody.'
     });
     const issueFive = await MaterialIssue.create({
@@ -1000,7 +912,8 @@ async function clearDemoData(companyIds) {
       issueNo: 'MI-NAG-004', items: [
         { itemId: itemMap['PUMP-5HP']._id, quantity: 1, serialIds: [serialMap['P5-NAG-007']._id] },
         { itemId: itemMap['MOTOR-5HP']._id, quantity: 1, serialIds: [serialMap['M5-NAG-007']._id] },
-        { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-007']._id] }
+        { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-007']._id] },
+        { itemId: itemMap['PNL-550']._id, quantity: 1, serialIds: [serialMap['PNL-NAG-010']._id] }
       ], status: 'CONSUMED', issuedAt: daysAgo(10), issuedBy: companyUsers.c1_inventory._id, notes: 'Closed installation material custody.'
     });
     const puneIssue = await MaterialIssue.create({
@@ -1024,6 +937,7 @@ async function clearDemoData(companyIds) {
       ...shipmentOne.items.map(line=>({companyId:companyOne._id,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'DISPATCH',fromWarehouseId:warehouseMap['WH-NAG-CEN']._id,toWarehouseId:warehouseMap['WH-NAG-AGY']._id,toOrganizationId:nagpurAgency._id,referenceType:'Shipment',referenceId:shipmentOne._id,performedBy:companyUsers.c1_logistics._id,reason:'Nagpur agency delivery',occurredAt:daysAgo(18)})),
       ...shipmentTwo.items.map(line=>({companyId:companyOne._id,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'DISPATCH',fromWarehouseId:warehouseMap['WH-NAG-CEN']._id,toWarehouseId:warehouseMap['WH-NAS-AGY']._id,toOrganizationId:nashikAgency._id,referenceType:'Shipment',referenceId:shipmentTwo._id,performedBy:companyUsers.c1_logistics._id,reason:'Nashik agency dispatch',occurredAt:daysAgo(3)})),
       ...shipmentThree.items.map(line=>({companyId:companyTwo._id,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'DISPATCH',fromWarehouseId:warehouseMap['WH-PUN-CEN']._id,toWarehouseId:warehouseMap['WH-PUN-AGY']._id,toOrganizationId:puneAgency._id,referenceType:'Shipment',referenceId:shipmentThree._id,performedBy:companyUsers.c2_inventory._id,reason:'Pune agency delivery',occurredAt:daysAgo(14)})),
+      ...[issueOne,issueTwo,issueThree,issueFour,issueFive,puneIssue].flatMap(issue=>issue.items.map(line=>({companyId:issue.companyId,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'ISSUE',fromWarehouseId:issue.warehouseId,toOrganizationId:issue.agencyId,referenceType:'MaterialIssue',referenceId:issue._id,performedBy:issue.issuedBy,reason:`Material issue ${issue.issueNo}`,occurredAt:issue.issuedAt}))),
       ...installedAssets.map(asset=>({companyId:asset.companyId,itemId:asset.itemId,serialIds:[asset.inventorySerialId],quantity:1,movementType:'INSTALL',toOrganizationId:asset.agencyId,referenceType:'InstalledAsset',referenceId:asset._id,performedBy:asset.companyId.equals(companyTwo._id)?companyUsers.c2_inventory._id:companyUsers.c1_inventory._id,reason:'Installed at beneficiary site',occurredAt:asset.installedAt}))
     ];
     await StockMovement.insertMany(stockMovements);
@@ -1047,7 +961,7 @@ async function clearDemoData(companyIds) {
         dueAt: daysFromNow(1),
         firstResponseAt: daysAgo(2),
         slaState: 'DUE_SOON',
-        evidence: { photoUrls: [entityMedia('service-sc-skepl-001')] },
+        evidence: { photoUrls: [demoMedia('OPS-DM-005','service')].filter(Boolean) },
         metadata: { complaintNumber: 'CMP-2026-001' },
       },
       {
@@ -1068,7 +982,7 @@ async function clearDemoData(companyIds) {
         resolvedAt: daysAgo(2),
         slaState: 'ON_TRACK',
         resolution: 'All parameters normal. No corrective action required.',
-        evidence: { photoUrls: [entityMedia('service-sc-skepl-002')] },
+        evidence: { photoUrls: [] },
       },
       {
         companyId: companyTwo._id,
@@ -1138,14 +1052,14 @@ async function clearDemoData(companyIds) {
         programId: programOne._id,
         workPackageId: wpNagpur._id,
         agencyId: nagpurAgency._id,
-        farmerId: farmerLookup['OPS-DM-004'].farmer._id,
+        farmerId: farmerLookup['OPS-DM-016'].farmer._id,
         recordNo: 'CMPREC-001',
         type: 'FINAL_INSPECTION',
         status: 'PASS',
         items: [
           { key: 'site_clean', label: 'Site condition', status: 'PASS', checkedAt: daysAgo(7) },
           { key: 'asset_serials', label: 'Serial capture', status: 'PASS', checkedAt: daysAgo(7) },
-          { key: 'commissioning', label: 'Commissioning proof', status: 'PASS', checkedAt: daysAgo(7), evidence: [entityMedia('compliance-cmprec-001')] },
+          { key: 'commissioning', label: 'Commissioning proof', status: 'PASS', checkedAt: daysAgo(7), evidence: [demoMedia('OPS-DM-016','install-after')].filter(Boolean) },
         ],
         geo: { latitude: 21.112, longitude: 79.007, accuracy: 12, capturedAt: daysAgo(7) },
         reviewedBy: companyUsers.c1_quality._id,
@@ -1163,7 +1077,7 @@ async function clearDemoData(companyIds) {
         status: 'IN_REVIEW',
         items: [
           { key: 'root_cause', label: 'Root cause documented', status: 'PENDING' },
-          { key: 'photo_evidence', label: 'Service photo evidence', status: 'PASS', evidence: [entityMedia('compliance-cmprec-002')] },
+          { key: 'photo_evidence', label: 'Service photo evidence', status: 'PASS', evidence: [demoMedia('OPS-DM-005','service')].filter(Boolean) },
         ],
         notes: 'Awaiting corrective action closeout.',
       },
@@ -1209,9 +1123,7 @@ async function clearDemoData(companyIds) {
     ]);
 
     await DocumentRecord.insertMany([
-      { companyId: companyOne._id, category: 'CONTRACT', title: 'LOA - Lot A Maharashtra', documentNo: contractOne.number, entityType: 'Contract', entityId: contractOne._id, fileUrl: entityMedia('document-loa-skepl'), fileName: 'loa-demo.pdf', mimeType: 'application/pdf', size: 234567, uploadedBy: companyUsers.c1_admin._id, notes: 'Demo placeholder document.' },
-      { companyId: companyOne._id, category: 'INSPECTION', title: 'Final inspection photo set', documentNo: 'INSP-001', entityType: 'Farmer', entityId: farmerLookup['OPS-DM-004'].farmer._id, fileUrl: entityMedia('document-final-inspection'), fileName: 'inspection-photo.png', mimeType: 'image/png', size: 356789, uploadedBy: companyUsers.c1_quality._id },
-      { companyId: companyTwo._id, category: 'SERVICE', title: 'Controller calibration support evidence', documentNo: 'SRV-001', entityType: 'ServiceCase', fileUrl: entityMedia('document-service-avsil'), fileName: 'service-photo.png', mimeType: 'image/png', size: 329001, uploadedBy: companyUsers.c2_quality._id },
+      { companyId: companyOne._id, category: 'BENEFICIARY', title: 'Beneficiary consent - Lata Gaikwad', documentNo: 'CONS-OPS-DM-003', entityType: 'Farmer', entityId: farmerLookup['OPS-DM-003'].farmer._id, fileUrl: demoMedia('OPS-DM-003','consent'), publicId: publicIdMap(DEMO_MEDIA,'OPS-DM-003').consent, fileName: 'OPS-DM-003-consent.jpg', mimeType: 'image/jpeg', uploadedBy: companyUsers.c1_ops._id, notes: 'Photorealistic AI-generated DEMO consent-document image linked from the governed media bundle.' },
     ]);
 
     await SLARule.insertMany([
@@ -1235,32 +1147,68 @@ async function clearDemoData(companyIds) {
       {companyId:companyOne._id,programId:programOne._id,stage:'INSTALLATION',key:'farmer_with_system',label:'Farmer with installed system',evidenceType:'PHOTO',required:true,minFiles:1,sortOrder:2},
       {companyId:companyOne._id,programId:programOne._id,stage:'FINAL_INSPECTION',key:'commissioning_proof',label:'Commissioning / water discharge proof',evidenceType:'PHOTO',required:true,minFiles:1,sortOrder:1}
     ]);
-    const demoInstalledFarmer=farmerLookup['OPS-DM-004'].farmer;
-    const [demoLat,demoLng]=String(demoInstalledFarmer.siteLocation||'').split(',').map(Number);
-    const demoGeo={latitude:demoLat,longitude:demoLng,accuracy:8,capturedAt:daysAgo(7),source:'DEMO',capturedByUserId:agencyUsers.nagpur_tech_1._id,capturedByName:agencyUsers.nagpur_tech_1.username,capturedByRole:'field_technician'};
-    await EvidenceSubmission.insertMany(evidenceReqs.map((r,i)=>({companyId:companyOne._id,farmerId:demoInstalledFarmer._id,workPackageId:wpNagpur._id,agencyId:nagpurAgency._id,requirementId:r._id,stage:r.stage,status:'VERIFIED',submissionSource:'DEMO',captureGeo:demoGeo,files:[{url:entityMedia(`evidence-ops-dm-004-${r.key}`),name:`demo-evidence-${i+1}.png`,mimeType:'image/png',geo:demoGeo}],submittedByLegacyUser:agencyUsers.nagpur_tech_1._id,verifiedBy:companyUsers.c1_quality._id,verifiedAt:daysAgo(6),notes:'Verified geo-tagged demo evidence'})));
-    const geoDemoFarmers=['OPS-DM-012','OPS-DM-015','OPS-DM-017','OPS-DM-018'];
-    for(let gi=0;gi<geoDemoFarmers.length;gi++){const fe=farmerLookup[geoDemoFarmers[gi]];if(!fe)continue;const [lat,lng]=String(fe.farmer.siteLocation||'').split(',').map(Number);const req=evidenceReqs[gi%evidenceReqs.length];const geoTag={latitude:lat,longitude:lng,accuracy:10+gi,capturedAt:daysAgo(4+gi),source:'DEMO',capturedByUserId:fe.wp.code==='WP-NAG-001'?agencyUsers.nagpur_tech_2._id:agencyUsers.nashik_tech_1._id,capturedByName:fe.wp.code==='WP-NAG-001'?agencyUsers.nagpur_tech_2.username:agencyUsers.nashik_tech_1.username,capturedByRole:'field_technician'};await EvidenceSubmission.create({companyId:fe.company._id,farmerId:fe.farmer._id,workPackageId:fe.wp._id,agencyId:fe.agency._id,requirementId:req._id,stage:req.stage,status:gi===2?'SUBMITTED':'VERIFIED',submissionSource:'DEMO',captureGeo:geoTag,files:[{url:entityMedia(`geo-evidence-${String(fe.farmer.beneficiaryId).toLowerCase()}`),name:`geo-demo-${gi+1}.png`,mimeType:'image/png',geo:geoTag}],submittedByLegacyUser:geoTag.capturedByUserId,verifiedBy:gi===2?undefined:companyUsers.c1_quality._id,verifiedAt:gi===2?undefined:daysAgo(2),notes:'Geo-tagged field evidence for map demonstration.'});}
+    const reqByKey=Object.fromEntries(evidenceReqs.map(r=>[r.key,r]));
+    const evidenceRows=[];
+    const addEvidence=(beneficiaryId,key,kind,{status='VERIFIED',techKey='nagpur_tech_1',verified=true}={})=>{
+      const fe=farmerLookup[beneficiaryId],req=reqByKey[key];if(!fe||!req)return;
+      const [lat,lng]=String(fe.farmer.siteLocation||'').split(',').map(Number);
+      const tech=agencyUsers[techKey];
+      const capturedAt=daysAgo(status==='SUBMITTED'?1:5);
+      const geoTag={latitude:lat,longitude:lng,accuracy:9,capturedAt,source:'DEMO',capturedByUserId:tech._id,capturedByName:tech.username,capturedByRole:'field_technician'};
+      const url=demoMedia(beneficiaryId,kind),publicId=publicIdMap(DEMO_MEDIA,beneficiaryId)[kind];
+      if(!url||!publicId)return;
+      evidenceRows.push({companyId:fe.company._id,farmerId:fe.farmer._id,workPackageId:fe.wp._id,agencyId:fe.agency._id,requirementId:req._id,stage:req.stage,status,submissionSource:'DEMO',captureGeo:geoTag,files:[{url,publicId,name:`${beneficiaryId}-${kind}.jpg`,mimeType:'image/jpeg',geo:geoTag}],submittedByLegacyUser:tech._id,verifiedBy:verified?companyUsers.c1_quality._id:undefined,verifiedAt:verified?daysAgo(2):undefined,notes:`Real demo evidence: ${kind}`});
+    };
+    // Completed/service record: full configured stage evidence.
+    addEvidence('OPS-DM-005','site_photo','survey-site',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-DM-005','farmer_consent','consent',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-DM-005','mounting_structure','install-during',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-DM-005','farmer_with_system','final-beneficiary',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-DM-005','commissioning_proof','install-after',{techKey:'nagpur_tech_2'});
+    // Survey-complete/processing examples use only evidence available at their stage.
+    addEvidence('OPS-DM-003','site_photo','survey-site',{techKey:'nagpur_tech_1'});
+    addEvidence('OPS-DM-003','farmer_consent','consent',{techKey:'nagpur_tech_1'});
+    addEvidence('OPS-DM-007','site_photo','survey-site',{techKey:'nashik_tech_1'});
+    addEvidence('OPS-DM-007','farmer_consent','consent',{techKey:'nashik_tech_1'});
+    addEvidence('OPS-DM-014','mounting_structure','install-during',{status:'SUBMITTED',techKey:'nagpur_tech_2',verified:false});
+    // Closed record also carries full configured stage evidence.
+    addEvidence('OPS-DM-016','site_photo','survey-site',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-DM-016','farmer_consent','consent',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-DM-016','mounting_structure','install-during',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-DM-016','farmer_with_system','final-beneficiary',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-DM-016','commissioning_proof','install-after',{techKey:'nagpur_tech_2'});
+    await EvidenceSubmission.insertMany(evidenceRows);
+
 
     const insuredAsset=installedAssets.find(a=>a.farmerId.equals(farmerLookup['OPS-DM-004'].farmer._id));
     const complaintInsuredAsset=installedAssets.find(a=>a.farmerId.equals(farmerLookup['OPS-DM-005'].farmer._id));
     await InsurancePolicy.insertMany([
-      {companyId:companyOne._id,farmerId:farmerLookup['OPS-DM-004'].farmer._id,installedAssetId:insuredAsset?._id,policyNumber:'INS-SKEPL-2026-0001',referenceNumber:'REF-INS-001',insurer:'Bharat Rural General Insurance',policyType:'COMPREHENSIVE',coverageAmount:425000,premiumAmount:6200,currency:'INR',startDate:daysAgo(7),endDate:daysFromNow(358),status:'ACTIVE',documentUrl:entityMedia('insurance-skepl-0001'),documentFileName:'demo-policy-0001.pdf',notes:'Demo comprehensive asset coverage.',createdBy:companyUsers.c1_finance._id},
-      {companyId:companyOne._id,farmerId:farmerLookup['OPS-DM-005'].farmer._id,installedAssetId:complaintInsuredAsset?._id,policyNumber:'INS-SKEPL-2026-0002',referenceNumber:'REF-INS-002',insurer:'Bharat Rural General Insurance',policyType:'PUMP',coverageAmount:185000,premiumAmount:3100,currency:'INR',startDate:daysAgo(8),endDate:daysFromNow(22),status:'EXPIRING',documentUrl:entityMedia('insurance-skepl-0002'),documentFileName:'demo-policy-0002.pdf',claimNumber:'IC-2026-0091',claimStatus:'Surveyor assigned',claimOpenedAt:daysAgo(1),notes:'Demo policy nearing expiry with claim context.',createdBy:companyUsers.c1_finance._id}
+      {companyId:companyOne._id,farmerId:farmerLookup['OPS-DM-004'].farmer._id,installedAssetId:insuredAsset?._id,policyNumber:'INS-SKEPL-2026-0001',referenceNumber:'REF-INS-001',insurer:'Bharat Rural General Insurance',policyType:'COMPREHENSIVE',coverageAmount:425000,premiumAmount:6200,currency:'INR',startDate:daysAgo(7),endDate:daysFromNow(358),status:'ACTIVE',documentUrl:'',documentFileName:'demo-policy-0001.pdf',notes:'Demo comprehensive asset coverage.',createdBy:companyUsers.c1_finance._id},
+      {companyId:companyOne._id,farmerId:farmerLookup['OPS-DM-005'].farmer._id,installedAssetId:complaintInsuredAsset?._id,policyNumber:'INS-SKEPL-2026-0002',referenceNumber:'REF-INS-002',insurer:'Bharat Rural General Insurance',policyType:'PUMP',coverageAmount:185000,premiumAmount:3100,currency:'INR',startDate:daysAgo(8),endDate:daysFromNow(22),status:'EXPIRING',documentUrl:'',documentFileName:'demo-policy-0002.pdf',claimNumber:'IC-2026-0091',claimStatus:'Surveyor assigned',claimOpenedAt:daysAgo(1),notes:'Demo policy nearing expiry with claim context.',createdBy:companyUsers.c1_finance._id}
     ]);
 
     await PDIRecord.insertMany([
-      {companyId:companyOne._id,pdiNumber:'PDI-SKEPL-0001',itemId:itemMap['PUMP-5HP']._id,inventorySerialId:serialMap['P5-NAG-005']._id,supplierName:'HelioFlow Manufacturing',brand:'HelioFlow',model:'HF-5',inspectionDate:daysAgo(20),inspectedBy:companyUsers.c1_quality._id,result:'PASS',checklist:[{key:'identity',label:'Serial/model identity verified',status:'PASS'},{key:'physical',label:'Physical condition inspected',status:'PASS'},{key:'electrical',label:'Electrical/functional checks completed',status:'PASS'},{key:'label',label:'Manufacturer label and barcode readable',status:'PASS'}],evidenceUrls:[entityMedia('pdi-skepl-0001-evidence')],certificateUrl:entityMedia('pdi-skepl-0001-certificate'),disposition:'WAREHOUSE_ACCEPT',warehouseId:warehouseMap['WH-NAG-CEN']._id,notes:'Demo PDI passed and released to stock.'},
-      {companyId:companyOne._id,pdiNumber:'PDI-SKEPL-0002',itemId:itemMap['CTRL-SMART']._id,inventorySerialId:serialMap['C1-NAG-005']._id,supplierName:'SunMesh Controls',brand:'SunMesh',model:'SM-CTRL',inspectionDate:daysAgo(18),inspectedBy:companyUsers.c1_quality._id,result:'HOLD',checklist:[{key:'identity',label:'Serial/model identity verified',status:'PASS'},{key:'physical',label:'Physical condition inspected',status:'PASS'},{key:'electrical',label:'Electrical/functional checks completed',status:'PENDING',notes:'Firmware validation pending'},{key:'label',label:'Manufacturer label and barcode readable',status:'PASS'}],evidenceUrls:[entityMedia('pdi-skepl-0002-evidence')],disposition:'HOLD_FOR_REWORK',warehouseId:warehouseMap['WH-NAG-CEN']._id,notes:'Held for firmware validation.'}
+      {companyId:companyOne._id,pdiNumber:'PDI-SKEPL-0001',itemId:itemMap['PUMP-5HP']._id,inventorySerialId:serialMap['P5-NAG-005']._id,supplierName:'HelioFlow Manufacturing',brand:'HelioFlow',model:'HF-5',inspectionDate:daysAgo(20),inspectedBy:companyUsers.c1_quality._id,result:'PASS',checklist:[{key:'identity',label:'Serial/model identity verified',status:'PASS'},{key:'physical',label:'Physical condition inspected',status:'PASS'},{key:'electrical',label:'Electrical/functional checks completed',status:'PASS'},{key:'label',label:'Manufacturer label and barcode readable',status:'PASS'}],evidenceUrls:[],certificateUrl:'',disposition:'WAREHOUSE_ACCEPT',warehouseId:warehouseMap['WH-NAG-CEN']._id,notes:'Demo PDI passed and released to stock.'},
+      {companyId:companyOne._id,pdiNumber:'PDI-SKEPL-0002',itemId:itemMap['CTRL-SMART']._id,inventorySerialId:serialMap['C1-NAG-005']._id,supplierName:'SunMesh Controls',brand:'SunMesh',model:'SM-CTRL',inspectionDate:daysAgo(18),inspectedBy:companyUsers.c1_quality._id,result:'HOLD',checklist:[{key:'identity',label:'Serial/model identity verified',status:'PASS'},{key:'physical',label:'Physical condition inspected',status:'PASS'},{key:'electrical',label:'Electrical/functional checks completed',status:'PENDING',notes:'Firmware validation pending'},{key:'label',label:'Manufacturer label and barcode readable',status:'PASS'}],evidenceUrls:[],disposition:'HOLD_FOR_REWORK',warehouseId:warehouseMap['WH-NAG-CEN']._id,notes:'Held for firmware validation.'}
     ]);
 
+    const beneficiaryAuditRows=[];
+    for(const fe of farmers){
+      const f=fe.farmer;const stage=f.customFields?.demoStageGroup||'PROCESSING';const actor=fe.company._id.equals(companyTwo._id)?companyUsers.c2_ops:companyUsers.c1_ops;
+      const base={companyId:fe.company._id,organizationId:fe.company._id,actorId:actor._id,actorType:'PlatformUser',entityType:'Farmer',entityId:f._id};
+      beneficiaryAuditRows.push({...base,action:'BENEFICIARY_REGISTERED',after:{beneficiaryId:f.beneficiaryId,status:f.applicationStatus,stage},reason:'Deterministic SRIF demo seed',createdAt:daysAgo(60),updatedAt:daysAgo(60)});
+      if(f.inspectionStatus!=='Pending')beneficiaryAuditRows.push({...base,action:'SURVEY_STATUS_UPDATED',after:{inspectionStatus:f.inspectionStatus,surveyDate:f.surveyDate,technician:f.surveyorName},reason:'Survey lifecycle seeded consistently',createdAt:f.surveyDate||daysAgo(40),updatedAt:f.surveyDate||daysAgo(40)});
+      if(['PROCESSING','COMPLETED'].includes(stage))beneficiaryAuditRows.push({...base,action:'MATERIAL_STAGE_UPDATED',after:{applicationStatus:f.applicationStatus,materialReceived:f.materialReceivedConfirmationYesNo,assignedTechnician:f.installationAssignedTechnician},reason:'Material/installation pipeline seeded consistently',createdAt:f.materialDispatchDate||daysAgo(20),updatedAt:f.materialDispatchDate||daysAgo(20)});
+      if(stage==='COMPLETED')beneficiaryAuditRows.push({...base,action:'INSTALLATION_COMPLETED',after:{applicationStatus:f.applicationStatus,installationCompletionDate:f.installationCompletionDate,commissioningDate:f.commissioningDate},reason:'Installed and commissioned demo record',createdAt:f.installationCompletionDate||daysAgo(10),updatedAt:f.installationCompletionDate||daysAgo(10)});
+      if(stage==='ON_HOLD'||stage==='REJECTED')beneficiaryAuditRows.push({...base,action:stage==='ON_HOLD'?'BENEFICIARY_ON_HOLD':'BENEFICIARY_REJECTED',after:{stage,reason:f.customFields?.holdOrRejectReason},reason:f.customFields?.holdOrRejectReason||stage,createdAt:daysAgo(3),updatedAt:daysAgo(3)});
+    }
     await AuditLog.insertMany([
-      { companyId: companyOne._id, organizationId: companyOne._id, actorId: companyUsers.c1_admin._id, actorType: 'PlatformUser', action: 'DEMO_SEED_COMPLETED', entityType: 'Organization', entityId: companyOne._id, after: { farmers: 15, workPackages: 2, shipments: 2, geoTaggedEvidence: 9 } },
-      { companyId: companyTwo._id, organizationId: companyTwo._id, actorId: companyUsers.c2_admin._id, actorType: 'PlatformUser', action: 'DEMO_SEED_COMPLETED', entityType: 'Organization', entityId: companyTwo._id, after: { farmers: 3, workPackages: 1, shipments: 1, geoTaggedEvidence: 0 } },
+      ...beneficiaryAuditRows,
+      { companyId: companyOne._id, organizationId: companyOne._id, actorId: companyUsers.c1_admin._id, actorType: 'PlatformUser', action: 'DEMO_SEED_COMPLETED', entityType: 'Organization', entityId: companyOne._id, after: { farmers: 15, workPackages: 2, shipments: 2, evidenceSubmissions: evidenceRows.length } },
+      { companyId: companyTwo._id, organizationId: companyTwo._id, actorId: companyUsers.c2_admin._id, actorType: 'PlatformUser', action: 'DEMO_SEED_COMPLETED', entityType: 'Organization', entityId: companyTwo._id, after: { farmers: 3, workPackages: 1, shipments: 1, evidenceSubmissions: 0 } },
     ]);
 
     console.log('✓ Opsynq demo data seeded successfully');
-    console.log(`✓ Shared demo password for seeded non-env demo accounts: ${DEMO_PASSWORD}`);
     console.log('✓ Platform demo companies: SKEPL, AVSIL');
     console.log('✓ Agency demo orgs: NAGFOPS, NASRINS, PUNESVC');
     console.log('✓ Rich demo data created across operations, inventory, logistics, insurance, PDI, regulatory reporting, service, claims, compliance, documents, notifications and agency workflow.');

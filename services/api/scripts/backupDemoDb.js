@@ -10,8 +10,8 @@ async function writeCollection(db,name,file){
  const {id,protectedState}=await validateTarget({destructive:false});
  const dir=path.resolve(__dirname,'../backups',`demo-reset-${stamp()}`);fs.mkdirSync(dir,{recursive:true});
  const cols=(await mongoose.connection.db.listCollections({}, {nameOnly:true}).toArray()).map(x=>x.name).filter(x=>!x.startsWith('system.')).sort();
- const counts={};for(const name of cols){counts[name]=await writeCollection(mongoose.connection.db,name,path.join(dir,`${name}.ndjson`));console.log(`backup ${name}: ${counts[name]}`)}
- const manifest={createdAt:new Date().toISOString(),complete:true,dbName:id.dbName,host:id.host,counts,protectedAccounts:accountSnapshot(protectedState)};
+ const counts={};for(const name of cols){if(['platformusers','users'].includes(name)){counts[name]=await mongoose.connection.db.collection(name).estimatedDocumentCount();console.log(`backup ${name}: ${counts[name]} protected account records retained in DB; raw credentials not exported`);continue;}counts[name]=await writeCollection(mongoose.connection.db,name,path.join(dir,`${name}.ndjson`));console.log(`backup ${name}: ${counts[name]}`)}
+ const manifest={createdAt:new Date().toISOString(),complete:true,targetFingerprint:id.targetFingerprint,counts,protectedAccountDigests:accountSnapshot(protectedState)};
  fs.writeFileSync(path.join(dir,'manifest.json'),JSON.stringify(manifest,null,2));
  console.log(`BACKUP_DIR=${dir}`);
 })().catch(e=>{console.error(`Backup failed: ${e.message}`);process.exitCode=1}).finally(async()=>{try{await mongoose.connection.close()}catch{}});

@@ -1,0 +1,7 @@
+OPS-DM-014 image batch
+
+Target copy path: services/api/demo-media/OPS-DM-014/
+
+Contains the exact 10 filenames expected by the prepared demo-media mapping.
+Images are photorealistic AI-generated demo evidence, not photographs of real beneficiaries or real identity documents.
+id-proof.jpg / consent.jpg / lr.jpg / serial-plate.jpg are visibly DEMO/SAMPLE fictional evidence and must not be treated as genuine documents.

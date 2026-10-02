@@ -12,7 +12,11 @@
     "seed:all": "node seed/bootstrap.js",
     "automation:run": "node scripts/runAutomation.js",
     "snapshot": "node scripts/exportCompanySnapshot.js",
-    "seed:demo": "node seed/demoData.js"
+    "seed:demo": "node seed/demoData.js",
+    "demo:media:upload": "node scripts/uploadDemoMedia.js",
+    "demo:seed-ready": "npm run demo:db-check && npm run demo:media:upload && npm run seed:demo && npm run demo:sanity",
+    "demo:db-check": "node scripts/demoDbPreflight.js",
+    "demo:sanity": "node scripts/demoSanity.js"
   },
   "keywords": [],
   "author": "",

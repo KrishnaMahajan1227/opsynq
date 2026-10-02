@@ -1,5 +1,9 @@
 const base = process.env.OPSYNQ_API_URL || 'http://localhost:3000';
-const demoPassword = process.env.DEMO_DEFAULT_PASSWORD || 'Demo@1234';
+const demoPassword = String(process.env.DEMO_LOGIN_PASSWORD || '');
+if (!demoPassword) {
+  console.error('DEMO_LOGIN_PASSWORD is required as a process/session variable for login verification. No credential is hardcoded.');
+  process.exit(2);
+}
 
 const companyAccounts = [
   ['9000000001','company_owner'],['9000000002','company_admin'],['9000000003','operations_manager'],['9000000004','inventory_manager'],['9000000005','logistics_manager'],['9000000006','quality_user'],['9000000007','finance_user'],['9000000008','viewer'],

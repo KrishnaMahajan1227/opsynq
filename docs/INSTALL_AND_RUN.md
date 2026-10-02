@@ -25,8 +25,8 @@ Required at minimum:
 
 ```env
 PORT=3000
-MONGO_URI=mongodb+srv://YOUR_USER:YOUR_PASSWORD@YOUR_CLUSTER/OPSYNQ?retryWrites=true&w=majority
-JWT_SECRET=YOUR_LONG_RANDOM_SECRET
+MONGO_URI=mongodb+srv://<YOUR_USER>:<YOUR_PASSWORD>@<YOUR_CLUSTER>/OPSYNQ?retryWrites=true&w=majority
+JWT_SECRET=<YOUR_LONG_RANDOM_SECRET>
 JWT_EXPIRES_IN=12h
 CLIENT_ORIGIN=http://localhost:5173,http://localhost:5174
 ```

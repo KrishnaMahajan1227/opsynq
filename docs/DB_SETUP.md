@@ -7,8 +7,8 @@ Create a new MongoDB database and set:
 `services/api/.env`
 
 ```env
-MONGO_URI=mongodb+srv://USER:PASSWORD@CLUSTER/opsynq_global
-JWT_SECRET=YOUR_LONG_RANDOM_SECRET
+MONGO_URI=mongodb+srv://<YOUR_USER>:<YOUR_PASSWORD>@<YOUR_CLUSTER>/opsynq_global
+JWT_SECRET=<YOUR_LONG_RANDOM_SECRET>
 PORT=3000
 CLIENT_ORIGIN=http://localhost:5173
 ```

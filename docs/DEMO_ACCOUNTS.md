@@ -2,7 +2,7 @@
 
 The reset/seed flow preserves every existing demo account record, `_id`, tenant mapping, role and password hash. It does not reset existing credentials.
 
-On a brand-new isolated demo database only, if a listed demo account does not exist, `seed/demoData.js` creates it with `DEMO_DEFAULT_PASSWORD` (default `Demo@1234`). The existing Platform SuperAdmin always keeps the credentials already configured for that environment.
+`seed/demoData.js` now requires every listed demo account and tenant mapping to already exist. It refuses to create, reset or remap any login. The existing Platform SuperAdmin credentials remain environment-owned and are intentionally not copied into this document.
 
 ## Unified sign-in
 
@@ -73,7 +73,7 @@ Agency users are routed to Agency Operations through the existing one-time hando
 - Lifecycle coverage from new/pending through survey, dispatch, installation, complaint, closed, plus ON_HOLD and REJECTED edge demonstrations.
 - Serialized inventory with available, agency-stock, issued and installed states tied to beneficiaries/technicians.
 - Procurement, GRN, stock movement, shipments, material issue, installed assets, service, compliance, claims, RMS-supporting records, notifications, audit and reports seed data.
-- 329 unique synthetic demo media files; no seeded evidence path is intentionally reused.
+- Real-media mode is limited to 6 selected beneficiaries (58 unique JPG slots). The seed requires a verified Cloudinary manifest; all other beneficiaries keep empty media fields so the UI does not render broken URLs.
 
 ## Recommended demo walkthrough
 

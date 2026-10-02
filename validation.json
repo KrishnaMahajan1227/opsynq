@@ -1,0 +1,72 @@
+[
+  {
+    "file": "beneficiary.jpg",
+    "width": 1200,
+    "height": 1790,
+    "bytes": 564715,
+    "sha256": "3931476571c63570480ccc9ec3dd96ab30417db402b2da5b839d761c62da9bc5"
+  },
+  {
+    "file": "survey-site.jpg",
+    "width": 1200,
+    "height": 1802,
+    "bytes": 681301,
+    "sha256": "023ed0fa0c8bcc038fee6e67d44a009aec3867c81d662d51bd6beb83b319348a"
+  },
+  {
+    "file": "water-source.jpg",
+    "width": 1200,
+    "height": 1808,
+    "bytes": 628958,
+    "sha256": "465eec4afc759cb1c712caf05f7f263f9b0bca2ced257116a2b90f9afb445b0a"
+  },
+  {
+    "file": "id-proof.jpg",
+    "width": 1200,
+    "height": 1808,
+    "bytes": 539616,
+    "sha256": "4f0b9fb81369e161520c224ca0fd4062294e65afeaec973e1878b61e55912dd8"
+  },
+  {
+    "file": "consent.jpg",
+    "width": 1200,
+    "height": 1808,
+    "bytes": 433422,
+    "sha256": "b431d17bd601291316426f21fa86dbe01ea11e771ebceec95e457270e9e45900"
+  },
+  {
+    "file": "signature.jpg",
+    "width": 1200,
+    "height": 1790,
+    "bytes": 483983,
+    "sha256": "3d1cddacd6d8bf80efed83b5413249f27cc4dcb05d84d294ce1eed811186e08b"
+  },
+  {
+    "file": "lr.jpg",
+    "width": 1200,
+    "height": 1802,
+    "bytes": 542065,
+    "sha256": "452de57b61fd2e82cd1bc9ff72e45e73db7a1fbc4f021250b84242c395817ef7"
+  },
+  {
+    "file": "install-before.jpg",
+    "width": 1200,
+    "height": 1808,
+    "bytes": 676266,
+    "sha256": "86f5c8cae36cb8a2b221ffe63ae16cedbdc5188a61a2c2fc7da1089e7a3addb4"
+  },
+  {
+    "file": "install-during.jpg",
+    "width": 1200,
+    "height": 1808,
+    "bytes": 683669,
+    "sha256": "01647cc9d26864c4e4a57155305c717fafb5120d6db72a6402b53cde7db98a75"
+  },
+  {
+    "file": "serial-plate.jpg",
+    "width": 1200,
+    "height": 1808,
+    "bytes": 465150,
+    "sha256": "992333ba9d4f48b1a619b671e5250e8a01f87713cb95e926eef3a9785d0fcc98"
+  }
+]

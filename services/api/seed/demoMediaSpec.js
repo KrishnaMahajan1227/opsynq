@@ -1,0 +1,62 @@
+const path = require('path');
+
+const DEMO_MEDIA_ROOT = path.resolve(__dirname, '../demo-media');
+const DEMO_MEDIA_MANIFEST = path.join(DEMO_MEDIA_ROOT, 'cloudinary-manifest.json');
+
+// Exactly six beneficiary records are intentionally media-rich. The remaining
+// demo beneficiaries must keep clean empty states instead of fake/broken URLs.
+const DEMO_MEDIA_SPEC = {
+  'OPS-DM-001': {
+    stage: 'NEW',
+    reason: 'Early-stage record using the available registration portrait and fictional DEMO identity card.',
+    assets: ['beneficiary', 'id-proof'],
+  },
+  'OPS-DM-003': {
+    stage: 'PROCESSING',
+    reason: 'Processing-stage example using the available survey, consent, identity, signature and LR evidence.',
+    assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr'],
+  },
+  'OPS-DM-014': {
+    stage: 'PROCESSING',
+    reason: 'Installation-in-progress example using the available survey/material and installation evidence.',
+    assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr', 'install-before', 'install-during', 'serial-plate'],
+  },
+};
+
+const filenameFor = (beneficiaryId, kind) => path.join(beneficiaryId, `${kind}.jpg`);
+const requiredFiles = () => Object.entries(DEMO_MEDIA_SPEC).flatMap(([beneficiaryId, spec]) =>
+  spec.assets.map(kind => ({ beneficiaryId, kind, relativePath: filenameFor(beneficiaryId, kind), stage: spec.stage, reason: spec.reason }))
+);
+
+function validateManifest(data) {
+  const missing = [];
+  for (const row of requiredFiles()) {
+    const entry = data?.beneficiaries?.[row.beneficiaryId]?.assets?.[row.kind];
+    if (!entry?.url || !entry?.publicId || !/^https:\/\//i.test(String(entry.url))) missing.push(`${row.beneficiaryId}/${row.kind}`);
+  }
+  if (missing.length) throw new Error(`Demo media manifest is incomplete (${missing.length} asset(s)): ${missing.join(', ')}`);
+  return data;
+}
+
+function loadManifest({ required = false, validate = required } = {}) {
+  const fs = require('fs');
+  if (!fs.existsSync(DEMO_MEDIA_MANIFEST)) {
+    if (required) throw new Error(`Real demo media manifest not found: ${DEMO_MEDIA_MANIFEST}. Add the required JPGs and run npm run demo:media:upload first.`);
+    return { version: 1, beneficiaries: {} };
+  }
+  const data = JSON.parse(fs.readFileSync(DEMO_MEDIA_MANIFEST, 'utf8'));
+  if (!data || typeof data !== 'object' || !data.beneficiaries) throw new Error('Invalid demo media manifest. Re-run npm run demo:media:upload.');
+  return validate ? validateManifest(data) : data;
+}
+
+function asset(manifest, beneficiaryId, kind) {
+  return manifest?.beneficiaries?.[beneficiaryId]?.assets?.[kind] || null;
+}
+function assetUrl(manifest, beneficiaryId, kind) { return asset(manifest, beneficiaryId, kind)?.url || ''; }
+function assetPublicId(manifest, beneficiaryId, kind) { return asset(manifest, beneficiaryId, kind)?.publicId || ''; }
+function publicIdMap(manifest, beneficiaryId) {
+  const assets = manifest?.beneficiaries?.[beneficiaryId]?.assets || {};
+  return Object.fromEntries(Object.entries(assets).map(([key, value]) => [key, value?.publicId || '']).filter(([, value]) => value));
+}
+
+module.exports = { DEMO_MEDIA_ROOT, DEMO_MEDIA_MANIFEST, DEMO_MEDIA_SPEC, requiredFiles, validateManifest, loadManifest, asset, assetUrl, assetPublicId, publicIdMap };
