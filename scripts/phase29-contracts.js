@@ -3,6 +3,7 @@ const root=path.resolve(__dirname,'..');
 let failed=false;
 const check=(ok,msg)=>{if(ok)console.log(`✓ ${msg}`);else{failed=true;console.error(`✗ ${msg}`)}};
 const read=rel=>fs.readFileSync(path.join(root,rel),'utf8');
+const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name)]);
 const shell=read('apps/platform-web/src/layout/Shell.jsx');
 const ops=read('apps/platform-web/src/features/company/operations/OperationsPages.jsx');
 const opsController=read('services/api/controllers/platform/operationsController.js');
@@ -14,15 +15,14 @@ check(gov.includes('Notification details')&&gov.includes('Notification filters')
 check(((ops.includes('dashboard-kpis')&&ops.includes('Beneficiary execution funnel'))||(ops.includes('command-kpis')&&(ops.includes('Execution pipeline')||ops.includes('Execution mix'))))&&ops.includes('opsynq.dashboard.filter.'),'dashboard KPIs and stage rows are actionable');
 check(opsController.includes('beneficiaryStatus')&&opsController.includes('surveyStatus')&&opsController.includes('districts'),'dashboard API exposes beneficiary, survey and district execution aggregates');
 check(opsController.includes('req.query.district')&&opsController.includes('req.query.survey'),'beneficiary API supports dashboard drill-down filters');
-check(seed.includes("'OPS-DM-018'")&&!seed.includes("'OPS-DM-019'")&&seed.includes('const mediaSet=')&&seed.includes('installationBeforeUrl')&&seed.includes('completionCertificateUrl'),'scenario-rich 18-beneficiary demo seed is present');
+check(seed.includes("'OPS-DM-019'")&&seed.includes('fullyClearedDemo')&&seed.includes('const mediaSet=')&&seed.includes('installationBeforeUrl')&&seed.includes('completionCertificateUrl'),'scenario-rich 19-beneficiary demo seed with a fully cleared record is present');
 check(seed.includes('Survey backlog requires review')&&seed.includes('Final inspection queue updated'),'role-relevant demo notifications are seeded');
 check((css.includes('.dashboard-kpis')&&css.includes('.funnel-list')&&css.includes('.management-action-list'))||(css.includes('.command-kpis')&&css.includes('.command-panel')&&css.includes('.command-bars')),'restrained command dashboard styles are present');
 const mediaDir=path.join(root,'services/api/demo-media');
-const media=fs.readdirSync(mediaDir).filter(x=>/\.(png|jpe?g)$/i.test(x));
-check(media.length>=18,`demo media library contains ${media.length} distinct field images`);
+const media=walk(mediaDir).filter(x=>/\.(png|jpe?g)$/i.test(x));
+check(media.length>=33,`demo media library contains ${media.length} governed field-image slots`);
 const uiRoots=['apps/platform-web/src','apps/agency-web/src'];
 let hindi=[];
-const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):[path.join(d,e.name)]);
 for(const rel of uiRoots){for(const f of walk(path.join(root,rel)).filter(f=>/\.(js|jsx|css|html)$/.test(f))){const t=fs.readFileSync(f,'utf8');if(/[\u0900-\u097F]/.test(t))hindi.push(path.relative(root,f));}}
 check(!hindi.length,`user-facing frontend source is English-only${hindi.length?`: ${hindi.join(', ')}`:''}`);
 if(failed)process.exit(1);

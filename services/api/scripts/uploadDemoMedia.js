@@ -31,8 +31,8 @@ async function reachable(url) {
     const size = fs.statSync(full).size;
     if (size < 40 * 1024) throw new Error(`Demo media file looks too small/placeholder-like (<40KB): ${row.relativePath}`);
     const digest = sha256(full);
-    if (hashes.has(digest)) throw new Error(`Duplicate image bytes are not allowed: ${row.relativePath} duplicates ${hashes.get(digest)}`);
-    hashes.set(digest, row.relativePath);
+    if (hashes.has(digest) && !row.allowDuplicate) throw new Error(`Duplicate image bytes are not allowed unless explicitly approved for a governed evidence reuse: ${row.relativePath} duplicates ${hashes.get(digest)}`);
+    if (!hashes.has(digest)) hashes.set(digest, row.relativePath);
   }
   if (missing.length) throw new Error(`Missing ${missing.length} required real demo images:\n${missing.map(x => ` - ${x}`).join('\n')}`);
 

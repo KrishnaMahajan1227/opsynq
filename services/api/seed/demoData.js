@@ -2,7 +2,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
 
-const { validateTarget } = require('../scripts/demoDbGuard');
+const { validateTarget, cleanupKnownDemoRmsBootstrap } = require('../scripts/demoDbGuard');
 
 const Organization = require('../models/platform/Organization');
 const PlatformUser = require('../models/platform/PlatformUser');
@@ -116,8 +116,15 @@ async function requireLegacyUser(payload) {
 
 (async () => {
   try {
-    // Read-only safety gate first: seed is allowed only after a clean demo/dev target
-    // with the complete protected account + tenant set has been verified.
+    // Safety gate first. During an explicitly-authorized destructive demo reset,
+    // a running RMS dashboard can auto-recreate only its DEMO bootstrap provider/rules
+    // after wipe and before seed. Clean that narrow, verified race-condition state only;
+    // any other data still causes a hard block.
+    if (String(process.env.OPSYNQ_ALLOW_DESTRUCTIVE_DEMO_RESET || '') === 'YES') {
+      console.log('[demo-seed] guarded DEMO RMS bootstrap cleanup enabled');
+      const cleaned = await cleanupKnownDemoRmsBootstrap();
+      console.log(`[demo-seed] RMS bootstrap cleanup complete (providers=${cleaned.providers}, rules=${cleaned.rules})`);
+    }
     await validateTarget({ destructive: false, write: true, requireClean: true });
 
     const platformOrg = await requireOrganization({ code: 'OPSYNQ', type: 'PLATFORM' });
@@ -293,7 +300,7 @@ async function requireLegacyUser(payload) {
         name: 'Nagpur Rural Package',
         agencyId: nagpurAgency._id,
         geography: { country: 'India', state: 'Maharashtra', district: 'Nagpur', taluka: 'Hingna', villages: ['Wanadongri', 'Gumgaon', 'Dhamna'] },
-        assignedQuantity: 10,
+        assignedQuantity: 11,
         assignedAt: daysAgo(60),
         dueDate: daysFromNow(45),
         status: 'IN_PROGRESS',
@@ -334,8 +341,8 @@ async function requireLegacyUser(payload) {
         sourceFileName: 'nagpur-beneficiaries-demo.xlsx',
         fileHash: 'demo-nagpur-batch',
         status: 'COMPLETED',
-        totalRows: 10,
-        successRows: 10,
+        totalRows: 11,
+        successRows: 11,
         failedRows: 0,
         skippedRows: 0,
         uploadedBy: companyUsers.c1_admin._id,
@@ -385,6 +392,7 @@ async function requireLegacyUser(payload) {
       ['OPS-DM-016', 'Arun Shende', '9823011016', 'Nagpur', 'Ramtek', 'Mansar', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Closed', 'Completed', ''],
       ['OPS-DM-017', 'Kalpana Pawar', '9823011017', 'Nashik', 'Sinnar', 'Musalgaon', wpNashik, nashikAgency, companyOne, programOne, workOrderOne, 'Pending', 'Pending', 'Land document pending'],
       ['OPS-DM-018', 'Ganesh Jadhav', '9823011018', 'Nashik', 'Niphad', 'Lasalgaon', wpNashik, nashikAgency, companyOne, programOne, workOrderOne, 'Pending', 'In Progress', 'Water-source verification pending'],
+      ['OPS-DM-019', 'Madhukar Zade', '9823011019', 'Nagpur', 'Hingna', 'Gumgaon', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Closed', 'Completed', ''],
     ];
 
     const demoCoordinates={Nagpur:[21.1458,79.0882],Nashik:[19.9975,73.7898],Pune:[18.5204,73.8567]};
@@ -397,7 +405,7 @@ async function requireLegacyUser(payload) {
       'OPS-DM-001':'NEW','OPS-DM-009':'NEW','OPS-DM-012':'NEW',
       'OPS-DM-002':'SURVEY','OPS-DM-007':'SURVEY','OPS-DM-010':'SURVEY',
       'OPS-DM-003':'PROCESSING','OPS-DM-008':'PROCESSING','OPS-DM-011':'PROCESSING','OPS-DM-013':'PROCESSING','OPS-DM-014':'PROCESSING',
-      'OPS-DM-004':'COMPLETED','OPS-DM-005':'COMPLETED','OPS-DM-006':'COMPLETED','OPS-DM-015':'COMPLETED','OPS-DM-016':'COMPLETED',
+      'OPS-DM-004':'COMPLETED','OPS-DM-005':'COMPLETED','OPS-DM-006':'COMPLETED','OPS-DM-015':'COMPLETED','OPS-DM-016':'COMPLETED','OPS-DM-019':'COMPLETED',
       'OPS-DM-017':'ON_HOLD','OPS-DM-018':'REJECTED',
     };
     const farmers = [];
@@ -529,7 +537,9 @@ async function requireLegacyUser(payload) {
           installationDuringUrl: installationEvidenceAllowed ? mediaSet.during : '',
           serialPlateUrl: installationEvidenceAllowed ? mediaSet.serialPlate : '',
           completionCertificateUrl: hasInstalled ? mediaSet.completion : '',
-          serviceEvidenceUrl: isComplaintDemo ? mediaSet.service : ''
+          serviceEvidenceUrl: isComplaintDemo ? mediaSet.service : '',
+          fullyClearedDemo: beneficiaryId === 'OPS-DM-019',
+          closureSummary: beneficiaryId === 'OPS-DM-019' ? 'Survey, documents, material custody, installation, commissioning, required evidence and final inspection verified and closed.' : ''
         },
       });
       farmers.push({ farmer, wp, agency, company, program, workOrder, importBatch: wp.code === 'WP-NAG-001' ? importBatches[0] : wp.code === 'WP-NAS-001' ? importBatches[1] : importBatches[2] });
@@ -670,10 +680,10 @@ async function requireLegacyUser(payload) {
     ]);
 
     await InventoryBalance.insertMany([
-      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['PUMP-5HP']._id, onHand: 2, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
-      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['MOTOR-5HP']._id, onHand: 2, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
-      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['CTRL-SMART']._id, onHand: 2, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
-      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['PNL-550']._id, onHand: 10, allocated: 0, inTransit: 3, damaged: 0, lastMovementAt: daysAgo(1) },
+      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['PUMP-5HP']._id, onHand: 1, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
+      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['MOTOR-5HP']._id, onHand: 1, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
+      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['CTRL-SMART']._id, onHand: 1, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
+      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['PNL-550']._id, onHand: 9, allocated: 0, inTransit: 3, damaged: 0, lastMovementAt: daysAgo(1) },
       { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-AGY']._id, itemId: itemMap['PNL-550']._id, onHand: 2, allocated: 0, inTransit: 0, damaged: 0, lastMovementAt: daysAgo(2) },
       { companyId: companyTwo._id, warehouseId: warehouseMap['WH-PUN-CEN']._id, itemId: itemMap['PUMP-7HP']._id, onHand: 4, allocated: 0, inTransit: 0, damaged: 0, lastMovementAt: daysAgo(1) },
       { companyId: companyTwo._id, warehouseId: warehouseMap['WH-PUN-CEN']._id, itemId: itemMap['CTRL-FIELD']._id, onHand: 4, allocated: 0, inTransit: 0, damaged: 0, lastMovementAt: daysAgo(1) },
@@ -830,6 +840,7 @@ async function requireLegacyUser(payload) {
     await installAssetFor({ beneficiaryId: 'OPS-DM-006', serialPrefixList: ['P5-NAG-004', 'M5-NAG-004', 'C1-NAG-004', 'PNL-NAG-008'], technicianKey: 'nashik_tech_1' });
     await installAssetFor({ beneficiaryId: 'OPS-DM-015', serialPrefixList: ['P5-NAG-006', 'M5-NAG-006', 'C1-NAG-006', 'PNL-NAG-009'], technicianKey: 'nagpur_tech_1' });
     await installAssetFor({ beneficiaryId: 'OPS-DM-016', serialPrefixList: ['P5-NAG-007', 'M5-NAG-007', 'C1-NAG-007', 'PNL-NAG-010'], technicianKey: 'nagpur_tech_2' });
+    await installAssetFor({ beneficiaryId: 'OPS-DM-019', serialPrefixList: ['P5-NAG-008', 'M5-NAG-008', 'C1-NAG-008', 'PNL-NAG-011'], technicianKey: 'nagpur_tech_1' });
 
     await AssetServicePlan.insertMany(
       installedAssets.slice(0, 3).map((asset, index) => ({
@@ -916,6 +927,18 @@ async function requireLegacyUser(payload) {
         { itemId: itemMap['PNL-550']._id, quantity: 1, serialIds: [serialMap['PNL-NAG-010']._id] }
       ], status: 'CONSUMED', issuedAt: daysAgo(10), issuedBy: companyUsers.c1_inventory._id, notes: 'Closed installation material custody.'
     });
+    const issueSix = await MaterialIssue.create({
+      companyId: companyOne._id, agencyId: nagpurAgency._id, warehouseId: warehouseMap['WH-NAG-CEN']._id,
+      technicianUserId: agencyUsers.nagpur_tech_1._id, workPackageId: wpNagpur._id, farmerId: farmerLookup['OPS-DM-019'].farmer._id,
+      issueNo: 'MI-NAG-005', items: [
+        { itemId: itemMap['PUMP-5HP']._id, quantity: 1, serialIds: [serialMap['P5-NAG-008']._id] },
+        { itemId: itemMap['MOTOR-5HP']._id, quantity: 1, serialIds: [serialMap['M5-NAG-008']._id] },
+        { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-008']._id] },
+        { itemId: itemMap['PNL-550']._id, quantity: 1, serialIds: [serialMap['PNL-NAG-011']._id] }
+      ], status: 'CONSUMED', issuedAt: daysAgo(9), issuedBy: companyUsers.c1_inventory._id,
+      notes: 'Fully cleared demo installation material custody for OPS-DM-019.'
+    });
+
     const puneIssue = await MaterialIssue.create({
       companyId: companyTwo._id, agencyId: puneAgency._id, warehouseId: warehouseMap['WH-PUN-AGY']._id,
       technicianUserId: agencyUsers.pune_tech_1._id, workPackageId: wpPune._id, farmerId: farmerLookup['OPS-DM-011'].farmer._id,
@@ -937,7 +960,7 @@ async function requireLegacyUser(payload) {
       ...shipmentOne.items.map(line=>({companyId:companyOne._id,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'DISPATCH',fromWarehouseId:warehouseMap['WH-NAG-CEN']._id,toWarehouseId:warehouseMap['WH-NAG-AGY']._id,toOrganizationId:nagpurAgency._id,referenceType:'Shipment',referenceId:shipmentOne._id,performedBy:companyUsers.c1_logistics._id,reason:'Nagpur agency delivery',occurredAt:daysAgo(18)})),
       ...shipmentTwo.items.map(line=>({companyId:companyOne._id,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'DISPATCH',fromWarehouseId:warehouseMap['WH-NAG-CEN']._id,toWarehouseId:warehouseMap['WH-NAS-AGY']._id,toOrganizationId:nashikAgency._id,referenceType:'Shipment',referenceId:shipmentTwo._id,performedBy:companyUsers.c1_logistics._id,reason:'Nashik agency dispatch',occurredAt:daysAgo(3)})),
       ...shipmentThree.items.map(line=>({companyId:companyTwo._id,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'DISPATCH',fromWarehouseId:warehouseMap['WH-PUN-CEN']._id,toWarehouseId:warehouseMap['WH-PUN-AGY']._id,toOrganizationId:puneAgency._id,referenceType:'Shipment',referenceId:shipmentThree._id,performedBy:companyUsers.c2_inventory._id,reason:'Pune agency delivery',occurredAt:daysAgo(14)})),
-      ...[issueOne,issueTwo,issueThree,issueFour,issueFive,puneIssue].flatMap(issue=>issue.items.map(line=>({companyId:issue.companyId,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'ISSUE',fromWarehouseId:issue.warehouseId,toOrganizationId:issue.agencyId,referenceType:'MaterialIssue',referenceId:issue._id,performedBy:issue.issuedBy,reason:`Material issue ${issue.issueNo}`,occurredAt:issue.issuedAt}))),
+      ...[issueOne,issueTwo,issueThree,issueFour,issueFive,issueSix,puneIssue].flatMap(issue=>issue.items.map(line=>({companyId:issue.companyId,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'ISSUE',fromWarehouseId:issue.warehouseId,toOrganizationId:issue.agencyId,referenceType:'MaterialIssue',referenceId:issue._id,performedBy:issue.issuedBy,reason:`Material issue ${issue.issueNo}`,occurredAt:issue.issuedAt}))),
       ...installedAssets.map(asset=>({companyId:asset.companyId,itemId:asset.itemId,serialIds:[asset.inventorySerialId],quantity:1,movementType:'INSTALL',toOrganizationId:asset.agencyId,referenceType:'InstalledAsset',referenceId:asset._id,performedBy:asset.companyId.equals(companyTwo._id)?companyUsers.c2_inventory._id:companyUsers.c1_inventory._id,reason:'Installed at beneficiary site',occurredAt:asset.installedAt}))
     ];
     await StockMovement.insertMany(stockMovements);
@@ -1052,6 +1075,26 @@ async function requireLegacyUser(payload) {
         programId: programOne._id,
         workPackageId: wpNagpur._id,
         agencyId: nagpurAgency._id,
+        farmerId: farmerLookup['OPS-DM-019'].farmer._id,
+        recordNo: 'CMPREC-019',
+        type: 'FINAL_INSPECTION',
+        status: 'PASS',
+        items: [
+          { key: 'site_clean', label: 'Site condition', status: 'PASS', checkedAt: daysAgo(3) },
+          { key: 'asset_serials', label: 'Serial capture', status: 'PASS', checkedAt: daysAgo(3), evidence: [demoMedia('OPS-DM-019','serial-plate')].filter(Boolean) },
+          { key: 'commissioning', label: 'Commissioning proof', status: 'PASS', checkedAt: daysAgo(3), evidence: [demoMedia('OPS-DM-019','install-after')].filter(Boolean) },
+          { key: 'beneficiary_handover', label: 'Beneficiary handover and acknowledgement', status: 'PASS', checkedAt: daysAgo(3), evidence: [demoMedia('OPS-DM-019','final-beneficiary')].filter(Boolean) },
+        ],
+        geo: { latitude: 21.1458, longitude: 79.0882, accuracy: 9, capturedAt: daysAgo(3) },
+        reviewedBy: companyUsers.c1_quality._id,
+        reviewedAt: daysAgo(3),
+        notes: 'Fully cleared demo record: survey, material, installation, commissioning, final inspection and handover all passed.',
+      },
+      {
+        companyId: companyOne._id,
+        programId: programOne._id,
+        workPackageId: wpNagpur._id,
+        agencyId: nagpurAgency._id,
         farmerId: farmerLookup['OPS-DM-016'].farmer._id,
         recordNo: 'CMPREC-001',
         type: 'FINAL_INSPECTION',
@@ -1124,6 +1167,8 @@ async function requireLegacyUser(payload) {
 
     await DocumentRecord.insertMany([
       { companyId: companyOne._id, category: 'BENEFICIARY', title: 'Beneficiary consent - Lata Gaikwad', documentNo: 'CONS-OPS-DM-003', entityType: 'Farmer', entityId: farmerLookup['OPS-DM-003'].farmer._id, fileUrl: demoMedia('OPS-DM-003','consent'), publicId: publicIdMap(DEMO_MEDIA,'OPS-DM-003').consent, fileName: 'OPS-DM-003-consent.jpg', mimeType: 'image/jpeg', uploadedBy: companyUsers.c1_ops._id, notes: 'Photorealistic AI-generated DEMO consent-document image linked from the governed media bundle.' },
+      { companyId: companyOne._id, category: 'BENEFICIARY', title: 'Beneficiary consent - Madhukar Zade', documentNo: 'CONS-OPS-DM-019', entityType: 'Farmer', entityId: farmerLookup['OPS-DM-019'].farmer._id, fileUrl: demoMedia('OPS-DM-019','consent'), publicId: publicIdMap(DEMO_MEDIA,'OPS-DM-019').consent, fileName: 'OPS-DM-019-consent.jpg', mimeType: 'image/jpeg', uploadedBy: companyUsers.c1_ops._id, notes: 'Verified demo consent evidence for the fully cleared beneficiary record.' },
+      { companyId: companyOne._id, category: 'BENEFICIARY', title: 'Identity proof - Madhukar Zade', documentNo: 'ID-OPS-DM-019', entityType: 'Farmer', entityId: farmerLookup['OPS-DM-019'].farmer._id, fileUrl: demoMedia('OPS-DM-019','id-proof'), publicId: publicIdMap(DEMO_MEDIA,'OPS-DM-019')['id-proof'], fileName: 'OPS-DM-019-id-proof.jpg', mimeType: 'image/jpeg', uploadedBy: companyUsers.c1_ops._id, notes: 'Fictional SAMPLE/DEMO identity evidence used only for product demonstration.' },
     ]);
 
     await SLARule.insertMany([
@@ -1177,6 +1222,12 @@ async function requireLegacyUser(payload) {
     addEvidence('OPS-DM-016','mounting_structure','install-during',{techKey:'nagpur_tech_2'});
     addEvidence('OPS-DM-016','farmer_with_system','final-beneficiary',{techKey:'nagpur_tech_2'});
     addEvidence('OPS-DM-016','commissioning_proof','install-after',{techKey:'nagpur_tech_2'});
+    // Fully cleared end-to-end record: every configured required evidence item is VERIFIED.
+    addEvidence('OPS-DM-019','site_photo','survey-site',{techKey:'nagpur_tech_1'});
+    addEvidence('OPS-DM-019','farmer_consent','consent',{techKey:'nagpur_tech_1'});
+    addEvidence('OPS-DM-019','mounting_structure','install-during',{techKey:'nagpur_tech_1'});
+    addEvidence('OPS-DM-019','farmer_with_system','final-beneficiary',{techKey:'nagpur_tech_1'});
+    addEvidence('OPS-DM-019','commissioning_proof','install-after',{techKey:'nagpur_tech_1'});
     await EvidenceSubmission.insertMany(evidenceRows);
 
 
@@ -1204,7 +1255,7 @@ async function requireLegacyUser(payload) {
     }
     await AuditLog.insertMany([
       ...beneficiaryAuditRows,
-      { companyId: companyOne._id, organizationId: companyOne._id, actorId: companyUsers.c1_admin._id, actorType: 'PlatformUser', action: 'DEMO_SEED_COMPLETED', entityType: 'Organization', entityId: companyOne._id, after: { farmers: 15, workPackages: 2, shipments: 2, evidenceSubmissions: evidenceRows.length } },
+      { companyId: companyOne._id, organizationId: companyOne._id, actorId: companyUsers.c1_admin._id, actorType: 'PlatformUser', action: 'DEMO_SEED_COMPLETED', entityType: 'Organization', entityId: companyOne._id, after: { farmers: 16, workPackages: 2, shipments: 2, evidenceSubmissions: evidenceRows.length } },
       { companyId: companyTwo._id, organizationId: companyTwo._id, actorId: companyUsers.c2_admin._id, actorType: 'PlatformUser', action: 'DEMO_SEED_COMPLETED', entityType: 'Organization', entityId: companyTwo._id, after: { farmers: 3, workPackages: 1, shipments: 1, evidenceSubmissions: 0 } },
     ]);
 

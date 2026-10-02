@@ -16,6 +16,7 @@ const AgencyUserLink = require('../models/platform/AgencyUserLink');
 const EvidenceSubmission = require('../models/platform/EvidenceSubmission');
 const DocumentRecord = require('../models/platform/DocumentRecord');
 const AuditLog = require('../models/platform/AuditLog');
+const ComplianceRecord = require('../models/platform/ComplianceRecord');
 
 const fail = msg => { throw new Error(msg); };
 const ok = msg => console.log(`✓ ${msg}`);
@@ -96,20 +97,20 @@ async function verifyUrls(urls) {
   }
 
   const farmers = await Farmer.find({ beneficiaryId: /^OPS-DM-/ }).lean();
-  if (farmers.length !== 18) fail(`Expected exactly 18 demo beneficiaries, found ${farmers.length}`);
+  if (farmers.length !== 19) fail(`Expected exactly 19 demo beneficiaries, found ${farmers.length}`);
   const stageCounts = farmers.reduce((acc, farmer) => {
     const stage = farmer.customFields?.demoStageGroup || 'MISSING';
     acc[stage] = (acc[stage] || 0) + 1;
     return acc;
   }, {});
-  const expectedStages = { NEW: 3, SURVEY: 3, PROCESSING: 5, COMPLETED: 5, ON_HOLD: 1, REJECTED: 1 };
+  const expectedStages = { NEW: 3, SURVEY: 3, PROCESSING: 5, COMPLETED: 6, ON_HOLD: 1, REJECTED: 1 };
   for (const [stage, count] of Object.entries(expectedStages)) if (stageCounts[stage] !== count) fail(`Lifecycle count mismatch ${stage}: ${stageCounts[stage] || 0} != ${count}`);
-  ok('Exactly 18 beneficiaries with lifecycle split 3/3/5/5/1/1');
+  ok('Exactly 19 beneficiaries with lifecycle split 3/3/5/6/1/1');
 
   const farmerIds = farmers.map(x => x._id);
   const farmerSet = new Set(farmerIds.map(id));
   const contexts = await BeneficiaryContext.find({ farmerId: { $in: farmerIds } }).lean();
-  if (contexts.length !== 18 || contexts.some(x => !farmerSet.has(id(x.farmerId)))) fail('Beneficiary context count/orphan check failed');
+  if (contexts.length !== 19 || contexts.some(x => !farmerSet.has(id(x.farmerId)))) fail('Beneficiary context count/orphan check failed');
   const orgs = await Organization.find({ _id: { $in: [...new Set(contexts.flatMap(x => [id(x.companyId), id(x.agencyId)]))] } }).lean();
   const orgMap = new Map(orgs.map(x => [id(x._id), x]));
   for (const context of contexts) {
@@ -183,7 +184,7 @@ async function verifyUrls(urls) {
 
   const manifest = loadManifest({ required: true });
   const selectedIds = Object.keys(DEMO_MEDIA_SPEC).sort();
-  if (selectedIds.length !== 3) fail(`Expected exactly three media-rich beneficiaries in this packaged image set, found ${selectedIds.length}`);
+  if (selectedIds.length !== 4) fail(`Expected exactly four media-rich beneficiaries in this packaged image set, found ${selectedIds.length}`);
   const manifestUrls = new Set(requiredFiles().map(row => manifest.beneficiaries[row.beneficiaryId].assets[row.kind].url));
   const manifestPublicIds = new Set(requiredFiles().map(row => manifest.beneficiaries[row.beneficiaryId].assets[row.kind].publicId));
   if (manifestUrls.size !== requiredFiles().length || manifestPublicIds.size !== requiredFiles().length) fail('Duplicate Cloudinary URL/public_id in media manifest');
@@ -204,7 +205,20 @@ async function verifyUrls(urls) {
   const docs = await DocumentRecord.find({ companyId: { $in: companyIds } }).lean();
   for (const doc of docs.filter(x => x.fileUrl)) if (!doc.publicId || !manifestUrls.has(doc.fileUrl) || !manifestPublicIds.has(doc.publicId)) fail(`DocumentRecord Cloudinary linkage incomplete: ${doc._id}`);
   await verifyUrls([...manifestUrls]);
-  ok(`Three selected beneficiaries use ${manifestUrls.size} unique Cloudinary images; all URLs return HTTP 200/206`);
+  ok(`Four selected beneficiaries use ${manifestUrls.size} governed Cloudinary image slots; all URLs return HTTP 200/206`);
+
+  const cleared = farmers.find(f => f.beneficiaryId === 'OPS-DM-019');
+  if (!cleared || cleared.applicationStatus !== 'Closed' || cleared.inspectionStatus !== 'Completed' || cleared.customFields?.fullyClearedDemo !== true) fail('OPS-DM-019 is not marked as the fully cleared closed record');
+  const clearedAssets = assets.filter(a => id(a.farmerId) === id(cleared._id));
+  if (clearedAssets.length !== 4) fail(`OPS-DM-019 installed asset count mismatch: ${clearedAssets.length} != 4`);
+  const clearedIssue = issues.find(i => id(i.farmerId) === id(cleared._id));
+  if (!clearedIssue || clearedIssue.status !== 'CONSUMED') fail('OPS-DM-019 material issue is not fully consumed');
+  const clearedEvidence = evidence.filter(e => id(e.farmerId) === id(cleared._id));
+  const requiredClearedEvidence = ['SURVEY','INSTALLATION','FINAL_INSPECTION'];
+  if (clearedEvidence.length < 5 || requiredClearedEvidence.some(stage => !clearedEvidence.some(e => e.stage === stage && e.status === 'VERIFIED'))) fail('OPS-DM-019 required evidence is not fully verified across all stages');
+  const clearedCompliance = await ComplianceRecord.findOne({ farmerId: cleared._id, type: 'FINAL_INSPECTION' }).lean();
+  if (!clearedCompliance || clearedCompliance.status !== 'PASS' || (clearedCompliance.items || []).some(item => item.status !== 'PASS')) fail('OPS-DM-019 final inspection/compliance is not fully PASS');
+  ok('OPS-DM-019 is fully cleared: closed lifecycle, consumed material custody, installed assets, verified stage evidence and PASS final inspection');
 
   for (const farmer of farmers) {
     const logs = await AuditLog.countDocuments({ entityType: 'Farmer', entityId: farmer._id, companyId: contexts.find(c => id(c.farmerId) === id(farmer._id))?.companyId });

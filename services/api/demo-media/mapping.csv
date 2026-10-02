@@ -1,4 +1,4 @@
-beneficiary_id,stage,asset_kind,relative_path,reason
+beneficiary_id,stage,category,file,notes
 "OPS-DM-001","NEW","beneficiary","OPS-DM-001/beneficiary.jpg","Early-stage record using the available registration portrait and fictional DEMO identity card."
 "OPS-DM-001","NEW","id-proof","OPS-DM-001/id-proof.jpg","Early-stage record using the available registration portrait and fictional DEMO identity card."
 "OPS-DM-003","PROCESSING","beneficiary","OPS-DM-003/beneficiary.jpg","Processing-stage example using the available survey, consent, identity, signature and LR evidence."
@@ -18,3 +18,17 @@ beneficiary_id,stage,asset_kind,relative_path,reason
 "OPS-DM-014","PROCESSING","install-before","OPS-DM-014/install-before.jpg","Installation-in-progress example using the available survey/material and installation evidence."
 "OPS-DM-014","PROCESSING","install-during","OPS-DM-014/install-during.jpg","Installation-in-progress example using the available survey/material and installation evidence."
 "OPS-DM-014","PROCESSING","serial-plate","OPS-DM-014/serial-plate.jpg","Installation-in-progress example using the available survey/material and installation evidence."
+"OPS-DM-019","COMPLETED","beneficiary","OPS-DM-019/beneficiary.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","survey-site","OPS-DM-019/survey-site.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","water-source","OPS-DM-019/water-source.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","id-proof","OPS-DM-019/id-proof.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","consent","OPS-DM-019/consent.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","signature","OPS-DM-019/signature.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","lr","OPS-DM-019/lr.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","install-before","OPS-DM-019/install-before.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","install-during","OPS-DM-019/install-during.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","install-after","OPS-DM-019/install-after.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","serial-plate","OPS-DM-019/serial-plate.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","final-beneficiary","OPS-DM-019/final-beneficiary.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","final-signature","OPS-DM-019/final-signature.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."
+"OPS-DM-019","COMPLETED","surveyor-signature","OPS-DM-019/surveyor-signature.jpg","Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence."

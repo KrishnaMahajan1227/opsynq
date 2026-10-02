@@ -68,7 +68,7 @@ Agency users are routed to Agency Operations through the existing one-time hando
 ## Demo data summary
 
 - 2 demo companies and 3 linked demo agencies.
-- Exactly 18 beneficiaries: 10 Nagpur, 5 Nashik, 3 Pune.
+- Exactly 19 beneficiaries: 11 Nagpur, 5 Nashik, 3 Pune.
 - 3 work packages with assigned quantities matching beneficiary counts.
 - Lifecycle coverage from new/pending through survey, dispatch, installation, complaint, closed, plus ON_HOLD and REJECTED edge demonstrations.
 - Serialized inventory with available, agency-stock, issued and installed states tied to beneficiaries/technicians.

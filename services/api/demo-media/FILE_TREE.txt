@@ -17,3 +17,17 @@ OPS-DM-014/lr.jpg
 OPS-DM-014/install-before.jpg
 OPS-DM-014/install-during.jpg
 OPS-DM-014/serial-plate.jpg
+OPS-DM-019/beneficiary.jpg
+OPS-DM-019/survey-site.jpg
+OPS-DM-019/water-source.jpg
+OPS-DM-019/id-proof.jpg
+OPS-DM-019/consent.jpg
+OPS-DM-019/signature.jpg
+OPS-DM-019/lr.jpg
+OPS-DM-019/install-before.jpg
+OPS-DM-019/install-during.jpg
+OPS-DM-019/install-after.jpg
+OPS-DM-019/serial-plate.jpg
+OPS-DM-019/final-beneficiary.jpg
+OPS-DM-019/final-signature.jpg
+OPS-DM-019/surveyor-signature.jpg

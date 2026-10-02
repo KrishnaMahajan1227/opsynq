@@ -72,6 +72,27 @@ async function validateTarget({destructive=false,write=false,requireClean=false}
  }
  return{id,protectedState,nonProtectedCounts};
 }
+
+async function cleanupKnownDemoRmsBootstrap(){
+ const id=assertStaticSafety({destructive:true,write:true});
+ if(mongoose.connection.readyState!==1)await mongoose.connect(id.raw,{dbName:id.dbName,serverSelectionTimeoutMS:12000,socketTimeoutMS:45000,maxPoolSize:10});
+ const protectedState=await validateAccounts();
+ const counts=await scanNonProtectedData();
+ const allowed=new Set(['rmsproviders','rmsruleconfigs']);
+ const unexpected=Object.keys(counts).filter(name=>!allowed.has(name));
+ if(unexpected.length)throw new Error(`Refusing RMS bootstrap cleanup: other non-protected data exists (${unexpected.map(name=>`${name}=${counts[name]}`).join(', ')}). No data was changed.`);
+ const db=mongoose.connection.db;
+ const companyIds=new Set(protectedState.orgs.filter(o=>String(o.type)==='COMPANY').map(o=>String(o._id)));
+ const providers=await db.collection('rmsproviders').find({}).toArray();
+ const rules=await db.collection('rmsruleconfigs').find({}).toArray();
+ const invalidProviders=providers.filter(p=>!companyIds.has(String(p.companyId||''))||String(p.code||'')!=='DEMO-RMS'||String(p.type||'')!=='DEMO_SIMULATOR');
+ const invalidRules=rules.filter(r=>!companyIds.has(String(r.companyId||'')));
+ if(invalidProviders.length||invalidRules.length)throw new Error(`Refusing RMS bootstrap cleanup: unexpected RMS configuration exists (providers=${invalidProviders.length}, rules=${invalidRules.length}). No data was changed.`);
+ if(providers.length){const r=await db.collection('rmsproviders').deleteMany({_id:{$in:providers.map(x=>x._id)}});console.log(`cleaned auto-recreated demo RMS providers: ${r.deletedCount}`)}
+ if(rules.length){const r=await db.collection('rmsruleconfigs').deleteMany({_id:{$in:rules.map(x=>x._id)}});console.log(`cleaned auto-recreated demo RMS rule configs: ${r.deletedCount}`)}
+ return{providers:providers.length,rules:rules.length};
+}
+
 function accountSnapshot(state){
  const hash=value=>crypto.createHash('sha256').update(String(value)).digest('hex');
  const norm=(realm,x)=>({
@@ -82,4 +103,4 @@ function accountSnapshot(state){
  return[...state.platform.map(x=>norm('platform',x)),...state.legacy.map(x=>norm('agency',x))];
 }
 
-module.exports={DEMO_PLATFORM_MOBILES,DEMO_AGENCY_MOBILES,DEMO_ORG_CODES,dbIdentity,assertStaticSafety,connect,validateAccounts,scanNonProtectedData,validateTarget,accountSnapshot};
+module.exports={DEMO_PLATFORM_MOBILES,DEMO_AGENCY_MOBILES,DEMO_ORG_CODES,dbIdentity,assertStaticSafety,connect,validateAccounts,scanNonProtectedData,validateTarget,cleanupKnownDemoRmsBootstrap,accountSnapshot};

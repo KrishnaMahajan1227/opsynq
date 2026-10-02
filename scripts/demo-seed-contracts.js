@@ -14,14 +14,16 @@ must(seed.includes('requirePlatformUser') && seed.includes('requireLegacyUser'),
 must(!seed.includes('bcrypt.hash') && !seed.includes('DEMO_DEFAULT_PASSWORD'), 'Seed does not generate/reset demo passwords');
 must(seed.includes("validateTarget({ destructive: false, write: true, requireClean: true })"), 'Seed requires clean DB plus explicit demo/dev write classification');
 must(guard.includes("(write||destructive)&&!['demo','dev','test'].includes(purpose)"), 'DB guard blocks writes unless target is explicitly demo/dev/test');
+must(guard.includes('cleanupKnownDemoRmsBootstrap') && guard.includes("DEMO-RMS") && guard.includes("DEMO_SIMULATOR"), 'Seed guard safely handles only auto-recreated demo RMS bootstrap docs during authorized reset');
+must(seed.includes('cleanupKnownDemoRmsBootstrap()'), 'Seed invokes guarded RMS bootstrap race cleanup before clean-state validation');
 
-for (let i = 1; i <= 18; i += 1) must(seed.includes(`OPS-DM-${String(i).padStart(3, '0')}`), `Beneficiary OPS-DM-${String(i).padStart(3, '0')} is present`);
-for (let i = 19; i <= 24; i += 1) must(!seed.includes(`OPS-DM-${String(i).padStart(3, '0')}`), `Legacy beneficiary OPS-DM-${String(i).padStart(3, '0')} is absent`);
+for (let i = 1; i <= 19; i += 1) must(seed.includes(`OPS-DM-${String(i).padStart(3, '0')}`), `Beneficiary OPS-DM-${String(i).padStart(3, '0')} is present`);
+for (let i = 20; i <= 24; i += 1) must(!seed.includes(`OPS-DM-${String(i).padStart(3, '0')}`), `Legacy beneficiary OPS-DM-${String(i).padStart(3, '0')} is absent`);
 for (const token of ["'OPS-DM-001':'NEW'", "'OPS-DM-002':'SURVEY'", "'OPS-DM-003':'PROCESSING'", "'OPS-DM-004':'COMPLETED'", "'OPS-DM-017':'ON_HOLD'", "'OPS-DM-018':'REJECTED'"]) must(seed.includes(token), `Lifecycle contract ${token} exists`);
 
 const selected = Object.keys(DEMO_MEDIA_SPEC);
-must(selected.length === 3, 'Exactly three beneficiaries are media-rich in the packaged image set');
-must(requiredFiles().length === 19, 'Exactly 19 unique packaged image slots are required');
+must(selected.length === 4, 'Exactly four beneficiaries are media-rich in the packaged image set');
+must(requiredFiles().length === 33, 'Exactly 33 governed packaged image slots are required, including the fully cleared record');
 for (const row of requiredFiles()) {
   const folder = path.join(root, 'services/api/demo-media', row.beneficiaryId);
   must(fs.existsSync(folder), `Media folder exists: ${row.beneficiaryId}`);
@@ -30,5 +32,5 @@ must(!seed.includes('/demo-media/') && !seed.includes('.png'), 'Seed contains no
 must(uploader.includes('Duplicate image bytes are not allowed') && uploader.includes('40 * 1024') && uploader.includes('HTTP 200/206'), 'Uploader rejects duplicates/placeholders and verifies reachable URLs');
 
 const mapping = fs.readFileSync(path.join(root, 'services/api/demo-media/mapping.csv'), 'utf8').trim().split(/\r?\n/);
-must(mapping.length === 20, 'Media mapping table has one header plus 19 assets');
+must(mapping.length === 34, 'Media mapping table has one header plus 33 assets');
 console.log('✓ Demo seed source contracts passed');

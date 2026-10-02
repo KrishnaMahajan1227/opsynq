@@ -1,14 +1,10 @@
-# Final packaged demo media
+# Demo media
 
-This folder contains the photorealistic AI-generated demo images currently available from the image-generation batches in this chat.
+This package contains 33 governed image slots across 4 media-rich beneficiaries.
 
-Packaged beneficiaries:
-- OPS-DM-001: 2 images
-- OPS-DM-003: 7 images
-- OPS-DM-014: 10 images
+- OPS-DM-001: 2 slots
+- OPS-DM-003: 7 slots
+- OPS-DM-014: 10 slots
+- OPS-DM-019: 14 slots (fully cleared end-to-end record; 10 existing source photographs reused across a few logical evidence slots)
 
-Total: 19 unique JPG files.
-
-The remaining demo beneficiaries intentionally have no linked media in this delivery, so the UI should show its normal empty state rather than a broken URL.
-
-Important: these are realistic AI-generated demo images, not photographs of real beneficiaries. Any identity/consent/LR-style document is fictional and marked DEMO/SAMPLE. `npm run demo:media:upload` uploads these files through the existing Cloudinary integration and verifies each returned URL before writing `cloudinary-manifest.json`.
+Run `npm run demo:media:upload` before seeding. Cloudinary URLs/public_ids are written to `cloudinary-manifest.json`.

@@ -9,7 +9,7 @@
 
 ## Lifecycle distribution
 
-Exactly 18 beneficiaries: 3 NEW, 3 SURVEY, 5 PROCESSING, 5 COMPLETED/CLOSED, 1 ON_HOLD, 1 REJECTED.
+Exactly 19 beneficiaries: 3 NEW, 3 SURVEY, 5 PROCESSING, 6 COMPLETED/CLOSED, 1 ON_HOLD, 1 REJECTED.
 
 | ID | Beneficiary | Stage | Agency | Technician | Images |
 |---|---|---|---|---|---:|

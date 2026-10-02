@@ -22,9 +22,9 @@ npm run demo:db-check
 npm run demo:seed-ready
 ```
 
-`demo:db-check` is read-only. Unexpected accounts, organizations, mappings or business data block the operation; nothing is automatically deleted. `demo:seed-ready` uploads the 58 real assets to Cloudinary, verifies their URLs, seeds exactly 18 beneficiaries, then runs the database sanity checks. Existing credentials are required and are never created/reset by this seed.
+`demo:db-check` is read-only. Unexpected accounts, organizations, mappings or business data block the operation; nothing is automatically deleted. `demo:seed-ready` uploads the packaged governed demo images to Cloudinary, verifies their URLs, seeds exactly 19 beneficiaries, then runs the database sanity checks. Existing credentials are required and are never created/reset by this seed.
 
-The seeded demo includes two companies, three agencies, Company users across multiple roles, Agency Superadmin/Admin/Technician users, 18 beneficiaries, work packages, inventory, serialized hardware, procurement/GRN, shipments, installed assets, service cases, claims, PDI/insurance/compliance, audit data and six media-rich beneficiary records (58 unique real-photo/document slots).
+The seeded demo includes two companies, three agencies, Company users across multiple roles, Agency Superadmin/Admin/Technician users, 19 beneficiaries, work packages, inventory, serialized hardware, procurement/GRN, shipments, installed assets, service cases, claims, PDI/insurance/compliance, audit data and four media-rich beneficiary records (33 governed photorealistic AI-generated demo image slots).
 
 ## Start the demo
 

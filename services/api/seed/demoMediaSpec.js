@@ -3,8 +3,11 @@ const path = require('path');
 const DEMO_MEDIA_ROOT = path.resolve(__dirname, '../demo-media');
 const DEMO_MEDIA_MANIFEST = path.join(DEMO_MEDIA_ROOT, 'cloudinary-manifest.json');
 
-// Exactly six beneficiary records are intentionally media-rich. The remaining
-// demo beneficiaries must keep clean empty states instead of fake/broken URLs.
+// Four beneficiary records are intentionally media-rich. The remaining
+// demo beneficiaries keep clean empty states instead of fake/broken URLs.
+// OPS-DM-019 is a fully cleared end-to-end demo record built only from images
+// already generated in this project conversation; a few logical evidence slots
+// intentionally reuse the same underlying photograph.
 const DEMO_MEDIA_SPEC = {
   'OPS-DM-001': {
     stage: 'NEW',
@@ -20,12 +23,17 @@ const DEMO_MEDIA_SPEC = {
     stage: 'PROCESSING',
     reason: 'Installation-in-progress example using the available survey/material and installation evidence.',
     assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr', 'install-before', 'install-during', 'serial-plate'],
+  },  'OPS-DM-019': {
+    stage: 'COMPLETED',
+    reason: 'Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence.',
+    assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr', 'install-before', 'install-during', 'install-after', 'serial-plate', 'final-beneficiary', 'final-signature', 'surveyor-signature'],
+    allowDuplicateAssets: ['install-after', 'final-beneficiary', 'final-signature', 'surveyor-signature'],
   },
 };
 
 const filenameFor = (beneficiaryId, kind) => path.join(beneficiaryId, `${kind}.jpg`);
 const requiredFiles = () => Object.entries(DEMO_MEDIA_SPEC).flatMap(([beneficiaryId, spec]) =>
-  spec.assets.map(kind => ({ beneficiaryId, kind, relativePath: filenameFor(beneficiaryId, kind), stage: spec.stage, reason: spec.reason }))
+  spec.assets.map(kind => ({ beneficiaryId, kind, relativePath: filenameFor(beneficiaryId, kind), stage: spec.stage, reason: spec.reason, allowDuplicate: (spec.allowDuplicateAssets || []).includes(kind) }))
 );
 
 function validateManifest(data) {
