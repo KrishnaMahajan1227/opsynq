@@ -7,7 +7,7 @@ const has=(p,s,label)=>{assert(read(p).includes(s),`${label} missing in ${p}`);c
 has('apps/platform-web/src/components/common.jsx','screen-header','compact professional page header');
 has('apps/platform-web/src/layout/Shell.jsx','context-back','contextual back navigation');
 has('apps/platform-web/src/layout/Shell.jsx','Back to {contextBack.label}','back destination label');
-has('apps/platform-web/src/layout/moduleRegistry.jsx',"label:'Program Delivery'",'professional delivery navigation label');
+has('apps/platform-web/src/layout/moduleRegistry.jsx',"label:'Agency Operations'",'professional delivery navigation label');
 has('apps/platform-web/src/layout/moduleRegistry.jsx',"label:'Supply Operations'",'professional supply navigation label');
 has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','supply-stage-rail','supply operating flow');
 has('apps/platform-web/src/features/company/inventory/SupplyChainWorkspace.jsx','Open the area where work happens','progressive supply disclosure');

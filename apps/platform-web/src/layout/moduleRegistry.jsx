@@ -71,12 +71,13 @@ export const companyGroups=[
   {id:'intelligence',label:'AI Operations',icon:BrainCircuit,items:[
     item('ai-operations','Operations Intelligence',BrainCircuit,'automated monitoring proposals decision support risk recommendations approvals')
   ]},
-  {id:'delivery',label:'Program Delivery',icon:BriefcaseBusiness,items:[
+  {id:'delivery',label:'Agency Operations',icon:BriefcaseBusiness,items:[
     item('programs','Delivery Portfolio',Layers3,'program contract loa work order work package delivery hierarchy scheme project','operations.write'),
     item('agencies','Agencies',UsersRound,'agency implementation partner','operations.write'),
     item('beneficiary-records','Beneficiary Records',UsersRound,'farmer beneficiary records details photos status'),
     item('geo-operations','Geo Operations',MapPin,'map geography sites survey installation complaint location geotag'),
-    item('beneficiary-imports','Beneficiary Imports',UploadCloud,'farmer beneficiary excel bulk import','operations.write')
+    item('beneficiary-imports','Beneficiary Imports',UploadCloud,'farmer beneficiary excel bulk import','operations.write'),
+    item('agency-performance','Agency Performance',BarChart3,'agency scorecard performance survey coverage completion exceptions')
   ]},
   {id:'supply-chain',label:'Supply Operations',icon:Truck,items:[
     item('supply-chain','Supply Chain Control',Truck,'procurement inventory warehouse dispatch shipment driver vehicle agency technician material custody control tower'),
@@ -109,7 +110,6 @@ export const companyGroups=[
     item('sla','SLA Rules',ClipboardCheck,'sla due delayed breach','assurance.write'),
     item('financial-control','Financial Control',WalletCards,'company finance procurement commitment receivables agency commercial'),
     item('claims','Claims & Receivables',Building2,'claim payment receivable commercial','finance.write'),
-    item('agency-performance','Agency Performance',BarChart3,'agency scorecard performance'),
     item('compliance','Quality & Compliance',ShieldCheck,'inspection compliance claim ready quality','assurance.write'),
     item('approval-center','Approval Center',CheckCircle2,'approval exception waiver','approvals.decide'),
     item('evidence-control','Evidence Control',ClipboardCheck,'survey installation final inspection evidence checklist photos documents'),
@@ -132,7 +132,7 @@ const hiddenDeliveryModules=[
   item('contracts','Contracts / LOA',ClipboardCheck,'contract loa tender award','operations.write'),
   item('work-orders','Work Orders',Building2,'work order execution','operations.write'),
   item('work-packages','Work Packages',PackageCheck,'allocation agency package','operations.write')
-].map(x=>({...x,groupId:'delivery',groupLabel:'Program Delivery'}));
+].map(x=>({...x,groupId:'delivery',groupLabel:'Agency Operations'}));
 const hiddenSupplyModules=[
   item('inventory-overview','Supply Chain Overview',Boxes,'inventory dashboard stock'),
   item('item-master','Item Master',PackagePlus,'sku product material master','inventory.write'),

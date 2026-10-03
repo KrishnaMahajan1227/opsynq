@@ -4,7 +4,7 @@ import{api,aiPath,assurancePath}from'../../../core/api';
 import{PageHeader,Status,DetailDrawer,InfoGrid}from'../../../components/common';
 import{usePermissions}from'../../../core/accessControl.jsx';
 
-const scopes=[['EXECUTIVE','Executive','Company-wide priorities, exceptions and decisions'],['DELIVERY','Program delivery','Programs, packages, agencies and beneficiaries'],['SUPPLY','Supply operations','Procurement, stock, dispatch and fleet'],['SERVICE','Service & quality','Service workload, warranty and execution'],['FINANCE','Finance operations','Claims and operational-finance signals']];
+const scopes=[['EXECUTIVE','Executive','Company-wide priorities, exceptions and decisions'],['DELIVERY','Agency operations','Programs, packages, agencies and beneficiaries'],['SUPPLY','Supply operations','Procurement, stock, dispatch and fleet'],['SERVICE','Service & quality','Service workload, warranty and execution'],['FINANCE','Finance operations','Claims and operational-finance signals']];
 const fmtDate=v=>v?new Date(v).toLocaleString():'—';
 const pretty=v=>String(v||'').replaceAll('_',' ').replace(/\b\w/g,m=>m.toUpperCase());
 const proposalTarget=x=>{const k=String(x?.payload?.proposalKind||'');if(k==='REPLENISHMENT_PO')return{page:'procurement-intelligence',label:'Open replenishment plan'};if(k==='SERVICE_PRIORITY_ESCALATION')return{page:'service-cases',label:'Open service cases'};if(k==='CLAIM_FOLLOWUP')return{page:'claims',label:'Open claims'};if(k==='COVERAGE_REVIEW')return{page:'service-plans',label:'Open warranty & AMC'};if(k==='INSURANCE_REVIEW')return{page:'insurance',label:'Open insurance'};return{page:'approval-center',label:'Open Approval Center'}};

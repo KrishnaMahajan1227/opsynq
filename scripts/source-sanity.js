@@ -44,7 +44,7 @@ if(jsxInJs.length){failed=true;console.error('✗ JSX found inside .js files; re
 const demoSeed=path.join(root,'services/api/seed/demoData.js');
 const demoMediaDir=path.join(root,'services/api/demo-media');
 const demoDocs=[path.join(root,'docs/DEMO_ACCOUNTS.md'),path.join(root,'docs/PHASE_19_DEMO_READINESS.md')];
-const demoMedia=fs.existsSync(demoMediaDir)?fs.readdirSync(demoMediaDir).filter(n=>/\.(png|jpe?g|webp)$/i.test(n)):[];
+const demoMedia=fs.existsSync(demoMediaDir)?walk(demoMediaDir,f=>/\.(png|jpe?g|webp)$/i.test(f)):[];
 if(!fs.existsSync(demoSeed)||demoMedia.length<6||demoDocs.some(f=>!fs.existsSync(f))){failed=true;console.error('✗ Phase 19 demo assets/seed/docs are incomplete')}else console.log(`✓ Phase 19 demo package present: ${demoMedia.length} field images + seed + account docs`);
 
 

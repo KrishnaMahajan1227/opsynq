@@ -12,6 +12,6 @@ const checks=[
  ['field evidence submissions are audited',()=>read('services/api/controllers/farmerController.js').includes('FIELD_EVIDENCE_SUBMITTED')],
  ['audit endpoint enriches actor identity',()=>read('services/api/controllers/platform/governanceController.js').includes('legacyUsers')&&read('services/api/controllers/platform/governanceController.js').includes('actor:actors.get')],
  ['audit UI supports detail drilldown',()=>read('apps/platform-web/src/features/company/governance/GovernancePages.jsx').includes('Before change')&&read('apps/platform-web/src/features/company/governance/GovernancePages.jsx').includes('Audit filters')],
- ['demo seed includes geo-tagged evidence',()=>read('services/api/seed/demoData.js').includes("source:'DEMO'")&&read('services/api/seed/demoData.js').includes('geoTaggedEvidence')]
+ ['demo seed includes geo-tagged evidence',()=>read('services/api/seed/demoData.js').includes("submissionSource:'DEMO'")&&read('services/api/seed/demoData.js').includes('captureGeo:geoTag')]
 ];
 let failed=false;for(const [name,test] of checks){let ok=false;try{ok=Boolean(test())}catch{};console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed=true;}if(failed)process.exit(1);console.log('Phase 30 geo operations, geo-evidence and audit intelligence contracts passed.');

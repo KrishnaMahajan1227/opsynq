@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-02T10:39:22.019Z",
+  "generatedAt": "2026-10-03T11:47:30.907Z",
   "provider": "cloudinary",
   "beneficiaries": {
     "OPS-DM-001": {
@@ -208,6 +208,254 @@
           "format": "jpg",
           "localFile": "OPS-DM-014/serial-plate.jpg",
           "sha256": "992333ba9d4f48b1a619b671e5250e8a01f87713cb95e926eef3a9785d0fcc98"
+        }
+      }
+    },
+    "OPS-HR-020": {
+      "stage": "NEW",
+      "reason": "Haryana registration example reusing approved demo-only media for a second-state walkthrough.",
+      "assets": {
+        "beneficiary": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028127/Opsynq/Demo/OPS-HR-020/ops-hr-020-beneficiary.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-020/ops-hr-020-beneficiary",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 549882,
+          "format": "jpg",
+          "localFile": "OPS-HR-020/beneficiary.jpg",
+          "sha256": "bbfb70e6fbac32d62e42c3836fae2ad9b36a2f3efa40eb9e0a257827e4c7915a"
+        },
+        "id-proof": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028130/Opsynq/Demo/OPS-HR-020/ops-hr-020-id-proof.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-020/ops-hr-020-id-proof",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 703194,
+          "format": "jpg",
+          "localFile": "OPS-HR-020/id-proof.jpg",
+          "sha256": "6f10ebe80e5eacbd423b1ffe9fa9082ccaff53280b26963be4eb433142f04931"
+        }
+      }
+    },
+    "OPS-HR-024": {
+      "stage": "PROCESSING",
+      "reason": "Haryana processing example with survey/document/material evidence for cross-state demonstration.",
+      "assets": {
+        "beneficiary": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028142/Opsynq/Demo/OPS-HR-024/ops-hr-024-beneficiary.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-024/ops-hr-024-beneficiary",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 797710,
+          "format": "jpg",
+          "localFile": "OPS-HR-024/beneficiary.jpg",
+          "sha256": "5da7a27166a7038bf75846802fdc40b8e0740ab5789389bf78553a89fe077fcb"
+        },
+        "survey-site": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028153/Opsynq/Demo/OPS-HR-024/ops-hr-024-survey-site.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-024/ops-hr-024-survey-site",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 947798,
+          "format": "jpg",
+          "localFile": "OPS-HR-024/survey-site.jpg",
+          "sha256": "b4c5bd5e98e7b15574f04b78b2289c10156902b082458d359985d9d58bdb1751"
+        },
+        "water-source": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028166/Opsynq/Demo/OPS-HR-024/ops-hr-024-water-source.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-024/ops-hr-024-water-source",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 783368,
+          "format": "jpg",
+          "localFile": "OPS-HR-024/water-source.jpg",
+          "sha256": "e98888d571d58bc916b463b4be1c9b31ca00058addfdefa9a713659d80e9822d"
+        },
+        "id-proof": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028173/Opsynq/Demo/OPS-HR-024/ops-hr-024-id-proof.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-024/ops-hr-024-id-proof",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 460284,
+          "format": "jpg",
+          "localFile": "OPS-HR-024/id-proof.jpg",
+          "sha256": "bbf5c186c6211d708945340b180fc1f59795f5aa5a63b204bc697d1e3bce434b"
+        },
+        "consent": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028180/Opsynq/Demo/OPS-HR-024/ops-hr-024-consent.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-024/ops-hr-024-consent",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 503981,
+          "format": "jpg",
+          "localFile": "OPS-HR-024/consent.jpg",
+          "sha256": "3baa644252b962a565ab4fa0489993c33cb0a5e0856db204a7a265d7027a4e4d"
+        },
+        "signature": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028183/Opsynq/Demo/OPS-HR-024/ops-hr-024-signature.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-024/ops-hr-024-signature",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 550365,
+          "format": "jpg",
+          "localFile": "OPS-HR-024/signature.jpg",
+          "sha256": "4961f9a33fb9e4a51595b98e16b967bf77f9d0d0d07306de25244499fcbf40a7"
+        },
+        "lr": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028185/Opsynq/Demo/OPS-HR-024/ops-hr-024-lr.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-024/ops-hr-024-lr",
+          "width": 1122,
+          "height": 1402,
+          "bytes": 637087,
+          "format": "jpg",
+          "localFile": "OPS-HR-024/lr.jpg",
+          "sha256": "e1900396ce822d52e7ba3f337f6a2cc116663a226f12e6c4ba031ff329b0d465"
+        }
+      }
+    },
+    "OPS-HR-029": {
+      "stage": "COMPLETED",
+      "reason": "Haryana closed example with full demo evidence set for second-state storytelling.",
+      "assets": {
+        "beneficiary": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028188/Opsynq/Demo/OPS-HR-029/ops-hr-029-beneficiary.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-beneficiary",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 629394,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/beneficiary.jpg",
+          "sha256": "d1e92f6f74b7a3f3962c083866800161d1dc5cc6dc071c650bb5df90acae42ff"
+        },
+        "survey-site": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028192/Opsynq/Demo/OPS-HR-029/ops-hr-029-survey-site.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-survey-site",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 732237,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/survey-site.jpg",
+          "sha256": "a86708c0bdfdc4c99c62ef32862d2fdae9b3ff77025cbc818bce9af3557280ac"
+        },
+        "water-source": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028195/Opsynq/Demo/OPS-HR-029/ops-hr-029-water-source.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-water-source",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 688249,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/water-source.jpg",
+          "sha256": "4e72d260faf957c8160bc4698348f262ecb6cc945279033f43fe64ae49c30431"
+        },
+        "id-proof": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028198/Opsynq/Demo/OPS-HR-029/ops-hr-029-id-proof.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-id-proof",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 329278,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/id-proof.jpg",
+          "sha256": "c60b592e7203711d503979779e4ee0a78080b08b00db90a4bba6b3952d3fd424"
+        },
+        "consent": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028200/Opsynq/Demo/OPS-HR-029/ops-hr-029-consent.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-consent",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 373564,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/consent.jpg",
+          "sha256": "39d27fe8c4b8378f9eec3ba93595efaa2102f51dd1ccd51981a108d4a22b6155"
+        },
+        "signature": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028205/Opsynq/Demo/OPS-HR-029/ops-hr-029-signature.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-signature",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 418591,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/signature.jpg",
+          "sha256": "e968843db13c97c4062fd776ee811758adb624b623040c9f399289aabe9524be"
+        },
+        "lr": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028207/Opsynq/Demo/OPS-HR-029/ops-hr-029-lr.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-lr",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 540739,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/lr.jpg",
+          "sha256": "dfd62b0ec396491026210cf971202e1504395f695cd7f20d571b5427ea32dda8"
+        },
+        "install-before": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028209/Opsynq/Demo/OPS-HR-029/ops-hr-029-install-before.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-install-before",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 716372,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/install-before.jpg",
+          "sha256": "8e5ec17022cbd73c901a6d56f6addc615425f239e6873a85dc77475e1d187c84"
+        },
+        "install-during": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028213/Opsynq/Demo/OPS-HR-029/ops-hr-029-install-during.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-install-during",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 647882,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/install-during.jpg",
+          "sha256": "fe755828198ef6177ac18b0feb1974b113b7b9832761dd8859ec7e330ffa0078"
+        },
+        "install-after": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028215/Opsynq/Demo/OPS-HR-029/ops-hr-029-install-after.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-install-after",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 688249,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/install-after.jpg",
+          "sha256": "4e72d260faf957c8160bc4698348f262ecb6cc945279033f43fe64ae49c30431"
+        },
+        "serial-plate": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028217/Opsynq/Demo/OPS-HR-029/ops-hr-029-serial-plate.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-serial-plate",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 412424,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/serial-plate.jpg",
+          "sha256": "f4903c9cb7bcb8ecd3a56fcf13854277cadcbd20d45618656171a1c60dfed07c"
+        },
+        "final-beneficiary": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028219/Opsynq/Demo/OPS-HR-029/ops-hr-029-final-beneficiary.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-final-beneficiary",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 629394,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/final-beneficiary.jpg",
+          "sha256": "d1e92f6f74b7a3f3962c083866800161d1dc5cc6dc071c650bb5df90acae42ff"
+        },
+        "final-signature": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028221/Opsynq/Demo/OPS-HR-029/ops-hr-029-final-signature.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-final-signature",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 418591,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/final-signature.jpg",
+          "sha256": "e968843db13c97c4062fd776ee811758adb624b623040c9f399289aabe9524be"
+        },
+        "surveyor-signature": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791028224/Opsynq/Demo/OPS-HR-029/ops-hr-029-surveyor-signature.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-029/ops-hr-029-surveyor-signature",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 418591,
+          "format": "jpg",
+          "localFile": "OPS-HR-029/surveyor-signature.jpg",
+          "sha256": "e968843db13c97c4062fd776ee811758adb624b623040c9f399289aabe9524be"
         }
       }
     },

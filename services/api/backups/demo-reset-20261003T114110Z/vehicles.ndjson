@@ -1,0 +1,2 @@
+{"_id":"6abf8c30da6ba4d432e9f335","companyId":"6ab78a1c52d0ac6ca141f9f2","registrationNo":"MH31AB1234","type":"Mini Truck","capacity":"2 Ton","status":"AVAILABLE","isActive":true,"createdAt":"2026-10-02T10:49:20.754Z","updatedAt":"2026-10-02T10:49:20.754Z","__v":0}
+{"_id":"6abf8c30da6ba4d432e9f337","companyId":"6ab78a1c52d0ac6ca141f9f3","registrationNo":"MH12PQ9012","type":"Pickup","capacity":"1.5 Ton","status":"AVAILABLE","isActive":true,"createdAt":"2026-10-02T10:49:20.789Z","updatedAt":"2026-10-02T10:49:20.789Z","__v":0}

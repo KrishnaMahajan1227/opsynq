@@ -17,6 +17,9 @@ const EvidenceSubmission = require('../models/platform/EvidenceSubmission');
 const DocumentRecord = require('../models/platform/DocumentRecord');
 const AuditLog = require('../models/platform/AuditLog');
 const ComplianceRecord = require('../models/platform/ComplianceRecord');
+const RmsDevice = require('../models/platform/RmsDevice');
+const RmsTelemetry = require('../models/platform/RmsTelemetry');
+const RmsCurrentState = require('../models/platform/RmsCurrentState');
 
 const fail = msg => { throw new Error(msg); };
 const ok = msg => console.log(`✓ ${msg}`);
@@ -96,21 +99,21 @@ async function verifyUrls(urls) {
     console.log('! Protected-account backup comparison: not verified (no matching reset backup manifest found)');
   }
 
-  const farmers = await Farmer.find({ beneficiaryId: /^OPS-DM-/ }).lean();
-  if (farmers.length !== 19) fail(`Expected exactly 19 demo beneficiaries, found ${farmers.length}`);
+  const farmers = await Farmer.find({ beneficiaryId: /^OPS-(?:DM|HR)-/ }).lean();
+  if (farmers.length !== 29) fail(`Expected exactly 29 demo beneficiaries, found ${farmers.length}`);
   const stageCounts = farmers.reduce((acc, farmer) => {
     const stage = farmer.customFields?.demoStageGroup || 'MISSING';
     acc[stage] = (acc[stage] || 0) + 1;
     return acc;
   }, {});
-  const expectedStages = { NEW: 3, SURVEY: 3, PROCESSING: 5, COMPLETED: 6, ON_HOLD: 1, REJECTED: 1 };
+  const expectedStages = { NEW: 5, SURVEY: 5, PROCESSING: 10, COMPLETED: 7, ON_HOLD: 1, REJECTED: 1 };
   for (const [stage, count] of Object.entries(expectedStages)) if (stageCounts[stage] !== count) fail(`Lifecycle count mismatch ${stage}: ${stageCounts[stage] || 0} != ${count}`);
-  ok('Exactly 19 beneficiaries with lifecycle split 3/3/5/6/1/1');
+  ok('Exactly 29 beneficiaries across Maharashtra + Haryana with lifecycle split 5/5/10/7/1/1');
 
   const farmerIds = farmers.map(x => x._id);
   const farmerSet = new Set(farmerIds.map(id));
   const contexts = await BeneficiaryContext.find({ farmerId: { $in: farmerIds } }).lean();
-  if (contexts.length !== 19 || contexts.some(x => !farmerSet.has(id(x.farmerId)))) fail('Beneficiary context count/orphan check failed');
+  if (contexts.length !== 29 || contexts.some(x => !farmerSet.has(id(x.farmerId)))) fail('Beneficiary context count/orphan check failed');
   const orgs = await Organization.find({ _id: { $in: [...new Set(contexts.flatMap(x => [id(x.companyId), id(x.agencyId)]))] } }).lean();
   const orgMap = new Map(orgs.map(x => [id(x._id), x]));
   for (const context of contexts) {
@@ -184,7 +187,7 @@ async function verifyUrls(urls) {
 
   const manifest = loadManifest({ required: true });
   const selectedIds = Object.keys(DEMO_MEDIA_SPEC).sort();
-  if (selectedIds.length !== 4) fail(`Expected exactly four media-rich beneficiaries in this packaged image set, found ${selectedIds.length}`);
+  if (selectedIds.length !== 7) fail(`Expected exactly seven media-rich beneficiaries in this packaged image set, found ${selectedIds.length}`);
   const manifestUrls = new Set(requiredFiles().map(row => manifest.beneficiaries[row.beneficiaryId].assets[row.kind].url));
   const manifestPublicIds = new Set(requiredFiles().map(row => manifest.beneficiaries[row.beneficiaryId].assets[row.kind].publicId));
   if (manifestUrls.size !== requiredFiles().length || manifestPublicIds.size !== requiredFiles().length) fail('Duplicate Cloudinary URL/public_id in media manifest');
@@ -205,7 +208,7 @@ async function verifyUrls(urls) {
   const docs = await DocumentRecord.find({ companyId: { $in: companyIds } }).lean();
   for (const doc of docs.filter(x => x.fileUrl)) if (!doc.publicId || !manifestUrls.has(doc.fileUrl) || !manifestPublicIds.has(doc.publicId)) fail(`DocumentRecord Cloudinary linkage incomplete: ${doc._id}`);
   await verifyUrls([...manifestUrls]);
-  ok(`Four selected beneficiaries use ${manifestUrls.size} governed Cloudinary image slots; all URLs return HTTP 200/206`);
+  ok(`Seven selected beneficiaries use ${manifestUrls.size} governed Cloudinary image slots; all URLs return HTTP 200/206`);
 
   const cleared = farmers.find(f => f.beneficiaryId === 'OPS-DM-019');
   if (!cleared || cleared.applicationStatus !== 'Closed' || cleared.inspectionStatus !== 'Completed' || cleared.customFields?.fullyClearedDemo !== true) fail('OPS-DM-019 is not marked as the fully cleared closed record');
@@ -219,6 +222,19 @@ async function verifyUrls(urls) {
   const clearedCompliance = await ComplianceRecord.findOne({ farmerId: cleared._id, type: 'FINAL_INSPECTION' }).lean();
   if (!clearedCompliance || clearedCompliance.status !== 'PASS' || (clearedCompliance.items || []).some(item => item.status !== 'PASS')) fail('OPS-DM-019 final inspection/compliance is not fully PASS');
   ok('OPS-DM-019 is fully cleared: closed lifecycle, consumed material custody, installed assets, verified stage evidence and PASS final inspection');
+
+  const rmsDevices = await RmsDevice.find({ companyId: { $in: companyIds }, 'metadata.simulated': true }).lean();
+  if (!rmsDevices.length) fail('Demo RMS was not primed before sanity verification');
+  const activeRms = rmsDevices.filter(x => x.lifecycleStatus !== 'DECOMMISSIONED');
+  const mappedFarmers = activeRms.map(x => id(x.farmerId)).filter(Boolean);
+  if (new Set(mappedFarmers).size !== mappedFarmers.length) fail('Duplicate active RMS device mappings exist for a beneficiary');
+  const states = await RmsCurrentState.find({ deviceId: { $in: rmsDevices.map(x => x._id) } }).lean();
+  if (!states.length) fail('Demo RMS current state is missing');
+  for (const device of activeRms) {
+    const historyCount = await RmsTelemetry.countDocuments({ deviceId: device._id });
+    if (historyCount < 10) fail(`RMS telemetry history is incomplete for ${device.externalDeviceId}: ${historyCount} readings`);
+  }
+  ok(`RMS is primed with ${rmsDevices.length} canonical demo devices, current state and multi-reading telemetry history`);
 
   for (const farmer of farmers) {
     const logs = await AuditLog.countDocuments({ entityType: 'Farmer', entityId: farmer._id, companyId: contexts.find(c => id(c.farmerId) === id(farmer._id))?.companyId });

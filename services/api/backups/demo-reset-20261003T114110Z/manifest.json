@@ -1,0 +1,191 @@
+{
+  "createdAt": "2026-10-03T11:41:13.501Z",
+  "complete": true,
+  "targetFingerprint": "bfdf9cbf7dd3b1e9fc5ce967a9b856eee247358c0d4d6c43ed06a2c2755cf236",
+  "counts": {
+    "adminchangelogs": 0,
+    "agencyuserlinks": 11,
+    "approvalrequests": 9,
+    "assetlifecycleevents": 0,
+    "assetserviceplans": 3,
+    "auditlogs": 58,
+    "authhandoffs": 0,
+    "automationlocks": 0,
+    "automationruns": 96,
+    "beneficiarycontexts": 19,
+    "beneficiarymaterialreceipts": 0,
+    "commercialclaims": 2,
+    "compliancerecords": 3,
+    "contracts": 2,
+    "documentrecords": 3,
+    "drivers": 2,
+    "evidencerequirements": 5,
+    "evidencesubmissions": 8,
+    "farmers": 19,
+    "goodsreceipts": 2,
+    "importbatches": 4,
+    "installedassets": 24,
+    "insurancepolicies": 2,
+    "inventorybalances": 8,
+    "inventoryserials": 66,
+    "itemmasters": 8,
+    "masterdataentries": 6,
+    "materialissues": 7,
+    "notifications": 20,
+    "organizations": 6,
+    "passwordresettokens": 0,
+    "pdirecords": 2,
+    "platformusers": 14,
+    "programs": 2,
+    "purchaseorders": 7,
+    "realtimerevisions": 1,
+    "replenishmentplans": 8,
+    "replenishmentrecommendations": 0,
+    "rmsalerts": 12,
+    "rmscurrentstates": 12,
+    "rmsdevices": 12,
+    "rmsproviders": 1,
+    "rmsrawingestions": 12,
+    "rmsruleconfigs": 1,
+    "rmstelemetries": 12,
+    "securityevents": 6,
+    "servicecases": 3,
+    "shipments": 3,
+    "slarules": 3,
+    "stockmovements": 69,
+    "technicianchangerequests": 0,
+    "trackingevents": 3,
+    "users": 11,
+    "vehicles": 2,
+    "warehouses": 5,
+    "workorders": 2,
+    "workpackages": 3
+  },
+  "protectedAccountDigests": [
+    {
+      "realm": "platform",
+      "idDigest": "40796495bd6d026e743aceb8b9613c0031e1be9c78832153f85fd0f59d502eea",
+      "stateDigest": "28961ce6d2275b66dda034e95a3b28298bb566da2bb5f3b325bc9c97a377b3e4"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "6f167d2099ebb0c96a9b45c6fad41f3facef8e31aee56b7fa77bbc9da598555b",
+      "stateDigest": "9e3d86e32df06976325efac7a6f766d3957beef8d233fdbb92eef3850becfe44"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "c73a664b006c249dd207359001f851dff5cc6c8426b0c4b86844143c9f054e34",
+      "stateDigest": "e96d66087603f709c6bb08a73ba748f4007392d60e93ef4fe118eb384864c218"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "f238955ad84b86331041882338ff82fa80ac8c20d890e1c207bfdf6718ec8a41",
+      "stateDigest": "0e86295092a66e636ed6dafcd2549a20e5ff386efc87c72a7326820a595d5b5f"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "a3cf0209265dcc52b602baaa74604067495f1a6e5c7de5ed577e97bace6d259d",
+      "stateDigest": "8eb3b7c3f440c756df65ff67b44cbe992b3f04674e312a6c204b75f32ac60ad2"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "a280ac59bd929f60fb6bb27b10a3d5ddf2282c597359057a3d412941f63e03af",
+      "stateDigest": "8e6b470a8ca28db1389bf4b61e3adcbc07346a3221289e0fa418b7832c7ae5f8"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "6b4ab20fe5d693225cf82ce24e6165e58762814b8114b919477061cad6802ae6",
+      "stateDigest": "5538fe56f4ce9d974bb725f21351a4206b11c1ed53962e36360c09aee5457d2a"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "0ab054bf9beec7c05a510fd9be8110c3d56722217dc0fd33d29ba2108e1e7fd0",
+      "stateDigest": "0c8306fb1116c81cb5b47d29c95dcc5822b9977de1e83b601b7859b85fc63541"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "a6383789035b890fecf6493e206f2f096626a49a1816215cd2a0592a234a1438",
+      "stateDigest": "660c1748cb1135dd117deec9650c00e4f2913fcd968886e90d92262e7852a3fd"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "97f5ba03293a85a374b7bac82a5ea4dbf6385f7da61945fc7fd418f800e9dd9b",
+      "stateDigest": "fb32f9f716dd0083b352f6dc58bdad6755faf571863270fb281df30fcc3e343e"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "33a1f7b777c1dcbfef3be6cb9602cb094948dc8885caf9b527c99e23e8f77aea",
+      "stateDigest": "c40f77d81862e641ebc74ca4174162abf2f56c40f3b1e97dc97c5661f44a090c"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "c3e027d9e5e0867f6d6c7025ec56152fb24c813014ea9c59f3f77011ee09c92a",
+      "stateDigest": "7c0e8028ee202328b61bed58e3d81ee8adb791f57df11f84fe6b2f03f7531940"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "e5859bdae4b5cd747b4a57a8a1df6c2d382cf48c1d4dc799c1d06192510c4db0",
+      "stateDigest": "511634b82aa98d6fb7c981111bf2a296da6f9869b64474c498300512c6fb846e"
+    },
+    {
+      "realm": "platform",
+      "idDigest": "9952abae92e17c374285e996ff0f56ee9b94d1aae95882fa23a62d3ecf19e799",
+      "stateDigest": "ef72e78a74e652f94eb138e737db691716b559eee7eb0bdb3d1fcf2cd49999f4"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "c625e11e13fc2c8184bf30bd4eea19dc103c26b878f7ddd8432a6f446114e69d",
+      "stateDigest": "3f2dd9c263bf15f201a4a8ced5b07cf43aa7369e9ede68d1233b9696408ba116"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "ffc1ba82fa241da01b9aa6016609ed8630cacc8353f3ea9e1cb0ae0e6d7115b5",
+      "stateDigest": "79e0d7fc99f80fdf0b14eb013fa5c105a111d984fdd7cd0d9b3fbdf7d52e4e23"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "8e8a8ee87d9b63a6a51a68eb2995ed6899fc737f056e6f086dd45a10b873832f",
+      "stateDigest": "272b7cfd0c1031ff20c331f67abf4c14d4dff18923367fe1d9d1453e3a43ca4b"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "fb9293fc478b63fe2b8af0d9fc2fa673ee08c131d88c1ce042ae3b699d36a481",
+      "stateDigest": "a942371d40fc2d87ee17d74d235f79dcbf92c073fab527eb80c2dc24582a4a77"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "4e565fa155edfdfa9aef90d519cba41fd8aadebbd9c677152db3624055878895",
+      "stateDigest": "d51951624192bfe913f156bd338eebe0156a2aa0c5c393145476e2fdb2fcb821"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "2b3515e3d2f1142db936a7b6c93729a68a99dbe80a3b85e4075d01629d6c6284",
+      "stateDigest": "af9c7dba233fb10e224eb8cabfa284fd5dc1d51a8aacc69be2ce05691d63a987"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "65970edc9955009e035516e9bc28bc2381a46b02c8f906d794c71a08da758328",
+      "stateDigest": "f177c75c8631493ce4c2b1bed21efd6124f91892d24d262a3b174f9ca7fe7287"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "3b09b9466365c35aa99d1c46c46a2fbf4e89cfcd15c9d1ed8f230daec3c48947",
+      "stateDigest": "f0067c65b112553235de49c7aa03c23efbb477ebe766934f78b2e5c4495b2204"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "44d388635c885a04e4b18d9696cbe2a11405f2b3633e8b8fbdb3660c5d7fee43",
+      "stateDigest": "081b65e06619b66419d9450a2ef1ace7718fb744c4b677f549d5ffcc56a996d0"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "e2a2a43306e57bcacd991bce3557fff9829ae3d23d11d8d1e5ea058c4c94258a",
+      "stateDigest": "2e30e5f12aa0bb8818faa089ef085520d76081c4813a6989787582666a680bbb"
+    },
+    {
+      "realm": "agency",
+      "idDigest": "b1909360c362f026268309e767d3e1606f4c919b08c0cf94b949dbea973e8dd0",
+      "stateDigest": "1b7f24347059ca1bb05a6f747a6e96dbe3c891f96aca3f1482568381ccf7ef0a"
+    }
+  ]
+}

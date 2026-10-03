@@ -22,8 +22,8 @@ for (let i = 20; i <= 24; i += 1) must(!seed.includes(`OPS-DM-${String(i).padSta
 for (const token of ["'OPS-DM-001':'NEW'", "'OPS-DM-002':'SURVEY'", "'OPS-DM-003':'PROCESSING'", "'OPS-DM-004':'COMPLETED'", "'OPS-DM-017':'ON_HOLD'", "'OPS-DM-018':'REJECTED'"]) must(seed.includes(token), `Lifecycle contract ${token} exists`);
 
 const selected = Object.keys(DEMO_MEDIA_SPEC);
-must(selected.length === 4, 'Exactly four beneficiaries are media-rich in the packaged image set');
-must(requiredFiles().length === 33, 'Exactly 33 governed packaged image slots are required, including the fully cleared record');
+must(selected.length === 7, 'Exactly seven beneficiaries are media-rich in the packaged image set');
+must(requiredFiles().length === 56, 'Exactly 56 governed packaged image slots are required, including the fully cleared record');
 for (const row of requiredFiles()) {
   const folder = path.join(root, 'services/api/demo-media', row.beneficiaryId);
   must(fs.existsSync(folder), `Media folder exists: ${row.beneficiaryId}`);
@@ -32,5 +32,5 @@ must(!seed.includes('/demo-media/') && !seed.includes('.png'), 'Seed contains no
 must(uploader.includes('Duplicate image bytes are not allowed') && uploader.includes('40 * 1024') && uploader.includes('HTTP 200/206'), 'Uploader rejects duplicates/placeholders and verifies reachable URLs');
 
 const mapping = fs.readFileSync(path.join(root, 'services/api/demo-media/mapping.csv'), 'utf8').trim().split(/\r?\n/);
-must(mapping.length === 34, 'Media mapping table has one header plus 33 assets');
+must(mapping.length === 57, 'Media mapping table has one header plus 56 assets');
 console.log('✓ Demo seed source contracts passed');

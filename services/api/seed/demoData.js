@@ -208,6 +208,22 @@ async function requireLegacyUser(payload) {
         endDate: daysFromNow(240),
       },
       {
+        companyId: companyOne._id,
+        name: 'PM-KUSUM Demo Haryana 2026',
+        code: 'PMK-2026-HR',
+        country: 'India',
+        state: 'Haryana',
+        authority: 'Haryana Renewable Demo Authority',
+        scheme: 'PM-KUSUM',
+        component: 'Solar Irrigation Pumps',
+        financialYear: '2026-27',
+        sanctionedQuantity: 180,
+        contractValue: 69000000,
+        status: 'ACTIVE',
+        startDate: daysAgo(65),
+        endDate: daysFromNow(260),
+      },
+      {
         companyId: companyTwo._id,
         name: 'AgriVolt Rural Water Program',
         code: 'AV-RWP-2026',
@@ -225,7 +241,8 @@ async function requireLegacyUser(payload) {
       },
     ]);
     const programOne = programs[0];
-    const programTwo = programs[1];
+    const programHaryana = programs[1];
+    const programTwo = programs[2];
 
     const contracts = await Contract.insertMany([
       {
@@ -240,6 +257,20 @@ async function requireLegacyUser(payload) {
         awardDate: daysAgo(100),
         startDate: daysAgo(90),
         endDate: daysFromNow(240),
+        status: 'ACTIVE',
+      },
+      {
+        companyId: companyOne._id,
+        programId: programHaryana._id,
+        type: 'LOA',
+        number: 'SKEPL/PMK/HR/2026/001',
+        title: 'Haryana Solar Irrigation Demonstration Cluster',
+        authority: 'Haryana Renewable Demo Authority',
+        sanctionedQuantity: 180,
+        contractValue: 69000000,
+        awardDate: daysAgo(72),
+        startDate: daysAgo(65),
+        endDate: daysFromNow(260),
         status: 'ACTIVE',
       },
       {
@@ -258,7 +289,8 @@ async function requireLegacyUser(payload) {
       },
     ]);
     const contractOne = contracts[0];
-    const contractTwo = contracts[1];
+    const contractHaryana = contracts[1];
+    const contractTwo = contracts[2];
 
     const workOrders = await WorkOrder.insertMany([
       {
@@ -272,6 +304,19 @@ async function requireLegacyUser(payload) {
         contractValue: 81000000,
         startDate: daysAgo(75),
         dueDate: daysFromNow(120),
+        status: 'ACTIVE',
+      },
+      {
+        companyId: companyOne._id,
+        programId: programHaryana._id,
+        contractId: contractHaryana._id,
+        number: 'WO-SKEPL-HR-001',
+        title: 'Haryana Pilot Solar Pump Installations',
+        loaNumber: contractHaryana.number,
+        sanctionedQuantity: 80,
+        contractValue: 31000000,
+        startDate: daysAgo(55),
+        dueDate: daysFromNow(145),
         status: 'ACTIVE',
       },
       {
@@ -289,7 +334,8 @@ async function requireLegacyUser(payload) {
       },
     ]);
     const workOrderOne = workOrders[0];
-    const workOrderTwo = workOrders[1];
+    const workOrderHaryana = workOrders[1];
+    const workOrderTwo = workOrders[2];
 
     const workPackages = await WorkPackage.insertMany([
       {
@@ -319,6 +365,19 @@ async function requireLegacyUser(payload) {
         status: 'IN_PROGRESS',
       },
       {
+        companyId: companyOne._id,
+        programId: programHaryana._id,
+        workOrderId: workOrderHaryana._id,
+        code: 'WP-HR-001',
+        name: 'Haryana Multi-District Demo Package',
+        agencyId: nagpurAgency._id,
+        geography: { country: 'India', state: 'Haryana', district: 'Karnal', taluka: 'Karnal', villages: ['Gharaunda', 'Nilokheri', 'Assandh', 'Indri'] },
+        assignedQuantity: 10,
+        assignedAt: daysAgo(42),
+        dueDate: daysFromNow(75),
+        status: 'IN_PROGRESS',
+      },
+      {
         companyId: companyTwo._id,
         programId: programTwo._id,
         workOrderId: workOrderTwo._id,
@@ -332,7 +391,7 @@ async function requireLegacyUser(payload) {
         status: 'ASSIGNED',
       },
     ]);
-    const [wpNagpur, wpNashik, wpPune] = workPackages;
+    const [wpNagpur, wpNashik, wpHaryana, wpPune] = workPackages;
 
     const importBatches = await ImportBatch.insertMany([
       {
@@ -355,6 +414,18 @@ async function requireLegacyUser(payload) {
         status: 'COMPLETED',
         totalRows: 5,
         successRows: 5,
+        failedRows: 0,
+        skippedRows: 0,
+        uploadedBy: companyUsers.c1_admin._id,
+      },
+      {
+        companyId: companyOne._id,
+        type: 'BENEFICIARY_MASTER',
+        sourceFileName: 'haryana-beneficiaries-demo.xlsx',
+        fileHash: 'demo-haryana-batch',
+        status: 'COMPLETED',
+        totalRows: 10,
+        successRows: 10,
         failedRows: 0,
         skippedRows: 0,
         uploadedBy: companyUsers.c1_admin._id,
@@ -393,13 +464,24 @@ async function requireLegacyUser(payload) {
       ['OPS-DM-017', 'Kalpana Pawar', '9823011017', 'Nashik', 'Sinnar', 'Musalgaon', wpNashik, nashikAgency, companyOne, programOne, workOrderOne, 'Pending', 'Pending', 'Land document pending'],
       ['OPS-DM-018', 'Ganesh Jadhav', '9823011018', 'Nashik', 'Niphad', 'Lasalgaon', wpNashik, nashikAgency, companyOne, programOne, workOrderOne, 'Pending', 'In Progress', 'Water-source verification pending'],
       ['OPS-DM-019', 'Madhukar Zade', '9823011019', 'Nagpur', 'Hingna', 'Gumgaon', wpNagpur, nagpurAgency, companyOne, programOne, workOrderOne, 'Closed', 'Completed', ''],
+      ['OPS-HR-020', 'Sandeep Malik', '9812012020', 'Karnal', 'Karnal', 'Gharaunda', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Pending', 'Pending', 'Registration completed'],
+      ['OPS-HR-021', 'Sunita Devi', '9812012021', 'Karnal', 'Indri', 'Kheri Man Singh', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Pending', 'Pending', 'Documents under review'],
+      ['OPS-HR-022', 'Rajesh Kumar', '9812012022', 'Panipat', 'Samalkha', 'Bapoli', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Pending', 'In Progress', 'Survey visit scheduled'],
+      ['OPS-HR-023', 'Poonam Rani', '9812012023', 'Kurukshetra', 'Shahbad', 'Babain', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Pending', 'Completed', 'Survey approved'],
+      ['OPS-HR-024', 'Mahender Singh', '9812012024', 'Karnal', 'Nilokheri', 'Taraori', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Ordered', 'Completed', 'Material order approved'],
+      ['OPS-HR-025', 'Kavita Rani', '9812012025', 'Kaithal', 'Pundri', 'Fatehpur', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Dispatch Completed', 'Completed', 'Material dispatched'],
+      ['OPS-HR-026', 'Virender Dahiya', '9812012026', 'Sonipat', 'Gohana', 'Mundlana', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Move to Installation', 'Completed', 'Ready for installation allocation'],
+      ['OPS-HR-027', 'Rekha Devi', '9812012027', 'Hisar', 'Hansi', 'Sisar', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Ready for Installation', 'Completed', 'Crew mobilization pending'],
+      ['OPS-HR-028', 'Deepak Hooda', '9812012028', 'Rohtak', 'Sampla', 'Ismaila', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Ready for Installation', 'Completed', 'Installation in progress'],
+      ['OPS-HR-029', 'Balwan Singh', '9812012029', 'Karnal', 'Assandh', 'Jalmana', wpHaryana, nagpurAgency, companyOne, programHaryana, workOrderHaryana, 'Closed', 'Completed', 'Fully commissioned Haryana demo site'],
     ];
 
-    const demoCoordinates={Nagpur:[21.1458,79.0882],Nashik:[19.9975,73.7898],Pune:[18.5204,73.8567]};
+    const demoCoordinates={Nagpur:[21.1458,79.0882],Nashik:[19.9975,73.7898],Pune:[18.5204,73.8567],Karnal:[29.6857,76.9905],Panipat:[29.3909,76.9635],Kurukshetra:[29.9695,76.8783],Kaithal:[29.8015,76.3996],Sonipat:[28.9931,77.0151],Hisar:[29.1492,75.7217],Rohtak:[28.8955,76.6066]};
     const demoFieldTeamByPackage={
       'WP-NAG-001':{technicians:[{username:'nagpur.tech01',mobile:'9200000003'},{username:'nagpur.tech02',mobile:'9200000004'}],admin:'nagpur.admin'},
       'WP-NAS-001':{technicians:[{username:'nashik.tech01',mobile:'9300000003'},{username:'nashik.tech02',mobile:'9300000004'}],admin:'nashik.admin'},
       'WP-PUN-001':{technicians:[{username:'pune.tech01',mobile:'9400000003'}],admin:'pune.admin'},
+      'WP-HR-001':{technicians:[{username:'nagpur.tech01',mobile:'9200000003'},{username:'nagpur.tech02',mobile:'9200000004'}],admin:'nagpur.admin'},
     };
     const stageGroupById = {
       'OPS-DM-001':'NEW','OPS-DM-009':'NEW','OPS-DM-012':'NEW',
@@ -407,6 +489,8 @@ async function requireLegacyUser(payload) {
       'OPS-DM-003':'PROCESSING','OPS-DM-008':'PROCESSING','OPS-DM-011':'PROCESSING','OPS-DM-013':'PROCESSING','OPS-DM-014':'PROCESSING',
       'OPS-DM-004':'COMPLETED','OPS-DM-005':'COMPLETED','OPS-DM-006':'COMPLETED','OPS-DM-015':'COMPLETED','OPS-DM-016':'COMPLETED','OPS-DM-019':'COMPLETED',
       'OPS-DM-017':'ON_HOLD','OPS-DM-018':'REJECTED',
+      'OPS-HR-020':'NEW','OPS-HR-021':'NEW','OPS-HR-022':'SURVEY','OPS-HR-023':'SURVEY',
+      'OPS-HR-024':'PROCESSING','OPS-HR-025':'PROCESSING','OPS-HR-026':'PROCESSING','OPS-HR-027':'PROCESSING','OPS-HR-028':'PROCESSING','OPS-HR-029':'COMPLETED',
     };
     const farmers = [];
     for (let i = 0; i < farmersPayload.length; i += 1) {
@@ -538,8 +622,8 @@ async function requireLegacyUser(payload) {
           serialPlateUrl: installationEvidenceAllowed ? mediaSet.serialPlate : '',
           completionCertificateUrl: hasInstalled ? mediaSet.completion : '',
           serviceEvidenceUrl: isComplaintDemo ? mediaSet.service : '',
-          fullyClearedDemo: beneficiaryId === 'OPS-DM-019',
-          closureSummary: beneficiaryId === 'OPS-DM-019' ? 'Survey, documents, material custody, installation, commissioning, required evidence and final inspection verified and closed.' : ''
+          fullyClearedDemo: beneficiaryId === 'OPS-DM-019' || beneficiaryId === 'OPS-HR-029',
+          closureSummary: ['OPS-DM-019','OPS-HR-029'].includes(beneficiaryId) ? 'Survey, documents, material custody, installation, commissioning and closure completed for demo.' : ''
         },
       });
       farmers.push({ farmer, wp, agency, company, program, workOrder, importBatch: wp.code === 'WP-NAG-001' ? importBatches[0] : wp.code === 'WP-NAS-001' ? importBatches[1] : importBatches[2] });
@@ -680,10 +764,10 @@ async function requireLegacyUser(payload) {
     ]);
 
     await InventoryBalance.insertMany([
-      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['PUMP-5HP']._id, onHand: 1, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
-      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['MOTOR-5HP']._id, onHand: 1, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
-      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['CTRL-SMART']._id, onHand: 1, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
-      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['PNL-550']._id, onHand: 9, allocated: 0, inTransit: 3, damaged: 0, lastMovementAt: daysAgo(1) },
+      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['PUMP-5HP']._id, onHand: 0, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
+      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['MOTOR-5HP']._id, onHand: 0, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
+      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['CTRL-SMART']._id, onHand: 0, allocated: 0, inTransit: 1, damaged: 0, lastMovementAt: daysAgo(1) },
+      { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-CEN']._id, itemId: itemMap['PNL-550']._id, onHand: 8, allocated: 0, inTransit: 3, damaged: 0, lastMovementAt: daysAgo(1) },
       { companyId: companyOne._id, warehouseId: warehouseMap['WH-NAG-AGY']._id, itemId: itemMap['PNL-550']._id, onHand: 2, allocated: 0, inTransit: 0, damaged: 0, lastMovementAt: daysAgo(2) },
       { companyId: companyTwo._id, warehouseId: warehouseMap['WH-PUN-CEN']._id, itemId: itemMap['PUMP-7HP']._id, onHand: 4, allocated: 0, inTransit: 0, damaged: 0, lastMovementAt: daysAgo(1) },
       { companyId: companyTwo._id, warehouseId: warehouseMap['WH-PUN-CEN']._id, itemId: itemMap['CTRL-FIELD']._id, onHand: 4, allocated: 0, inTransit: 0, damaged: 0, lastMovementAt: daysAgo(1) },
@@ -841,6 +925,7 @@ async function requireLegacyUser(payload) {
     await installAssetFor({ beneficiaryId: 'OPS-DM-015', serialPrefixList: ['P5-NAG-006', 'M5-NAG-006', 'C1-NAG-006', 'PNL-NAG-009'], technicianKey: 'nagpur_tech_1' });
     await installAssetFor({ beneficiaryId: 'OPS-DM-016', serialPrefixList: ['P5-NAG-007', 'M5-NAG-007', 'C1-NAG-007', 'PNL-NAG-010'], technicianKey: 'nagpur_tech_2' });
     await installAssetFor({ beneficiaryId: 'OPS-DM-019', serialPrefixList: ['P5-NAG-008', 'M5-NAG-008', 'C1-NAG-008', 'PNL-NAG-011'], technicianKey: 'nagpur_tech_1' });
+    await installAssetFor({ beneficiaryId: 'OPS-HR-029', serialPrefixList: ['P5-NAG-005', 'M5-NAG-005', 'C1-NAG-005', 'PNL-NAG-012'], technicianKey: 'nagpur_tech_2' });
 
     await AssetServicePlan.insertMany(
       installedAssets.slice(0, 3).map((asset, index) => ({
@@ -939,6 +1024,17 @@ async function requireLegacyUser(payload) {
       notes: 'Fully cleared demo installation material custody for OPS-DM-019.'
     });
 
+    const haryanaIssue = await MaterialIssue.create({
+      companyId: companyOne._id, agencyId: nagpurAgency._id, warehouseId: warehouseMap['WH-NAG-CEN']._id,
+      technicianUserId: agencyUsers.nagpur_tech_2._id, workPackageId: wpHaryana._id, farmerId: farmerLookup['OPS-HR-029'].farmer._id,
+      issueNo: 'MI-HR-001', items: [
+        { itemId: itemMap['PUMP-5HP']._id, quantity: 1, serialIds: [serialMap['P5-NAG-005']._id] },
+        { itemId: itemMap['MOTOR-5HP']._id, quantity: 1, serialIds: [serialMap['M5-NAG-005']._id] },
+        { itemId: itemMap['CTRL-SMART']._id, quantity: 1, serialIds: [serialMap['C1-NAG-005']._id] },
+        { itemId: itemMap['PNL-550']._id, quantity: 1, serialIds: [serialMap['PNL-NAG-012']._id] }
+      ], status: 'CONSUMED', issuedAt: daysAgo(6), issuedBy: companyUsers.c1_inventory._id, notes: 'Haryana completed demo installation material custody.'
+    });
+
     const puneIssue = await MaterialIssue.create({
       companyId: companyTwo._id, agencyId: puneAgency._id, warehouseId: warehouseMap['WH-PUN-AGY']._id,
       technicianUserId: agencyUsers.pune_tech_1._id, workPackageId: wpPune._id, farmerId: farmerLookup['OPS-DM-011'].farmer._id,
@@ -960,7 +1056,7 @@ async function requireLegacyUser(payload) {
       ...shipmentOne.items.map(line=>({companyId:companyOne._id,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'DISPATCH',fromWarehouseId:warehouseMap['WH-NAG-CEN']._id,toWarehouseId:warehouseMap['WH-NAG-AGY']._id,toOrganizationId:nagpurAgency._id,referenceType:'Shipment',referenceId:shipmentOne._id,performedBy:companyUsers.c1_logistics._id,reason:'Nagpur agency delivery',occurredAt:daysAgo(18)})),
       ...shipmentTwo.items.map(line=>({companyId:companyOne._id,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'DISPATCH',fromWarehouseId:warehouseMap['WH-NAG-CEN']._id,toWarehouseId:warehouseMap['WH-NAS-AGY']._id,toOrganizationId:nashikAgency._id,referenceType:'Shipment',referenceId:shipmentTwo._id,performedBy:companyUsers.c1_logistics._id,reason:'Nashik agency dispatch',occurredAt:daysAgo(3)})),
       ...shipmentThree.items.map(line=>({companyId:companyTwo._id,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'DISPATCH',fromWarehouseId:warehouseMap['WH-PUN-CEN']._id,toWarehouseId:warehouseMap['WH-PUN-AGY']._id,toOrganizationId:puneAgency._id,referenceType:'Shipment',referenceId:shipmentThree._id,performedBy:companyUsers.c2_inventory._id,reason:'Pune agency delivery',occurredAt:daysAgo(14)})),
-      ...[issueOne,issueTwo,issueThree,issueFour,issueFive,issueSix,puneIssue].flatMap(issue=>issue.items.map(line=>({companyId:issue.companyId,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'ISSUE',fromWarehouseId:issue.warehouseId,toOrganizationId:issue.agencyId,referenceType:'MaterialIssue',referenceId:issue._id,performedBy:issue.issuedBy,reason:`Material issue ${issue.issueNo}`,occurredAt:issue.issuedAt}))),
+      ...[issueOne,issueTwo,issueThree,issueFour,issueFive,issueSix,haryanaIssue,puneIssue].flatMap(issue=>issue.items.map(line=>({companyId:issue.companyId,itemId:line.itemId,serialIds:line.serialIds,quantity:line.quantity,movementType:'ISSUE',fromWarehouseId:issue.warehouseId,toOrganizationId:issue.agencyId,referenceType:'MaterialIssue',referenceId:issue._id,performedBy:issue.issuedBy,reason:`Material issue ${issue.issueNo}`,occurredAt:issue.issuedAt}))),
       ...installedAssets.map(asset=>({companyId:asset.companyId,itemId:asset.itemId,serialIds:[asset.inventorySerialId],quantity:1,movementType:'INSTALL',toOrganizationId:asset.agencyId,referenceType:'InstalledAsset',referenceId:asset._id,performedBy:asset.companyId.equals(companyTwo._id)?companyUsers.c2_inventory._id:companyUsers.c1_inventory._id,reason:'Installed at beneficiary site',occurredAt:asset.installedAt}))
     ];
     await StockMovement.insertMany(stockMovements);
@@ -1089,6 +1185,26 @@ async function requireLegacyUser(payload) {
         reviewedBy: companyUsers.c1_quality._id,
         reviewedAt: daysAgo(3),
         notes: 'Fully cleared demo record: survey, material, installation, commissioning, final inspection and handover all passed.',
+      },
+      {
+        companyId: companyOne._id,
+        programId: programHaryana._id,
+        workPackageId: wpHaryana._id,
+        agencyId: nagpurAgency._id,
+        farmerId: farmerLookup['OPS-HR-029'].farmer._id,
+        recordNo: 'CMPREC-HR-029',
+        type: 'FINAL_INSPECTION',
+        status: 'PASS',
+        items: [
+          { key: 'site_clean', label: 'Site condition', status: 'PASS', checkedAt: daysAgo(2) },
+          { key: 'asset_serials', label: 'Serial capture', status: 'PASS', checkedAt: daysAgo(2), evidence: [demoMedia('OPS-HR-029','serial-plate')].filter(Boolean) },
+          { key: 'commissioning', label: 'Commissioning proof', status: 'PASS', checkedAt: daysAgo(2), evidence: [demoMedia('OPS-HR-029','install-after')].filter(Boolean) },
+          { key: 'beneficiary_handover', label: 'Beneficiary handover', status: 'PASS', checkedAt: daysAgo(2), evidence: [demoMedia('OPS-HR-029','final-beneficiary')].filter(Boolean) },
+        ],
+        geo: { latitude: 29.6857, longitude: 76.9905, accuracy: 10, capturedAt: daysAgo(2) },
+        reviewedBy: companyUsers.c1_quality._id,
+        reviewedAt: daysAgo(2),
+        notes: 'Haryana demo site fully inspected, commissioned and closed.',
       },
       {
         companyId: companyOne._id,
@@ -1228,6 +1344,13 @@ async function requireLegacyUser(payload) {
     addEvidence('OPS-DM-019','mounting_structure','install-during',{techKey:'nagpur_tech_1'});
     addEvidence('OPS-DM-019','farmer_with_system','final-beneficiary',{techKey:'nagpur_tech_1'});
     addEvidence('OPS-DM-019','commissioning_proof','install-after',{techKey:'nagpur_tech_1'});
+    addEvidence('OPS-HR-024','site_photo','survey-site',{techKey:'nagpur_tech_1'});
+    addEvidence('OPS-HR-024','farmer_consent','consent',{techKey:'nagpur_tech_1'});
+    addEvidence('OPS-HR-029','site_photo','survey-site',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-HR-029','farmer_consent','consent',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-HR-029','mounting_structure','install-during',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-HR-029','farmer_with_system','final-beneficiary',{techKey:'nagpur_tech_2'});
+    addEvidence('OPS-HR-029','commissioning_proof','install-after',{techKey:'nagpur_tech_2'});
     await EvidenceSubmission.insertMany(evidenceRows);
 
 

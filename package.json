@@ -87,10 +87,12 @@
     "demo:wipe": "cd services/api && node scripts/wipeDemoDb.js",
     "demo:seed": "cd services/api && node seed/demoData.js",
     "demo:sanity": "cd services/api && node scripts/demoSanity.js",
-    "demo:reset": "npm run demo:backup && npm run demo:wipe && npm run demo:media:upload && npm run demo:seed && npm run demo:sanity",
+    "demo:reset": "npm run demo:backup && npm run demo:wipe && npm run demo:media:upload && npm run demo:seed && npm run demo:rms-prime && npm run demo:sanity",
     "demo:media:upload": "cd services/api && node scripts/uploadDemoMedia.js",
-    "demo:seed-ready": "npm run demo:db-check && npm run demo:media:upload && npm run demo:seed && npm run demo:sanity",
-    "demo:rms-cleanup": "cd services/api && node scripts/cleanupDemoRmsBootstrap.js"
+    "demo:seed-ready": "npm run demo:db-check && npm run demo:media:upload && npm run demo:seed && npm run demo:rms-prime && npm run demo:sanity",
+    "demo:rms-cleanup": "cd services/api && node scripts/cleanupDemoRmsBootstrap.js",
+    "demo:rms-prime": "cd services/api && node scripts/primeDemoRms.js",
+    "qa:rms-final": "node scripts/final-rms-realtime-responsive-regression.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",

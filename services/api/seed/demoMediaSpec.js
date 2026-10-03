@@ -3,7 +3,7 @@ const path = require('path');
 const DEMO_MEDIA_ROOT = path.resolve(__dirname, '../demo-media');
 const DEMO_MEDIA_MANIFEST = path.join(DEMO_MEDIA_ROOT, 'cloudinary-manifest.json');
 
-// Four beneficiary records are intentionally media-rich. The remaining
+// Selected Maharashtra and Haryana beneficiary records are intentionally media-rich. The remaining
 // demo beneficiaries keep clean empty states instead of fake/broken URLs.
 // OPS-DM-019 is a fully cleared end-to-end demo record built only from images
 // already generated in this project conversation; a few logical evidence slots
@@ -23,11 +23,32 @@ const DEMO_MEDIA_SPEC = {
     stage: 'PROCESSING',
     reason: 'Installation-in-progress example using the available survey/material and installation evidence.',
     assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr', 'install-before', 'install-during', 'serial-plate'],
-  },  'OPS-DM-019': {
+  },  'OPS-HR-020': {
+    stage: 'NEW',
+    reason: 'Haryana registration example reusing approved demo-only media for a second-state walkthrough.',
+    assets: ['beneficiary', 'id-proof'],
+    allowDuplicateAssets: ['beneficiary','id-proof'],
+  },
+  'OPS-HR-024': {
+    stage: 'PROCESSING',
+    reason: 'Haryana processing example with survey/document/material evidence for cross-state demonstration.',
+    assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr'],
+    allowDuplicateAssets: ['beneficiary','survey-site','water-source','id-proof','consent','signature','lr'],
+  },
+  'OPS-HR-029': {
+    stage: 'COMPLETED',
+    reason: 'Haryana closed example with full demo evidence set for second-state storytelling.',
+    assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr', 'install-before', 'install-during', 'install-after', 'serial-plate', 'final-beneficiary', 'final-signature', 'surveyor-signature'],
+    allowDuplicateAssets: ['beneficiary','survey-site','water-source','id-proof','consent','signature','lr','install-before','install-during','install-after','serial-plate','final-beneficiary','final-signature','surveyor-signature'],
+  },
+  'OPS-DM-019': {
     stage: 'COMPLETED',
     reason: 'Fully cleared end-to-end record with survey, material, installation, commissioning and final-inspection evidence.',
     assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr', 'install-before', 'install-during', 'install-after', 'serial-plate', 'final-beneficiary', 'final-signature', 'surveyor-signature'],
-    allowDuplicateAssets: ['install-after', 'final-beneficiary', 'final-signature', 'surveyor-signature'],
+    // This record intentionally reuses the already-approved demo photo set across logical evidence slots.
+    // Keep this explicit allowlist narrow to this beneficiary; the uploader still rejects every
+    // unapproved duplicate anywhere else in demo media.
+    allowDuplicateAssets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr', 'install-before', 'install-during', 'install-after', 'serial-plate', 'final-beneficiary', 'final-signature', 'surveyor-signature'],
   },
 };
 
