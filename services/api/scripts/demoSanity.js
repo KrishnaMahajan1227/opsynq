@@ -106,9 +106,9 @@ async function verifyUrls(urls) {
     acc[stage] = (acc[stage] || 0) + 1;
     return acc;
   }, {});
-  const expectedStages = { NEW: 5, SURVEY: 5, PROCESSING: 10, COMPLETED: 7, ON_HOLD: 1, REJECTED: 1 };
+  const expectedStages = { NEW: 5, SURVEY: 5, PROCESSING: 9, COMPLETED: 8, ON_HOLD: 1, REJECTED: 1 };
   for (const [stage, count] of Object.entries(expectedStages)) if (stageCounts[stage] !== count) fail(`Lifecycle count mismatch ${stage}: ${stageCounts[stage] || 0} != ${count}`);
-  ok('Exactly 29 beneficiaries across Maharashtra + Haryana with lifecycle split 5/5/10/7/1/1');
+  ok('Exactly 29 beneficiaries across Maharashtra + Haryana with lifecycle split 5/5/9/8/1/1');
 
   const farmerIds = farmers.map(x => x._id);
   const farmerSet = new Set(farmerIds.map(id));
@@ -187,7 +187,7 @@ async function verifyUrls(urls) {
 
   const manifest = loadManifest({ required: true });
   const selectedIds = Object.keys(DEMO_MEDIA_SPEC).sort();
-  if (selectedIds.length !== 7) fail(`Expected exactly seven media-rich beneficiaries in this packaged image set, found ${selectedIds.length}`);
+  if (selectedIds.length !== 8) fail(`Expected exactly eight media-rich beneficiaries in this packaged image set, found ${selectedIds.length}`);
   const manifestUrls = new Set(requiredFiles().map(row => manifest.beneficiaries[row.beneficiaryId].assets[row.kind].url));
   const manifestPublicIds = new Set(requiredFiles().map(row => manifest.beneficiaries[row.beneficiaryId].assets[row.kind].publicId));
   if (manifestUrls.size !== requiredFiles().length || manifestPublicIds.size !== requiredFiles().length) fail('Duplicate Cloudinary URL/public_id in media manifest');
@@ -208,7 +208,7 @@ async function verifyUrls(urls) {
   const docs = await DocumentRecord.find({ companyId: { $in: companyIds } }).lean();
   for (const doc of docs.filter(x => x.fileUrl)) if (!doc.publicId || !manifestUrls.has(doc.fileUrl) || !manifestPublicIds.has(doc.publicId)) fail(`DocumentRecord Cloudinary linkage incomplete: ${doc._id}`);
   await verifyUrls([...manifestUrls]);
-  ok(`Seven selected beneficiaries use ${manifestUrls.size} governed Cloudinary image slots; all URLs return HTTP 200/206`);
+  ok(`Eight selected beneficiaries use ${manifestUrls.size} governed Cloudinary image slots; all URLs return HTTP 200/206`);
 
   const cleared = farmers.find(f => f.beneficiaryId === 'OPS-DM-019');
   if (!cleared || cleared.applicationStatus !== 'Closed' || cleared.inspectionStatus !== 'Completed' || cleared.customFields?.fullyClearedDemo !== true) fail('OPS-DM-019 is not marked as the fully cleared closed record');
@@ -222,6 +222,26 @@ async function verifyUrls(urls) {
   const clearedCompliance = await ComplianceRecord.findOne({ farmerId: cleared._id, type: 'FINAL_INSPECTION' }).lean();
   if (!clearedCompliance || clearedCompliance.status !== 'PASS' || (clearedCompliance.items || []).some(item => item.status !== 'PASS')) fail('OPS-DM-019 final inspection/compliance is not fully PASS');
   ok('OPS-DM-019 is fully cleared: closed lifecycle, consumed material custody, installed assets, verified stage evidence and PASS final inspection');
+
+
+  const haryanaAgency = await Organization.findOne({ code: 'HRYOPS', type: 'AGENCY', state: 'Haryana' }).lean();
+  if (!haryanaAgency) fail('Dedicated Haryana agency HRYOPS is missing');
+  const haryanaFarmers = farmers.filter(f => /^OPS-HR-/.test(f.beneficiaryId));
+  const haryanaContexts = contexts.filter(c => haryanaFarmers.some(f => id(f._id) === id(c.farmerId)));
+  if (haryanaContexts.length !== 10 || haryanaContexts.some(c => id(c.agencyId) !== id(haryanaAgency._id))) fail('Haryana beneficiary-to-agency mapping is not fully assigned to HRYOPS');
+  for (const beneficiaryId of ['OPS-HR-028','OPS-HR-029']) {
+    const farmer = farmers.find(f => f.beneficiaryId === beneficiaryId);
+    if (!farmer || farmer.applicationStatus !== 'Closed' || farmer.customFields?.fullyClearedDemo !== true) fail(`${beneficiaryId} is not fully closed`);
+    const fa = assets.filter(a => id(a.farmerId) === id(farmer._id));
+    if (fa.length !== 4 || fa.some(a => id(a.agencyId) !== id(haryanaAgency._id))) fail(`${beneficiaryId} installed assets are not fully mapped to HRYOPS`);
+    const fi = issues.find(i => id(i.farmerId) === id(farmer._id));
+    if (!fi || fi.status !== 'CONSUMED' || id(fi.agencyId) !== id(haryanaAgency._id)) fail(`${beneficiaryId} material custody is not fully consumed under HRYOPS`);
+    const fe = evidence.filter(e => id(e.farmerId) === id(farmer._id));
+    if (requiredClearedEvidence.some(stage => !fe.some(e => e.stage === stage && e.status === 'VERIFIED'))) fail(`${beneficiaryId} required governed evidence is incomplete`);
+    const fc = await ComplianceRecord.findOne({ farmerId: farmer._id, type: 'FINAL_INSPECTION' }).lean();
+    if (!fc || fc.status !== 'PASS' || id(fc.agencyId) !== id(haryanaAgency._id)) fail(`${beneficiaryId} final inspection is not PASS under HRYOPS`);
+  }
+  ok('All 10 Haryana beneficiaries are mapped to HRYOPS; OPS-HR-028 and OPS-HR-029 are fully cleared with governed evidence');
 
   const rmsDevices = await RmsDevice.find({ companyId: { $in: companyIds }, 'metadata.simulated': true }).lean();
   if (!rmsDevices.length) fail('Demo RMS was not primed before sanity verification');

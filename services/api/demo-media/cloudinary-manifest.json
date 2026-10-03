@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-03T11:47:30.907Z",
+  "generatedAt": "2026-10-03T14:03:24.079Z",
   "provider": "cloudinary",
   "beneficiaries": {
     "OPS-DM-001": {
@@ -310,6 +310,152 @@
           "format": "jpg",
           "localFile": "OPS-HR-024/lr.jpg",
           "sha256": "e1900396ce822d52e7ba3f337f6a2cc116663a226f12e6c4ba031ff329b0d465"
+        }
+      }
+    },
+    "OPS-HR-028": {
+      "stage": "COMPLETED",
+      "reason": "Haryana fully completed Rohtak example with end-to-end governed evidence for agency/technician demonstration.",
+      "assets": {
+        "beneficiary": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036279/Opsynq/Demo/OPS-HR-028/ops-hr-028-beneficiary.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-beneficiary",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 629394,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/beneficiary.jpg",
+          "sha256": "d1e92f6f74b7a3f3962c083866800161d1dc5cc6dc071c650bb5df90acae42ff"
+        },
+        "survey-site": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036281/Opsynq/Demo/OPS-HR-028/ops-hr-028-survey-site.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-survey-site",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 732237,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/survey-site.jpg",
+          "sha256": "a86708c0bdfdc4c99c62ef32862d2fdae9b3ff77025cbc818bce9af3557280ac"
+        },
+        "water-source": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036283/Opsynq/Demo/OPS-HR-028/ops-hr-028-water-source.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-water-source",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 688249,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/water-source.jpg",
+          "sha256": "4e72d260faf957c8160bc4698348f262ecb6cc945279033f43fe64ae49c30431"
+        },
+        "id-proof": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036285/Opsynq/Demo/OPS-HR-028/ops-hr-028-id-proof.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-id-proof",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 329278,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/id-proof.jpg",
+          "sha256": "c60b592e7203711d503979779e4ee0a78080b08b00db90a4bba6b3952d3fd424"
+        },
+        "consent": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036287/Opsynq/Demo/OPS-HR-028/ops-hr-028-consent.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-consent",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 373564,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/consent.jpg",
+          "sha256": "39d27fe8c4b8378f9eec3ba93595efaa2102f51dd1ccd51981a108d4a22b6155"
+        },
+        "signature": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036289/Opsynq/Demo/OPS-HR-028/ops-hr-028-signature.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-signature",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 418591,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/signature.jpg",
+          "sha256": "e968843db13c97c4062fd776ee811758adb624b623040c9f399289aabe9524be"
+        },
+        "lr": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036292/Opsynq/Demo/OPS-HR-028/ops-hr-028-lr.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-lr",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 540739,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/lr.jpg",
+          "sha256": "dfd62b0ec396491026210cf971202e1504395f695cd7f20d571b5427ea32dda8"
+        },
+        "install-before": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036294/Opsynq/Demo/OPS-HR-028/ops-hr-028-install-before.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-install-before",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 716372,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/install-before.jpg",
+          "sha256": "8e5ec17022cbd73c901a6d56f6addc615425f239e6873a85dc77475e1d187c84"
+        },
+        "install-during": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036296/Opsynq/Demo/OPS-HR-028/ops-hr-028-install-during.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-install-during",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 647882,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/install-during.jpg",
+          "sha256": "fe755828198ef6177ac18b0feb1974b113b7b9832761dd8859ec7e330ffa0078"
+        },
+        "install-after": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036298/Opsynq/Demo/OPS-HR-028/ops-hr-028-install-after.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-install-after",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 688249,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/install-after.jpg",
+          "sha256": "4e72d260faf957c8160bc4698348f262ecb6cc945279033f43fe64ae49c30431"
+        },
+        "serial-plate": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036299/Opsynq/Demo/OPS-HR-028/ops-hr-028-serial-plate.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-serial-plate",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 412424,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/serial-plate.jpg",
+          "sha256": "f4903c9cb7bcb8ecd3a56fcf13854277cadcbd20d45618656171a1c60dfed07c"
+        },
+        "final-beneficiary": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036301/Opsynq/Demo/OPS-HR-028/ops-hr-028-final-beneficiary.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-final-beneficiary",
+          "width": 1086,
+          "height": 1448,
+          "bytes": 629394,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/final-beneficiary.jpg",
+          "sha256": "d1e92f6f74b7a3f3962c083866800161d1dc5cc6dc071c650bb5df90acae42ff"
+        },
+        "final-signature": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036303/Opsynq/Demo/OPS-HR-028/ops-hr-028-final-signature.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-final-signature",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 418591,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/final-signature.jpg",
+          "sha256": "e968843db13c97c4062fd776ee811758adb624b623040c9f399289aabe9524be"
+        },
+        "surveyor-signature": {
+          "url": "https://res.cloudinary.com/dxpf8q672/image/upload/v1791036305/Opsynq/Demo/OPS-HR-028/ops-hr-028-surveyor-signature.jpg",
+          "publicId": "Opsynq/Demo/OPS-HR-028/ops-hr-028-surveyor-signature",
+          "width": 1448,
+          "height": 1086,
+          "bytes": 418591,
+          "format": "jpg",
+          "localFile": "OPS-HR-028/surveyor-signature.jpg",
+          "sha256": "e968843db13c97c4062fd776ee811758adb624b623040c9f399289aabe9524be"
         }
       }
     },

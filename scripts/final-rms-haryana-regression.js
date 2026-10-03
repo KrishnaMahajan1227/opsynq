@@ -17,5 +17,7 @@ must(rms.includes("a.deviceId?.serialNumber")&&agency.includes("a.deviceId?.seri
 must(engine.includes("i===2?'COMMUNICATION_LOST'")&&engine.includes("i===5?'DECOMMISSIONED'"),'Demo RMS creates deterministic offline/alert/disabled examples');
 must(seed.includes("name: 'PM-KUSUM Demo Haryana 2026'")&&seed.includes("code: 'WP-HR-001'"),'Haryana program and work package are seeded');
 for(let i=20;i<=29;i++)must(seed.includes(`OPS-HR-${String(i).padStart(3,'0')}`),`Haryana beneficiary OPS-HR-${String(i).padStart(3,'0')} is seeded`);
-must(seed.includes("beneficiaryId: 'OPS-HR-029'")&&seed.includes("issueNo: 'MI-HR-001'")&&seed.includes("recordNo: 'CMPREC-HR-029'"),'Haryana closed record has installed material custody and compliance PASS');
+must(seed.includes("code: 'HRYOPS'")&&seed.includes("haryana.tech01")&&seed.includes("haryana.tech02"),'Dedicated Haryana agency and field team are seeded/required');
+must(seed.includes("beneficiaryId: 'OPS-HR-028'")&&seed.includes("issueNo: 'MI-HR-002'")&&seed.includes("recordNo: 'CMPREC-HR-028'"),'Haryana Rohtak closed record has installed material custody and compliance PASS');
+must(seed.includes("beneficiaryId: 'OPS-HR-029'")&&seed.includes("issueNo: 'MI-HR-001'")&&seed.includes("recordNo: 'CMPREC-HR-029'"),'Haryana Karnal closed record has installed material custody and compliance PASS');
 console.log('✓ Final RMS + Haryana demo regression passed');

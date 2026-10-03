@@ -35,6 +35,12 @@ const DEMO_MEDIA_SPEC = {
     assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr'],
     allowDuplicateAssets: ['beneficiary','survey-site','water-source','id-proof','consent','signature','lr'],
   },
+  'OPS-HR-028': {
+    stage: 'COMPLETED',
+    reason: 'Haryana fully completed Rohtak example with end-to-end governed evidence for agency/technician demonstration.',
+    assets: ['beneficiary', 'survey-site', 'water-source', 'id-proof', 'consent', 'signature', 'lr', 'install-before', 'install-during', 'install-after', 'serial-plate', 'final-beneficiary', 'final-signature', 'surveyor-signature'],
+    allowDuplicateAssets: ['beneficiary','survey-site','water-source','id-proof','consent','signature','lr','install-before','install-during','install-after','serial-plate','final-beneficiary','final-signature','surveyor-signature'],
+  },
   'OPS-HR-029': {
     stage: 'COMPLETED',
     reason: 'Haryana closed example with full demo evidence set for second-state storytelling.',
