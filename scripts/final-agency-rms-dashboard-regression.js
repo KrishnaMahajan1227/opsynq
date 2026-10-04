@@ -9,12 +9,18 @@ const adapter=read('services/api/rms/adapters/demoAdapter.js');
 const agencyUi=read('apps/agency-web/src/components/AgencyRmsPanel.jsx');
 const agencyCss=read('apps/agency-web/src/agency-professional.css');
 const ui=read('apps/platform-web/src/features/company/operations/OperationsPages.jsx');
+const rmsUi=read('apps/platform-web/src/features/company/rms/RmsPages.jsx');
 const css=read('apps/platform-web/src/styles/index.css');
 const checks=[
  ['dashboard API exposes ranked agencies',/topAgencies/.test(ops)&&/completionPercent\*\.65/.test(ops)&&/surveyPercent\*\.25/.test(ops)],
  ['dashboard renders top agency ranking',/Top agency performance/.test(ui)&&/agency-score-ring/.test(ui)&&/topAgencies\.slice\(0,5\)/.test(ui)],
  ['ranking explains score weights',/65% installation completion/.test(ui)&&/25% survey coverage/.test(ui)],
  ['ranking responsive styles exist',/agency-rank-list/.test(css)&&/@media\(max-width:430px\)/.test(css)],
+ ['RMS aggregation scope casts tenant identifiers to ObjectId',/const objectIds=/.test(rms)&&/new mongoose\.Types\.ObjectId/.test(rms)&&/companyFilter=req=>\(\{companyId:\{\$in:objectIds/.test(rms)],
+ ['RMS alerts expose affected subsystem diagnosis',/affectedSubsystem/.test(rms)&&/Controller \/ Inverter/.test(rms)&&/Pump \/ Motor \/ Water source/.test(rms)],
+ ['RMS device detail exposes installed component diagnostics',/buildSystemDiagnostics/.test(rms)&&/components:diagnostics\.components/.test(rms)&&/Installed system components/.test(rmsUi)],
+ ['RMS overview supports device drill-down navigation',/deviceId:a\.deviceId\?\._id/.test(rmsUi)&&/opsynq\.dashboard\.filter\.rms-live-assets/.test(rmsUi)],
+ ['RMS browser cache version invalidates stale zero summaries',/RMS_CACHE_VERSION='scope-v4'/.test(rmsUi)],
  ['RMS overview has persisted telemetry fallback',/hasDemoProvider/.test(rms)&&/RmsTelemetry\.aggregate/.test(rms)&&/metricSamples/.test(rms)],
  ['RMS prime rejects zero-only demo output',/demo RMS operating output is unexpectedly zero/.test(prime)&&/RmsCurrentState\.aggregate/.test(prime)],
  ['RMS reconciles every beneficiary context',/BeneficiaryContext\.find\(\{companyId\}\)/.test(engine)&&/RMS demo coverage is incomplete/.test(prime)],
