@@ -95,7 +95,8 @@
     "qa:rms-final": "node scripts/final-rms-realtime-responsive-regression.js",
     "demo:haryana-bootstrap": "cd services/api && node scripts/bootstrapHaryanaDemoTenant.js",
     "demo:finance-refresh": "cd services/api && node scripts/upsertDemoFinanceClaims.js",
-    "qa:finance-demo": "node scripts/final-finance-demo-regression.js"
+    "qa:finance-demo": "node scripts/final-finance-demo-regression.js",
+    "qa:final-dashboard": "node scripts/final-agency-rms-dashboard-regression.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",
