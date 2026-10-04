@@ -1,0 +1,12 @@
+const fs=require('fs');
+const assert=(ok,msg)=>{if(!ok){console.error('✗ '+msg);process.exitCode=1}else console.log('✓ '+msg)};
+const c=fs.readFileSync('services/api/controllers/rmsController.js','utf8');
+const ui=fs.readFileSync('apps/platform-web/src/features/company/rms/RmsPages.jsx','utf8');
+assert(c.includes('Never block read endpoints on a full demo telemetry write cycle'),'RMS reads do not block on demo ingestion cycle');
+const devices=c.slice(c.indexOf('exports.devices='),c.indexOf('exports.deviceDetail='));
+assert(devices.includes('RmsDevice.countDocuments(filter)'),'Live Assets uses indexed countDocuments');
+assert(devices.includes('RmsDevice.find(filter).sort'),'Live Assets uses indexed Mongoose find');
+assert(!devices.includes('beneficiaryDevicePage('),'Live Assets no longer depends on aggregation grouping');
+assert(ui.includes("RMS_CACHE_VERSION='scope-v5-fast-assets'"),'stale zero-result RMS cache is invalidated again');
+assert(ui.includes('0 current assets')||ui.includes('current assets'),'Live Assets result count remains visible');
+if(process.exitCode)process.exit(process.exitCode);else console.log('✓ Final RMS Live Assets performance regression passed');

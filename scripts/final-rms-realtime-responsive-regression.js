@@ -12,7 +12,7 @@ const sanity=read('services/api/scripts/demoSanity.js');
 assert(engine.includes("const rank={CONTROLLER:1,PUMP:2,MOTOR:3,PANEL:4,OTHER:5}"),'demo RMS chooses one canonical system/controller asset per beneficiary');
 assert(engine.includes('seedDemoHistory(provider,device,scenario)'),'demo RMS seeds telemetry history');
 assert(engine.includes('points=12'),'demo RMS provides a multi-reading timeline');
-assert(controller.includes('await runDemoCycle(id).catch(()=>{})'),'demo RMS advances persisted telemetry during live refresh');
+assert(controller.includes('Promise.resolve().then(()=>runDemoCycle(id))'),'demo RMS advances persisted telemetry without blocking read responses');
 assert(engine.includes("if(d.lifecycleStatus==='DECOMMISSIONED')continue"),'decommissioned RMS devices do not emit fresh telemetry');
 assert(pkg.includes('demo:rms-prime')&&pkg.includes('npm run demo:rms-prime && npm run demo:sanity'),'reset primes RMS before sanity');
 assert(sanity.includes('Duplicate active RMS device mappings exist for a beneficiary'),'sanity rejects repeated RMS mappings');

@@ -7,7 +7,7 @@ const fmt=n=>new Intl.NumberFormat('en-IN',{maximumFractionDigits:2}).format(Num
 const dt=v=>v?new Date(v).toLocaleString():'—';
 const age=v=>{if(!v)return'No data';const m=Math.max(0,Math.round((Date.now()-new Date(v).getTime())/60000));return m<1?'just now':m<60?`${m} min ago`:`${Math.floor(m/60)}h ${m%60}m ago`};
 const includes=(v,q)=>String(v||'').toLowerCase().includes(String(q||'').trim().toLowerCase());
-const rmsCache=new Map(),rmsInflight=new Map(),RMS_CACHE_VERSION='scope-v4';
+const rmsCache=new Map(),rmsInflight=new Map(),RMS_CACHE_VERSION='scope-v5-fast-assets';
 const cacheKey=(companyId,path)=>`${RMS_CACHE_VERSION}:${companyId||'default'}:${path}`;
 const sessionKey=key=>`opsynq.rms.cache:${key}`;
 const readCache=key=>{const memory=rmsCache.get(key);if(memory)return memory;try{const saved=JSON.parse(sessionStorage.getItem(sessionKey(key))||'null');if(saved?.data&&Date.now()-Number(saved.ts||0)<600000){const hit={data:saved.data,at:new Date(saved.ts)};rmsCache.set(key,hit);return hit}}catch{}return null};
