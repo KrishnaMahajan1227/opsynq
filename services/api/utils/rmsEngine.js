@@ -9,6 +9,7 @@ const RmsAlert=require('../models/platform/RmsAlert');
 const RmsRuleConfig=require('../models/platform/RmsRuleConfig');
 const InstalledAsset=require('../models/platform/InstalledAsset');
 const BeneficiaryContext=require('../models/platform/BeneficiaryContext');
+const Farmer=require('../models/Farmer');
 const Notification=require('../models/platform/Notification');
 const ServiceCase=require('../models/platform/ServiceCase');
 const demoAdapter=require('../rms/adapters/demoAdapter');
@@ -24,16 +25,34 @@ async function technicianForDevice(device){if(!device?.installedAssetId)return n
 async function rulesFor(companyId){return await RmsRuleConfig.findOneAndUpdate({companyId},{$setOnInsert:{companyId}},{new:true,upsert:true,setDefaultsOnInsert:true}).lean()}
 async function ensureDemoProvider(companyId){return await RmsProvider.findOneAndUpdate({companyId,code:'DEMO-RMS'},{$setOnInsert:{companyId,name:'Demo RMS Simulator',code:'DEMO-RMS',type:'DEMO_SIMULATOR',transport:'SIMULATED',mode:'SIMULATED',status:'ACTIVE',capabilities:DEFAULT_CAPS,mappingVersion:'v1'}},{new:true,upsert:true,setDefaultsOnInsert:true})}
 async function ensureDemoDevices(companyId){
- const provider=await ensureDemoProvider(companyId);await RmsRuleConfig.findOneAndUpdate({companyId},{$setOnInsert:{companyId,autoIncidentPolicy:'AUTO_CREATE_CRITICAL_INCIDENT'}},{upsert:true,setDefaultsOnInsert:true});
- let existing=await RmsDevice.countDocuments({companyId,providerId:provider._id});if(existing)return provider;
- const assets=await InstalledAsset.find({companyId,status:'ACTIVE'}).sort({installedAt:-1}).lean();
- const rank={CONTROLLER:1,PUMP:2,MOTOR:3,PANEL:4,OTHER:5};const byFarmer=new Map();
- for(const asset of assets){const key=String(asset.farmerId||'');if(!key)continue;const current=byFarmer.get(key);if(!current||(rank[asset.assetRole]||99)<(rank[current.assetRole]||99))byFarmer.set(key,asset);}
- let source=[...byFarmer.values()].slice(0,12);const farmerIds=source.map(x=>x.farmerId).filter(Boolean);
- const contexts=farmerIds.length?await BeneficiaryContext.find({companyId,farmerId:{$in:farmerIds}}).lean():await BeneficiaryContext.find({companyId}).limit(8).lean();
- if(!source.length)source=contexts.map(x=>({farmerId:x.farmerId,agencyId:x.agencyId,workPackageId:x.workPackageId,installedAt:new Date(),assetRole:'OTHER'}));
- const ctxByFarmer=new Map(contexts.map(x=>[String(x.farmerId),x]));let i=0;
- for(const row of source){const ctx=ctxByFarmer.get(String(row.farmerId))||contexts.find(x=>String(x.farmerId)===String(row.farmerId));if(!ctx)continue;i++;const scenario=i===2?'COMMUNICATION_LOST':i===3?'DRY_RUN':i===4?'LOW_PERFORMANCE':'HEALTHY_RUNNING';const device=await RmsDevice.findOneAndUpdate({companyId,providerId:provider._id,externalDeviceId:`RMS-DEMO-${String(i).padStart(3,'0')}`},{$setOnInsert:{companyId,providerId:provider._id,externalDeviceId:`RMS-DEMO-${String(i).padStart(3,'0')}`,serialNumber:`RMS${String(i).padStart(6,'0')}`,imei:`860000000${String(i).padStart(6,'0')}`,make:'OPSYNQ Demo',model:'RMS-SIM-1',agencyId:ctx.agencyId,programId:ctx.programId,workOrderId:ctx.workOrderId,workPackageId:ctx.workPackageId,farmerId:row.farmerId,installedAssetId:row._id||null,mappingStatus:'MAPPED',lifecycleStatus:i===5?'DECOMMISSIONED':'COMMISSIONING',commissioningStatus:i===5?'FAILED':'PENDING',installedAt:row.installedAt||new Date(),capabilities:DEFAULT_CAPS,metadata:{simulated:true,canonicalSystemDevice:true,scenario}}},{upsert:true,new:true,setDefaultsOnInsert:true});await seedDemoHistory(provider,device,scenario);}
+ const provider=await ensureDemoProvider(companyId);
+ await RmsRuleConfig.findOneAndUpdate({companyId},{$setOnInsert:{companyId,autoIncidentPolicy:'AUTO_CREATE_CRITICAL_INCIDENT'}},{upsert:true,setDefaultsOnInsert:true});
+ const [contexts,assets,existing]=await Promise.all([
+  BeneficiaryContext.find({companyId}).sort({assignedAt:1,createdAt:1,_id:1}).lean(),
+  InstalledAsset.find({companyId,status:'ACTIVE'}).sort({installedAt:-1}).lean(),
+  RmsDevice.find({companyId,providerId:provider._id}).sort({createdAt:1,_id:1})
+ ]);
+ if(!contexts.length)return provider;
+ const farmerIds=contexts.map(x=>x.farmerId).filter(Boolean),farmers=await Farmer.find({_id:{$in:farmerIds}}).select('_id beneficiaryId beneficiaryName applicationStatus inspectionStatus installationDoneYesNo').lean();
+ const farmerMap=new Map(farmers.map(x=>[String(x._id),x]));
+ const rank={CONTROLLER:1,PUMP:2,MOTOR:3,PANEL:4,OTHER:5},assetByFarmer=new Map();
+ for(const asset of assets){const key=String(asset.farmerId||'');if(!key)continue;const current=assetByFarmer.get(key);if(!current||(rank[asset.assetRole]||99)<(rank[current.assetRole]||99))assetByFarmer.set(key,asset);}
+ const existingByFarmer=new Map();
+ for(const device of existing){const key=String(device.farmerId||'');if(!key||existingByFarmer.has(key))continue;existingByFarmer.set(key,device);}
+ const stageFor=farmer=>String(farmer?.applicationStatus||'Pending');
+ const scenarioFor=(farmer,index)=>{if(index===1)return'COMMUNICATION_LOST';if(index===2)return'DRY_RUN';if(index===3)return'LOW_PERFORMANCE';const stage=stageFor(farmer);if(['Pending','Pending Installation'].includes(stage))return'STANDBY';return'HEALTHY_RUNNING';};
+ const lifecycleFor=farmer=>{const stage=stageFor(farmer);if(['Closed','Installation Completed'].includes(stage))return['COMMISSIONED','COMMISSIONED'];if(['Move to Installation','Ordered','Dispatch Completed','Ready for Installation'].includes(stage))return['COMMISSIONING','READY'];return['ALLOCATED','NOT_STARTED'];};
+ for(let i=0;i<contexts.length;i++){
+  const ctx=contexts[i],farmer=farmerMap.get(String(ctx.farmerId))||null,asset=assetByFarmer.get(String(ctx.farmerId))||null,scenario=scenarioFor(farmer,i),[lifecycleStatus,commissioningStatus]=lifecycleFor(farmer),existingDevice=existingByFarmer.get(String(ctx.farmerId));
+  const safeBeneficiary=String(farmer?.beneficiaryId||i+1).replace(/[^A-Za-z0-9-]/g,'').slice(-28)||String(i+1).padStart(3,'0');
+  const externalDeviceId=existingDevice?.externalDeviceId||`RMS-DEMO-${safeBeneficiary}`;
+  const device=await RmsDevice.findOneAndUpdate(
+   existingDevice?{_id:existingDevice._id}:{companyId,providerId:provider._id,externalDeviceId},
+   {$set:{companyId,providerId:provider._id,externalDeviceId,serialNumber:existingDevice?.serialNumber||`RMS${String(i+1).padStart(6,'0')}`,imei:existingDevice?.imei||`860000000${String(i+1).padStart(6,'0')}`,make:'OPSYNQ Demo',model:'RMS-SIM-1',agencyId:ctx.agencyId,programId:ctx.programId,workOrderId:ctx.workOrderId,workPackageId:ctx.workPackageId,farmerId:ctx.farmerId,installedAssetId:asset?asset._id:null,mappingStatus:'MAPPED',lifecycleStatus,commissioningStatus,installedAt:asset?.installedAt||existingDevice?.installedAt||ctx.assignedAt||ctx.createdAt||new Date(),capabilities:DEFAULT_CAPS,metadata:{...(existingDevice?.metadata||{}),simulated:true,canonicalSystemDevice:true,scenario,demoStage:stageFor(farmer),demoBeneficiaryId:farmer?.beneficiaryId||null}}},
+   {upsert:true,new:true,setDefaultsOnInsert:true}
+  );
+  await seedDemoHistory(provider,device,scenario);
+ }
  return provider;
 }
 async function seedDemoHistory(provider,device,scenario){
@@ -59,6 +78,6 @@ async function ingest(provider,externalDeviceId,payload){
 }
 async function refreshStale(companyId){const rules=await rulesFor(companyId),states=await RmsCurrentState.find({companyId});for(const s of states){const comm=stateFreshness(s,rules);if(comm!==s.communication){s.communication=comm;if(comm==='OFFLINE')s.health=s.health==='CRITICAL'?'CRITICAL':'WARNING';await s.save();const device=await RmsDevice.findById(s.deviceId);if(device)await evaluateAlerts(device,s,rules);}}}
 async function demoPayload(device,scenario='HEALTHY_RUNNING'){return demoAdapter.fetchLatestTelemetry(device,scenario)}
-async function runDemoCycle(companyId,scenarioByDevice={}){const provider=await ensureDemoDevices(companyId);if(provider.status==='DOWN')return;const devices=await RmsDevice.find({companyId,providerId:provider._id});for(const d of devices){if(d.lifecycleStatus==='DECOMMISSIONED')continue;const scenario=scenarioByDevice[String(d._id)]||d.metadata?.scenario||'HEALTHY_RUNNING',payload=await demoPayload(d,scenario);if(payload)await ingest(provider,d.externalDeviceId,payload);}await refreshStale(companyId);}
+async function runDemoCycle(companyId,scenarioByDevice={}){const provider=await ensureDemoDevices(companyId);if(provider.status==='DOWN')return;const devices=await RmsDevice.find({companyId,providerId:provider._id});for(const d of devices){if(d.lifecycleStatus==='DECOMMISSIONED')continue;const scenario=scenarioByDevice[String(d._id)]||d.metadata?.scenario||'HEALTHY_RUNNING',payload=await demoPayload(d,scenario);if(payload)await ingest(provider,d.externalDeviceId,payload);else if(scenario==='COMMUNICATION_LOST'){const staleAt=new Date(Date.now()-20*60000);await RmsCurrentState.updateOne({deviceId:d._id},{$set:{telemetryAt:staleAt,receivedAt:staleAt}});d.lastTelemetryAt=staleAt;d.lastSeenAt=staleAt;await d.save();}}await refreshStale(companyId);}
 async function setDemoScenario(companyId,deviceId,scenario){const d=await RmsDevice.findOne({_id:deviceId,companyId}).populate('providerId');if(!d||d.providerId?.type!=='DEMO_SIMULATOR')return null;d.metadata={...(d.metadata||{}),simulated:true,scenario};await d.save();if(scenario==='RECOVERY')d.metadata.scenario='HEALTHY_RUNNING';const payload=await demoPayload(d,scenario==='RECOVERY'?'HEALTHY_RUNNING':scenario);if(payload)await ingest(d.providerId,d.externalDeviceId,payload);else{const s=await RmsCurrentState.findOne({deviceId:d._id});if(s){s.telemetryAt=new Date(Date.now()-20*60000);await s.save();await refreshStale(companyId);}}return d;}
 module.exports={ensureDemoDevices,runDemoCycle,setDemoScenario,ingest,refreshStale,rulesFor,stateFreshness,DEFAULT_CAPS};

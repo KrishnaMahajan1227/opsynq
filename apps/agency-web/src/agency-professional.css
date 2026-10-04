@@ -158,3 +158,38 @@ body{font-size:14px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLe
 
 /* Scanner manual fallback — camera/handheld scanning must never block field work. */
 .order-manual-entry,.installer-manual-entry{margin-top:12px;padding:12px;border:1px solid #d8e2dd;border-radius:10px;background:#fbfcfb}.order-manual-entry .form-label,.installer-manual-entry .form-label{font-size:11px;font-weight:700;color:#344c42;margin-bottom:7px}.order-manual-entry__row,.installer-manual-entry__row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch}.order-manual-entry textarea,.installer-manual-entry textarea{min-height:68px;resize:vertical}.order-manual-entry small,.installer-manual-entry small{display:block;margin-top:7px;color:#697b73;line-height:1.45}@media(max-width:720px){.order-manual-entry__row,.installer-manual-entry__row{grid-template-columns:1fr}.order-manual-entry__row .btn,.installer-manual-entry__row .btn{width:100%;min-height:42px}}
+
+/* Final Agency presentation correction: backoffice has no top navbar, so the workspace begins at the viewport edge. */
+.crm-app .dashboard-shell{min-height:100dvh!important}
+.crm-app .agency-sidebar{top:0!important;height:100dvh!important;bottom:auto!important}
+.crm-app .dashboard-content,.crm-app .dashboard-content.sidebar-collapsed{padding-top:8px!important}
+.crm-app .agency-workspace-header{padding:12px 14px!important;margin:0 0 10px!important;min-height:0!important;align-items:center!important}
+.crm-app .agency-workspace-breadcrumb{margin:0 0 5px!important}
+.crm-app .agency-workspace-copy p{margin-top:3px!important}
+
+/* Bootstrap/action variants normalized to the existing Agency design language with readable contrast. */
+.crm-app .btn,.crm-app .btn *{color:inherit!important}
+.crm-app .btn-primary,.crm-app .btn-success{background:#193f31!important;border-color:#193f31!important;color:#fff!important}
+.crm-app .btn-primary:hover,.crm-app .btn-success:hover{background:#123328!important;border-color:#123328!important;color:#fff!important}
+.crm-app .btn-secondary{background:#46574f!important;border-color:#46574f!important;color:#fff!important}
+.crm-app .btn-secondary:hover{background:#34443d!important;border-color:#34443d!important;color:#fff!important}
+.crm-app .btn-warning{background:#fff5dd!important;border-color:#ddc98f!important;color:#684d13!important}
+.crm-app .btn-warning:hover{background:#f7e9c3!important;border-color:#cbb574!important;color:#523b0d!important}
+.crm-app .btn-info{background:#edf4f1!important;border-color:#bfd1c8!important;color:#285443!important}
+.crm-app .btn-info:hover{background:#e1ece7!important;border-color:#a8c0b5!important;color:#1e4234!important}
+.crm-app .btn-danger{background:#fff!important;border-color:#dfbbb7!important;color:#87342f!important}
+.crm-app .btn-danger:hover{background:#fff1ef!important;border-color:#cf9f9a!important;color:#742b27!important}
+.crm-app .btn-dark{background:#26332d!important;border-color:#26332d!important;color:#fff!important}
+.crm-app .btn-light,.crm-app .btn-outline-secondary,.crm-app .btn-outline-primary,.crm-app .btn-outline-success,.crm-app .btn-outline-warning,.crm-app .btn-outline-danger{background:#fff!important}
+.crm-app .btn-outline-primary,.crm-app .btn-outline-success{border-color:#aec5ba!important;color:#285443!important}
+.crm-app .btn-outline-warning{border-color:#dccb9c!important;color:#6a5018!important}
+.crm-app .btn-outline-danger{border-color:#dfc1bd!important;color:#87342f!important}
+.crm-app .btn-link{background:transparent!important;border-color:transparent!important;color:#285947!important;text-decoration:none!important}
+.crm-app .btn:disabled,.crm-app .btn.disabled{opacity:.62!important;filter:none!important}
+.crm-app .badge.bg-primary,.crm-app .badge.text-bg-primary,.crm-app .badge.bg-success,.crm-app .badge.text-bg-success{background:#e9f2ed!important;color:#285443!important}
+.crm-app .badge.bg-warning,.crm-app .badge.text-bg-warning{background:#fbf1d9!important;color:#74571d!important}
+.crm-app .badge.bg-danger,.crm-app .badge.text-bg-danger{background:#fae9e7!important;color:#87342f!important}
+.crm-app .badge.bg-info,.crm-app .badge.text-bg-info{background:#edf3f0!important;color:#426154!important}
+
+@media(max-width:900px){.crm-app .agency-sidebar{top:0!important}.crm-app .dashboard-content,.crm-app .dashboard-content.sidebar-collapsed{padding-top:7px!important}}
+@media(max-width:640px){.crm-app .agency-workspace-header{padding:10px 11px!important;border-radius:10px!important}.crm-app .dashboard-content,.crm-app .dashboard-content.sidebar-collapsed{padding-top:6px!important}}

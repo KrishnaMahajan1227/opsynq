@@ -264,13 +264,19 @@ async function verifyUrls(urls) {
   const activeRms = rmsDevices.filter(x => x.lifecycleStatus !== 'DECOMMISSIONED');
   const mappedFarmers = activeRms.map(x => id(x.farmerId)).filter(Boolean);
   if (new Set(mappedFarmers).size !== mappedFarmers.length) fail('Duplicate active RMS device mappings exist for a beneficiary');
+  const expectedRmsBeneficiaries = contexts.filter(c => companyIds.some(cid => id(cid) && id(c.companyId) === id(cid))).length;
+  if (expectedRmsBeneficiaries && mappedFarmers.length < expectedRmsBeneficiaries) fail(`Demo RMS beneficiary coverage is incomplete: ${mappedFarmers.length}/${expectedRmsBeneficiaries}`);
   const states = await RmsCurrentState.find({ deviceId: { $in: rmsDevices.map(x => x._id) } }).lean();
   if (!states.length) fail('Demo RMS current state is missing');
+  const stateMap = new Map(states.map(x => [id(x.deviceId), x]));
   for (const device of activeRms) {
     const historyCount = await RmsTelemetry.countDocuments({ deviceId: device._id });
     if (historyCount < 10) fail(`RMS telemetry history is incomplete for ${device.externalDeviceId}: ${historyCount} readings`);
+    const state = stateMap.get(id(device._id));
+    if (!state) fail(`RMS current state is missing for ${device.externalDeviceId}`);
+    if (device.metadata?.scenario !== 'COMMUNICATION_LOST' && !(Number(state.energyTodayKwh||0)>0 || Number(state.runtimeTodayMinutes||0)>0 || Number(state.waterDischargeLitres||0)>0)) fail(`RMS current state is zero-only for ${device.externalDeviceId}`);
   }
-  ok(`RMS is primed with ${rmsDevices.length} canonical demo devices, current state and multi-reading telemetry history`);
+  ok(`RMS is primed with ${rmsDevices.length} beneficiary-mapped demo devices, non-zero current telemetry and multi-reading history`);
 
   for (const farmer of farmers) {
     const logs = await AuditLog.countDocuments({ entityType: 'Farmer', entityId: farmer._id, companyId: contexts.find(c => id(c.farmerId) === id(farmer._id))?.companyId });
