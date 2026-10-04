@@ -42,6 +42,7 @@ const RmsProvider=require('../../models/platform/RmsProvider');
 const platformAudit=require('../../utils/platformAudit');
 const ai=require('../../utils/aiAdvisor');
 const automationEngine=require('../../utils/automationEngine');
+const {hasCapability}=require('../../security/platformCapabilities');
 
 const companyIdFor=req=>req.platformUser.role==='platform_superadmin'?(req.query.companyId||req.body.companyId):String(req.tenant.companyId||'');
 async function ensureCompany(req,res){const id=companyIdFor(req);if(!id||!mongoose.isValidObjectId(id)){res.status(400).json({message:'Valid company context is required.'});return null;}const c=await Organization.findOne({_id:id,type:'COMPANY',status:{$ne:'ARCHIVED'}}).select('name code status').lean();if(!c){res.status(404).json({message:'Company not found.'});return null;}return c;}
@@ -57,6 +58,32 @@ const PAGE_SCOPE={
  'financial-control':'FINANCE',claims:'FINANCE','regulatory-reports':'FINANCE',
  'approval-center':'EXECUTIVE',notifications:'EXECUTIVE',documents:'EXECUTIVE',audit:'EXECUTIVE','team-access':'EXECUTIVE',automation:'EXECUTIVE','master-data':'EXECUTIVE'
 };
+
+const PAGE_CAPABILITY={
+ 'company-overview':'overview.read','my-workspace':'overview.read','ai-operations':'ai.read','action-center':'operations.read','analytics':'overview.read','bulk-center':'governance.write','readiness':'readiness.read',
+ programs:'operations.read',contracts:'operations.read','work-orders':'operations.read','work-packages':'operations.read',agencies:'operations.read','beneficiary-records':'beneficiary.read','geo-operations':'beneficiary.read','beneficiary-imports':'operations.write','agency-performance':'operations.read',
+ 'supply-chain':['inventory.read','procurement.read','logistics.read'],procurement:'procurement.read',stock:'inventory.read',shipments:'logistics.read',fleet:'logistics.read','inventory-overview':'inventory.read','item-master':'inventory.read',warehouses:'inventory.read','procurement-intelligence':'procurement.read','logistics-overview':'logistics.read','material-issues':'logistics.read','agency-stock':'logistics.read',pdi:'pdi.read',
+ 'service-cases':'service.read','service-plans':'service.read','installed-assets':'assets.read','asset-lifecycle':'assets.read',reconciliation:['inventory.read','assurance.read','logistics.read'],insurance:'insurance.read',compliance:'assurance.read','evidence-control':'assurance.read',sla:'assurance.read','rms-overview':'rms.read','rms-live-assets':'rms.read','rms-alerts':'rms.read','rms-health':'rms.read','rms-performance':'rms.read','rms-map':'rms.read','rms-commissioning':'rms.read','rms-mapping':'rms.manage','rms-integrations':'rms.manage',
+ 'financial-control':'finance.read',claims:'finance.read','regulatory-reports':'regulatory.read','approval-center':'operations.read',notifications:'overview.read',documents:'overview.read',audit:'audit.read','team-access':'team.read',automation:'automation.read','master-data':'governance.write'
+};
+const canUsePage=(role,page)=>{const need=PAGE_CAPABILITY[page]||'overview.read',list=Array.isArray(need)?need:[need];return Boolean(PAGE_SCOPE[page]&&list.some(cap=>hasCapability(role,cap)));};
+const INTENT_ROUTES=[
+ [/(rms|telemetry|device|pump|motor|panel|controller|inverter|offline|stale|dry run|fault|energy|runtime|water discharge)/i,'rms-overview'],
+ [/(claim|receivable|paid|payment|blocked amount|financial|finance|commercial|working capital)/i,'financial-control'],
+ [/(purchase order|\bpo\b|procurement|supplier|\bgrn\b|goods receipt)/i,'procurement'],
+ [/(stock|inventory|serial|barcode|warehouse|sku|item master|material custody)/i,'stock'],
+ [/(shipment|dispatch|driver|vehicle|fleet|delivery tracking)/i,'shipments'],
+ [/(service|warranty|amc|complaint|breakdown|repair)/i,'service-cases'],
+ [/(compliance|inspection|quality|evidence|claim ready)/i,'compliance'],
+ [/(agency performance|agency ranking|agency score)/i,'agency-performance'],
+ [/(beneficiar|farmer|survey|installation status|application status)/i,'beneficiary-records'],
+ [/(program|work order|work package|loa|contract|delivery portfolio)/i,'programs'],
+ [/(approval|waiver|decision pending)/i,'approval-center'],
+ [/(notification|alert center)/i,'notifications'],
+ [/(audit|who changed|changed by|history of change)/i,'audit']
+];
+const contextPageFor=(question,currentPage,role)=>{for(const[re,target]of INTENT_ROUTES)if(re.test(String(question||''))&&canUsePage(role,target))return target;return canUsePage(role,currentPage)?currentPage:'company-overview'};
+
 const SAFE_ACTIONS={
  programs:[['programs','Open delivery portfolio'],['work-packages','Open work packages'],['beneficiary-records','Open beneficiaries']],contracts:[['programs','Open delivery portfolio'],['work-orders','Open work orders']], 'work-orders':[['work-orders','Open work orders'],['work-packages','Open work packages']], 'work-packages':[['work-packages','Open work packages'],['agencies','Open agencies']],
  agencies:[['agencies','Open agencies'],['work-packages','Open work packages'],['agency-performance','Open agency performance']], 'beneficiary-records':[['beneficiary-records','Open beneficiaries'],['geo-operations','Open geo operations'],['service-cases','Open service cases']], 'geo-operations':[['geo-operations','Open geo operations'],['beneficiary-records','Open beneficiaries']], 'beneficiary-imports':[['beneficiary-imports','Open imports'],['beneficiary-records','Open beneficiaries']],
@@ -65,13 +92,19 @@ const SAFE_ACTIONS={
  'rms-overview':[['rms-overview','Open RMS monitoring'],['rms-alerts','Open RMS alerts'],['rms-live-assets','Open live RMS assets']], 'rms-live-assets':[['rms-live-assets','Open live RMS assets'],['rms-alerts','Open RMS alerts']], 'rms-alerts':[['rms-alerts','Open RMS alerts'],['service-cases','Open service cases'],['rms-live-assets','Open live RMS assets']], 'rms-health':[['rms-health','Open RMS health'],['rms-alerts','Open RMS alerts']], 'rms-performance':[['rms-performance','Open RMS performance'],['rms-live-assets','Open live RMS assets']], 'rms-map':[['rms-map','Open RMS map'],['rms-live-assets','Open live RMS assets']], 'rms-commissioning':[['rms-commissioning','Open RMS commissioning'],['rms-mapping','Open RMS mapping']], 'rms-mapping':[['rms-mapping','Open RMS mapping'],['rms-commissioning','Open RMS commissioning']], 'rms-integrations':[['rms-integrations','Open RMS integrations'],['rms-health','Open RMS health']],
  claims:[['claims','Open claims'],['financial-control','Open financial control']], 'financial-control':[['financial-control','Open financial control'],['claims','Open claims']], 'approval-center':[['approval-center','Open approvals'],['notifications','Open notifications']],notifications:[['notifications','Open notifications']],documents:[['documents','Open documents']],audit:[['audit','Open audit trail']], 'team-access':[['team-access','Open team & access']],automation:[['automation','Open automation']], 'master-data':[['master-data','Open master data']],readiness:[['readiness','Open readiness'],['company-overview','Open dashboard']],analytics:[['analytics','Open analytics'],['company-overview','Open dashboard']], 'company-overview':[['company-overview','Open dashboard'],['notifications','Open notifications'],['ai-operations','Open intelligence']]
 };
-const actionsFor=page=>(SAFE_ACTIONS[page]||[[page,'Open current module']]).filter(([p])=>PAGE_SCOPE[p]).slice(0,4).map(([target,label])=>({target,label}));
+const actionsFor=(page,question='',role='')=>{
+ const intent=contextPageFor(question,page,role);const candidates=[];
+ const push=(target,label)=>{if(canUsePage(role,target)&&!candidates.some(x=>x.target===target))candidates.push({target,label})};
+ for(const[target,label]of SAFE_ACTIONS[intent]||[])push(target,label);
+ if(intent!==page)for(const[target,label]of SAFE_ACTIONS[page]||[])push(target,label);
+ return candidates.slice(0,4);
+};
 
 function restrictedQuestion(question){
  const q=String(question||'').trim().toLowerCase();
  if(!q)return 'Please ask a question about this Company workspace.';
  if(q.length>1200)return 'Question is too long. Ask one Company operations question at a time.';
- const blocked=/\b(other company|another company|other tenant|another tenant|system prompt|developer message|source code|database schema|db schema|api key|password|credential|secret|token|jwt|ignore previous|bypass|jailbreak|who created|created by|added by)\b/i;
+ const blocked=/\b(other company|another company|other tenant|another tenant|system prompt|developer message|source code|database schema|db schema|api key|password|credential|secret|token|jwt|ignore previous|bypass|jailbreak)\b/i;
  if(blocked.test(q))return 'I can only answer from the current Company operational context and cannot expose other tenants, credentials, prompts, source internals, or creator metadata.';
  const business=/\b(program|contract|work order|work package|agency|agencies|beneficiar|farmer|survey|installation|complaint|delivery|dispatch|shipment|fleet|driver|vehicle|warehouse|stock|inventory|item|material|procurement|purchase|po\b|grn|pdi|asset|service|warranty|amc|insurance|sla|claim|receivable|finance|compliance|approval|evidence|notification|document|audit|team|user|access|automation|master data|readiness|analytics|operations|rms|telemetry|pump|controller|device|connectivity|offline|stale|fault|commissioning|mapping|company|dashboard|status|risk|attention|priority|pending|overdue|open|closed|today|current|this screen|here|why|what needs|brief|summary|summarize|show|list|explain|how many|count)\b/i;
  return business.test(q)?'':'I can answer only questions about this Company, its OPSYNQ modules, and the operational data available to your role.';
@@ -136,27 +169,30 @@ async function buildScreenFacts(companyId,page){const cid=new mongoose.Types.Obj
 exports.status=async(req,res)=>{const c=await ensureCompany(req,res);if(!c)return;const result=await ai.health();res.json({...result,company:{id:c._id,name:c.name}})};
 exports.brief=async(req,res)=>{
  const c=await ensureCompany(req,res);if(!c)return;
- const page=String(req.body.page||'company-overview').trim();if(!PAGE_SCOPE[page])return res.status(400).json({message:'Unsupported Company workspace screen.'});
- const scope=PAGE_SCOPE[page],requestedScope=String(req.body.scope||scope).toUpperCase();if(requestedScope!==scope&&requestedScope!=='EXECUTIVE')return res.status(400).json({message:'AI scope does not match the current Company screen.'});
+ const requestedPage=String(req.body.page||'company-overview').trim();if(!PAGE_SCOPE[requestedPage])return res.status(400).json({message:'Unsupported Company workspace screen.'});
+ const role=String(req.platformUser?.role||'');
+ if(!canUsePage(role,requestedPage))return res.status(403).json({message:'AI cannot access this module for your role.'});
  const question=String(req.body.question||'').trim();const restriction=restrictedQuestion(question);
- if(restriction){await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_QUESTION_RESTRICTED',entityType:'Organization',entityId:c._id,after:{page,scope,reason:restriction.slice(0,180)}});return res.json({scope,page,restricted:true,generatedAt:new Date(),brief:{executiveSummary:restriction,findings:[],risks:[],recommendedActions:[],confidence:'HIGH',dataLimitations:[]},actions:actionsFor(page)});}
- const facts=await buildScreenFacts(c._id,page);
+ const contextPage=contextPageFor(question,requestedPage,role),scope=PAGE_SCOPE[contextPage];
+ if(restriction){await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_QUESTION_RESTRICTED',entityType:'Organization',entityId:c._id,after:{page:requestedPage,scope,reason:restriction.slice(0,180)}});return res.json({scope,page:requestedPage,contextPage,restricted:true,generatedAt:new Date(),brief:{answer:restriction,keyFacts:[],nextSteps:[],confidence:'HIGH',dataLimitations:[]},actions:actionsFor(contextPage,question,role)});}
+ const facts=await buildScreenFacts(c._id,contextPage);
+ const common={scope,page:requestedPage,contextPage,actions:actionsFor(contextPage,question,role),factsAsOf:facts.generatedAt,role};
  if(!ai.enabled()){
-  const fallback=ai.fallbackOperationsBrief({pageLabel:String(req.body.pageLabel||page).slice(0,100),facts});
-  await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_PROVIDER_FALLBACK',entityType:'Organization',entityId:c._id,after:{scope,page,providerCode:'NOT_CONFIGURED'}});
-  return res.json({scope,page,generatedAt:new Date(),brief:fallback,actions:actionsFor(page),factsAsOf:facts.generatedAt,provider:{ready:false,code:'NOT_CONFIGURED',message:'Live AI is not configured; rule-based tenant-scoped summary shown.'}});
+  const fallback=ai.fallbackOperationsBrief({pageLabel:String(req.body.pageLabel||contextPage).slice(0,100),question,facts});
+  await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_PROVIDER_FALLBACK',entityType:'Organization',entityId:c._id,after:{scope,page:requestedPage,contextPage,providerCode:'NOT_CONFIGURED'}});
+  return res.json({...common,generatedAt:new Date(),brief:fallback,provider:{ready:false,code:'NOT_CONFIGURED',message:'Live AI is not configured; tenant-scoped deterministic guidance shown.'}});
  }
  try{
-  const brief=await ai.operationsBrief({scope,page,pageLabel:String(req.body.pageLabel||page).slice(0,100),question,facts});
+  const brief=await ai.operationsBrief({scope,page:contextPage,pageLabel:String(req.body.pageLabel||contextPage).slice(0,100),question,facts,role});
   if(!brief)return res.status(502).json({message:'Operations intelligence returned no usable response.'});
-  await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_BRIEF_GENERATED',entityType:'Organization',entityId:c._id,after:{scope,page,model:ai.MODEL(),question:question.slice(0,240)}});
-  res.json({scope,page,generatedAt:new Date(),brief,actions:actionsFor(page),factsAsOf:facts.generatedAt});
+  await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_BRIEF_GENERATED',entityType:'Organization',entityId:c._id,after:{scope,page:requestedPage,contextPage,model:ai.MODEL(),question:question.slice(0,240)}});
+  res.json({...common,generatedAt:new Date(),brief});
  }catch(error){
   const code=error?.code||'PROVIDER_ERROR';
   if(['INVALID_CREDENTIAL','RATE_LIMITED','PROVIDER_UNAVAILABLE','NETWORK_ERROR','TIMEOUT'].includes(code)){
-   const fallback=ai.fallbackOperationsBrief({pageLabel:String(req.body.pageLabel||page).slice(0,100),facts});
-   await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_PROVIDER_FALLBACK',entityType:'Organization',entityId:c._id,after:{scope,page,providerCode:code}});
-   return res.json({scope,page,generatedAt:new Date(),brief:fallback,actions:actionsFor(page),factsAsOf:facts.generatedAt,provider:{ready:false,code,message:code==='INVALID_CREDENTIAL'?'AI provider credential rejected; server-side key must be replaced.':'AI provider temporarily unavailable; rule-based summary shown.'}});
+   const fallback=ai.fallbackOperationsBrief({pageLabel:String(req.body.pageLabel||contextPage).slice(0,100),question,facts});
+   await platformAudit(req,{companyId:c._id,organizationId:c._id,action:'AI_OPERATIONS_PROVIDER_FALLBACK',entityType:'Organization',entityId:c._id,after:{scope,page:requestedPage,contextPage,providerCode:code}});
+   return res.json({...common,generatedAt:new Date(),brief:fallback,provider:{ready:false,code,message:code==='INVALID_CREDENTIAL'?'AI provider credential rejected; replace the server-side credential.':'AI provider temporarily unavailable; tenant-scoped deterministic guidance shown.'}});
   }
   res.status(502).json({message:'Operations intelligence request failed.',code,detail:String(error.message||error).slice(0,300)});
  }

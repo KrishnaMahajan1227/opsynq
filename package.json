@@ -98,7 +98,8 @@
     "qa:finance-demo": "node scripts/final-finance-demo-regression.js",
     "qa:final-dashboard": "node scripts/final-agency-rms-dashboard-regression.js",
     "cleanup:stale-frontend": "node scripts/cleanup-stale-frontend-artifacts.js",
-    "qa:rms-live": "node scripts/final-rms-live-assets-performance-regression.js"
+    "qa:rms-live": "node scripts/final-rms-live-assets-performance-regression.js",
+    "qa:ai-final": "node scripts/final-company-ai-role-copilot-regression.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",
