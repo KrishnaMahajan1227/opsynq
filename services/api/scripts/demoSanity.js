@@ -17,6 +17,7 @@ const EvidenceSubmission = require('../models/platform/EvidenceSubmission');
 const DocumentRecord = require('../models/platform/DocumentRecord');
 const AuditLog = require('../models/platform/AuditLog');
 const ComplianceRecord = require('../models/platform/ComplianceRecord');
+const CommercialClaim = require('../models/platform/CommercialClaim');
 const RmsDevice = require('../models/platform/RmsDevice');
 const RmsTelemetry = require('../models/platform/RmsTelemetry');
 const RmsCurrentState = require('../models/platform/RmsCurrentState');
@@ -242,6 +243,21 @@ async function verifyUrls(urls) {
     if (!fc || fc.status !== 'PASS' || id(fc.agencyId) !== id(haryanaAgency._id)) fail(`${beneficiaryId} final inspection is not PASS under HRYOPS`);
   }
   ok('All 10 Haryana beneficiaries are mapped to HRYOPS; OPS-HR-028 and OPS-HR-029 are fully cleared with governed evidence');
+
+  const skepl = await Organization.findOne({ code: 'SKEPL', type: 'COMPANY' }).lean();
+  if (!skepl) fail('SKEPL company is missing for finance demo verification');
+  const claims = await CommercialClaim.find({ companyId: skepl._id }).populate({ path: 'workPackageId', select: 'code agencyId', populate: { path: 'agencyId', select: 'code state' } }).lean();
+  const demoClaims = claims.filter(x => /^CLM-SKEPL-00[1-4]$/.test(x.claimNo));
+  if (demoClaims.length !== 4) fail(`Expected four SKEPL commercial demo claims, found ${demoClaims.length}`);
+  const requiredClaimStatuses = ['SUBMITTED','PAID','PARTIALLY_APPROVED','READY'];
+  for (const status of requiredClaimStatuses) if (!demoClaims.some(x => x.status === status)) fail(`Finance demo is missing ${status} claim state`);
+  const claimTotals = demoClaims.reduce((a,x)=>{a.gross+=Number(x.grossAmount||0);a.eligible+=Number(x.eligibleAmount||0);a.approved+=Number(x.approvedAmount||0);a.paid+=Number(x.paidAmount||0);a.blocked+=Number(x.blockedAmount||0);return a},{gross:0,eligible:0,approved:0,paid:0,blocked:0});
+  if (!(claimTotals.gross > claimTotals.eligible && claimTotals.approved > 0 && claimTotals.paid > 0 && claimTotals.blocked > 0 && claimTotals.approved > claimTotals.paid)) fail('Finance demo claim totals do not demonstrate gross/eligible/approved/paid/blocked/receivable states');
+  const paidHaryana = demoClaims.find(x => x.claimNo === 'CLM-SKEPL-002');
+  if (!paidHaryana || paidHaryana.status !== 'PAID' || paidHaryana.workPackageId?.agencyId?.code !== 'HRYOPS') fail('Paid Haryana demo claim is not linked to HRYOPS');
+  const blocked = demoClaims.find(x => x.claimNo === 'CLM-SKEPL-003');
+  if (!blocked || blocked.status !== 'PARTIALLY_APPROVED' || Number(blocked.blockedAmount||0) <= 0 || !blocked.blockedReason) fail('Partial approval demo claim is missing blocked value/reason');
+  ok('Commercial demo covers READY → SUBMITTED → PARTIAL/blocked → PAID with Haryana/Nagpur Agency lineage and receivable value');
 
   const rmsDevices = await RmsDevice.find({ companyId: { $in: companyIds }, 'metadata.simulated': true }).lean();
   if (!rmsDevices.length) fail('Demo RMS was not primed before sanity verification');

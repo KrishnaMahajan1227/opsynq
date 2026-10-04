@@ -93,7 +93,9 @@
     "demo:rms-cleanup": "cd services/api && node scripts/cleanupDemoRmsBootstrap.js",
     "demo:rms-prime": "cd services/api && node scripts/primeDemoRms.js",
     "qa:rms-final": "node scripts/final-rms-realtime-responsive-regression.js",
-    "demo:haryana-bootstrap": "cd services/api && node scripts/bootstrapHaryanaDemoTenant.js"
+    "demo:haryana-bootstrap": "cd services/api && node scripts/bootstrapHaryanaDemoTenant.js",
+    "demo:finance-refresh": "cd services/api && node scripts/upsertDemoFinanceClaims.js",
+    "qa:finance-demo": "node scripts/final-finance-demo-regression.js"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",
